@@ -16,7 +16,7 @@ web-scraping, anti-detection, bot-bypass, cloudflare-bypass, captcha-bypass,
 playwright, selenium, puppeteer, browser-automation, fingerprint-spoofing,
 anti-bot, stealth-browser, datadome-bypass, kasada-bypass, akamai-bypass,
 camoufox, patchright, seleniumbase, botasaurus, undetected-chromedriver,
-cloakbrowser, scrapling, web-automation, scraping-tools, antibot-bypass, turnstile-bypass,
+cloakbrowser, scrapling, obscura, web-automation, scraping-tools, antibot-bypass, turnstile-bypass,
 browser-fingerprinting, cdp-stealth, juggler, firefox-automation
 -->
 
@@ -53,35 +53,37 @@ This repository provides:
 
 ### Stealth Capabilities
 
-| Feature | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling |
-|---------|:--------:|:----------:|:------------:|:----------:|:-------:|:------------:|:---------:|
-| `navigator.webdriver` bypass | ✅ C++ | ✅ | ✅ | ✅ | ✅ | ✅ C++ | ✅ (via Patchright/Camoufox) |
-| `Runtime.enable` bypass | ✅ Juggler | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ (via Patchright) |
-| Fingerprint rotation | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐ | ❌ | ⭐⭐⭐⭐ | ❌ |
-| Human mouse simulation | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ | ❌ |
-| CDP fingerprint evasion | N/A | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (via Patchright) |
-| Cross-platform parity | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
-| CAPTCHA solving | ❌ | ❌ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ❌ | ❌ | ⚠️ Cloudflare only |
-| Cloudflare bypass | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (auto-solve) |
-| Ease of use | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| TLS fingerprint impersonation | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ curl_cffi (HTTP tier) |
-| Built-in parser | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (784x faster than BS4) |
-| Spider/crawler framework | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Scrapy-like |
-| Cost | Free | Free | Free | Free | Free | Free* | Free |
+| Feature | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling | Obscura |
+|---------|:--------:|:----------:|:------------:|:----------:|:-------:|:------------:|:---------:|:-------:|
+| `navigator.webdriver` bypass | ✅ C++ | ✅ | ✅ | ✅ | ✅ | ✅ C++ | ✅ (via Patchright/Camoufox) | ✅ JS shim |
+| `Runtime.enable` bypass | ✅ Juggler | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ (via Patchright) | N/A (custom engine) |
+| Fingerprint rotation | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐ | ❌ | ⭐⭐⭐⭐ | ❌ | ⭐⭐ (small pools) |
+| Human mouse simulation | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ | ❌ | ❌ (no hit testing) |
+| CDP fingerprint evasion | N/A | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (via Patchright) | ⭐⭐⭐ (custom CDP server) |
+| Cross-platform parity | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ (UA hardcoded Linux) |
+| CAPTCHA solving | ❌ | ❌ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ❌ | ❌ | ⚠️ Cloudflare only | ❌ |
+| Cloudflare bypass | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (auto-solve) | ⭐⭐ (free tier only) |
+| Ease of use | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (single binary) |
+| TLS fingerprint impersonation | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ curl_cffi (HTTP tier) | ⚠️ Optional (`--features stealth`, single profile) |
+| Built-in parser | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (784x faster than BS4) | ⚠️ html5ever + selectors |
+| Spider/crawler framework | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Scrapy-like | ❌ (CLI scrape only) |
+| Real layout / rendering | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (browser tier) | ❌ (no layout engine) |
+| Memory footprint | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~10 MB (HTTP) | ~30 MB |
+| Cost | Free | Free | Free | Free | Free | Free* | Free | Free |
 
 > **\*** CloakBrowser wrapper is MIT open-source; the Chromium binary is proprietary but free to use. See [security audit notes](./cloakbrowser.md#security-audit).
 
 ### Anti-Bot Service Coverage
 
-| Service | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling |
-|---------|:--------:|:----------:|:------------:|:----------:|:-------:|:------------:|:---------:|
-| Cloudflare WAF | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (Stealth) / ⚠️ (HTTP) |
-| Cloudflare Turnstile | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (auto-solve) |
-| DataDome | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ (via Patchright/Camoufox) |
-| Kasada | ⚠️ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ (via Patchright) |
-| PerimeterX | ✅ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ |
-| Akamai | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ⚠️ | ⚠️ |
-| Imperva | ✅ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ |
+| Service | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling | Obscura |
+|---------|:--------:|:----------:|:------------:|:----------:|:-------:|:------------:|:---------:|:-------:|
+| Cloudflare WAF | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (Stealth) / ⚠️ (HTTP) | ⚠️ (free tier) |
+| Cloudflare Turnstile | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (auto-solve) | ❌ |
+| DataDome | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ (via Patchright/Camoufox) | ❌ |
+| Kasada | ⚠️ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ (via Patchright) | ❌ |
+| PerimeterX | ✅ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ | ❌ |
+| Akamai | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ⚠️ | ⚠️ | ❌ |
+| Imperva | ✅ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ | ❌ |
 
 ✅ = Reliably bypasses | ⚠️ = Partial/conditional | ❌ = Not effective
 
@@ -111,6 +113,8 @@ This repository provides:
 | **HTTP-only stealth (no browser)** | [Scrapling](./scrapling.md) | TLS impersonation via curl_cffi — fastest option |
 | **Adaptive scraping (sites change often)** | [Scrapling](./scrapling.md) | Auto-relocates selectors when DOM changes |
 | **AI-integrated scraping** | [Scrapling](./scrapling.md) | MCP server for Claude/Cursor workflows |
+| **Lightweight high-concurrency scraping** | [Obscura](./obscura.md) | ~30 MB / ~85 ms page load, single Rust binary |
+| **Server-rendered HTML at scale** | [Obscura](./obscura.md) | V8 + html5ever, no Chrome dependency |
 
 ---
 
@@ -142,10 +146,16 @@ Understanding detection helps you choose the right tool:
 │  └─ Scroll/navigation patterns    [Botasaurus, CloakBrowser]         │
 ├──────────────────────────────────────────────────────────────────────┤
 │  Layer 4: Network Analysis                                            │
-│  ├─ TLS fingerprinting (JA3/JA4)  [Scrapling Fetcher - curl_cffi]    │
+│  ├─ TLS fingerprinting (JA3/JA4)  [Scrapling Fetcher - curl_cffi,    │
+│  │                                  Obscura --features stealth (wreq)]│
 │  ├─ WebRTC/UDP leakage            [Camoufox, XDriver, Scrapling]     │
 │  ├─ IP reputation scoring         [Use proxies]                      │
 │  └─ DNS leakage                   [Use SOCKS5H proxies]              │
+├──────────────────────────────────────────────────────────────────────┤
+│  Layer 5: Layout & Rendering Probes                                   │
+│  ├─ getBoundingClientRect checks  [Real browsers only — Obscura returns 0s]│
+│  ├─ getComputedStyle queries      [Real browsers only — Obscura stubs]│
+│  └─ Real canvas/WebGL output      [Camoufox, CloakBrowser, all real-browser tools]│
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -240,6 +250,14 @@ Scrapling (Fetcher for bulk HTTP + StealthyFetcher for protected pages)
 = Best for: Large-scale scraping with mixed protection levels
 ```
 
+### Strategy 8: Lightweight V8 Scraper + Real Browser Fallback
+```
+Obscura (--features stealth) for unprotected JS-rendered pages
++ Patchright/Camoufox for the protected ones
+= 30 MB resident workers handle the bulk + heavy browsers reserved for hard targets
+= Best for: High-concurrency scraping where most pages are easy and only some need real Chrome
+```
+
 ---
 
 ## Contributing
@@ -272,7 +290,7 @@ web-scraping, anti-detection, bot-bypass, cloudflare-bypass, captcha-bypass,
 playwright, selenium, puppeteer, browser-automation, fingerprint-spoofing,
 anti-bot, stealth-browser, datadome-bypass, kasada-bypass, akamai-bypass,
 camoufox, patchright, seleniumbase, botasaurus, undetected-chromedriver,
-cloakbrowser, scrapling, web-automation, scraping-tools, antibot-bypass, turnstile-bypass,
+cloakbrowser, scrapling, obscura, web-automation, scraping-tools, antibot-bypass, turnstile-bypass,
 browser-fingerprinting, cdp-stealth, perimeter-x, imperva-bypass
 ```
 

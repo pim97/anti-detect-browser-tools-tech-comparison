@@ -1,128 +1,194 @@
-# Obscura - Technical Deep Dive
+# Obscura - Deep Technical Analysis
 
-> **Sponsored by [Scrappey.com](https://scrappey.com/)** — Anti-bot bypass API that handles Cloudflare, DataDome, and more without you having to read 3,000 lines of bootstrap JavaScript.
-
-[GitHub](https://github.com/h4ckf0r0day/obscura) · Apache-2.0 (workspace says MIT) · Rust workspace · ~8k LOC
-
----
-
-## TL;DR
-
-Obscura is **not a browser** in the way Chromium, Firefox, or even WebKit are browsers. It's a **V8 runtime + html5ever DOM tree + a 3,000-line JavaScript shim that pretends to be Chrome 145**. There is no layout engine, no CSS cascade, no compositor, no GPU. Pages don't render — they get parsed, their `<script>` tags get fetched and executed against a fake DOM, and the result is dumped or exposed via a partial CDP server.
-
-That is precisely why it's fast (30 MB, 85 ms page loads). It's also precisely why the README's "drop-in replacement for headless Chrome" claim is misleading: any site that runs real fingerprinting against `getBoundingClientRect`, `getComputedStyle`, real WebGL, or Service Workers will see straight through it.
-
-**Stealth maturity:** Cosmetic. The surface is wide (UA-CH, plugin list, battery, GPU strings, canvas fingerprint, audio params) but riddled with internal contradictions a basic detector will spot.
+> **Tool Type:** Custom Headless Browser Engine (built from scratch in Rust)
+> **Repository:** [github.com/h4ckf0r0day/obscura](https://github.com/h4ckf0r0day/obscura)
+> **Approach:** V8 runtime + html5ever DOM tree + JavaScript shim + optional TLS impersonation
+> **Language:** Rust (CLI / engine), Puppeteer / Playwright clients (any language) via CDP
+> **Effectiveness:** Moderate (basic detection bypass; weak against fingerprint-aware anti-bots)
+> **Maintenance:** Active development (v0.1.0, license declared as both Apache 2.0 and MIT in different files)
 
 ---
 
-## What It Actually Is
+## Table of Contents
 
-A Rust workspace with six crates:
+- [What is Obscura?](#what-is-obscura)
+- [How It Works](#how-it-works)
+- [Anti-Detection Mechanisms](#anti-detection-mechanisms)
+- [Network Layer & Stealth Mode](#network-layer--stealth-mode)
+- [CDP Implementation](#cdp-implementation)
+- [Performance](#performance)
+- [Pros and Cons](#pros-and-cons)
+- [Installation & Usage](#installation--usage)
+- [Comparison with Alternatives](#comparison-with-alternatives)
+- [When to Use](#when-to-use)
 
-| Crate | Lines | Job |
+---
+
+## What is Obscura?
+
+Obscura is an **open-source headless browser engine written in Rust**, built specifically for web scraping and AI agent automation. It runs JavaScript via V8 (through the `deno_core` crate) and exposes a Chrome DevTools Protocol server so it can be driven by Puppeteer or Playwright clients.
+
+**Key differentiator:** Unlike every other tool analyzed in this repository, Obscura is not a patched, forked, or wrapped version of Chrome or Firefox. It is a **from-scratch engine** that reimplements just enough of the browser surface to run JavaScript against an HTML document.
+
+**Important caveat:** Obscura is not a full browser. It contains no layout engine, no CSS cascade, no compositor, no GPU rasterization, and no real Canvas / WebGL / audio implementations. CSS files are fetched but stored as a string variable and never applied. This is what makes it lightweight (≈30 MB binary, ≈85 ms page load), and what limits its effectiveness against anti-bot systems that probe layout, rendering, or fingerprinting APIs.
+
+---
+
+## How It Works
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                       OBSCURA ARCHITECTURE                           │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌──────────────────┐    ┌──────────────────────┐                   │
+│  │  obscura-cli     │    │  obscura-cdp          │                   │
+│  │  fetch / scrape  │    │  WebSocket CDP server │                   │
+│  │  /serve commands │    │  (~9 domains)         │                   │
+│  └────────┬─────────┘    └─────────┬────────────┘                   │
+│           │                        │                                 │
+│           ▼                        ▼                                 │
+│  ┌──────────────────────────────────────────────┐                   │
+│  │             obscura-browser (Page)            │                   │
+│  │  Navigation + lifecycle + script orchestration│                   │
+│  └────┬──────────────────┬──────────────┬───────┘                   │
+│       │                  │              │                            │
+│       ▼                  ▼              ▼                            │
+│  ┌──────────┐    ┌──────────────┐  ┌──────────────┐                │
+│  │ obscura- │    │ obscura-js   │  │ obscura-net  │                │
+│  │ dom      │    │              │  │              │                │
+│  │          │    │ V8 +         │  │ reqwest      │                │
+│  │ html5    │    │ deno_core    │  │ (default)    │                │
+│  │ ever     │    │ + 3,035-line │  │ + wreq       │                │
+│  │ DOM      │    │ bootstrap.js │  │ (--features  │                │
+│  │ tree     │    │ (DOM shim    │  │   stealth,   │                │
+│  │ + CSS    │    │  in JS)      │  │   Chrome 145 │                │
+│  │ selectors│    │              │  │   TLS)       │                │
+│  └──────────┘    └──────────────┘  └──────────────┘                │
+│                                                                      │
+│  Supporting: 3,520-domain tracker blocklist (PGL list)              │
+│              CookieJar, robots.txt cache, proxy support             │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+The repository is a Cargo workspace of six crates:
+
+| Crate | Approx. LOC | Responsibility |
 |---|---:|---|
-| `obscura-cli` | ~700 | clap-based CLI (`fetch`, `scrape`, `serve`) + multi-worker load balancer |
-| `obscura-cdp` | ~1,800 | Tokio WebSocket server speaking Chrome DevTools Protocol |
-| `obscura-browser` | ~970 | "Page" abstraction — navigate, fetch subresources, run scripts |
+| `obscura-cli` | ~700 | clap-based CLI (`fetch`, `scrape`, `serve`) + multi-worker TCP load balancer |
+| `obscura-cdp` | ~1,800 | WebSocket server speaking the Chrome DevTools Protocol |
+| `obscura-browser` | ~970 | `Page` abstraction: navigation, subresource fetching, script execution |
 | `obscura-net` | ~600 | HTTP client (reqwest baseline + optional `wreq` for TLS impersonation) |
-| `obscura-js` | ~2,200 (Rust) + 3,035 (JS) | V8 runtime (deno_core) + bootstrap.js DOM shim |
-| `obscura-dom` | ~600 | html5ever-backed DOM tree + selectors-crate query engine |
+| `obscura-js` | ~2,200 Rust + 3,035 JS | V8 runtime via `deno_core` + bootstrap.js DOM shim |
+| `obscura-dom` | ~600 | html5ever-backed DOM tree + `selectors` crate for CSS queries |
 
-Build:
-```bash
-cargo build --release                         # baseline
-cargo build --release --features stealth      # adds wreq + tracker blocking
-```
+### Page Lifecycle
 
-The `stealth` feature flag is the only thing that gives you Chrome-like TLS fingerprints. **Pre-built release binaries that aren't compiled with this flag have a `reqwest`-shaped JA3/JA4** — i.e., they look like a Rust HTTP client, not Chrome.
-
----
-
-## Architecture: The Rendering Pipeline (or lack thereof)
-
-Here's what `obscura fetch <url>` actually does, in order ([page.rs:424-638](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-browser/src/page.rs)):
+When `obscura fetch <url>` runs, the `navigate_single` function ([page.rs:424](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-browser/src/page.rs)) executes:
 
 ```
-1. validate_url()          → reject private IPs / localhost / non-http schemes
-2. (optional) robots.txt   → fetch + check
-3. http_client.fetch()     → reqwest GET (or wreq if stealth)
-4. parse_html()            → html5ever → DomTree (Rust)
-5. extract <link rel=stylesheet> → fetch all CSS in parallel
-   ⚠️ CSS is then stuffed into globalThis.__obscura_css as a string.
-   That's it. No cascade, no specificity, no computed style.
-6. init V8 runtime         → load bootstrap.js (snapshot-cached)
-7. extract <script> tags   → classify regular/defer/async/module
-8. fetch + execute scripts → V8.execute_script() per script
-9. (optional) wait for network idle → 5s timeout, 500ms idle window
+1. validate_url()                  reject private IPs, localhost, non-http schemes
+2. (optional) robots.txt           fetch and check if --obey-robots
+3. http_client.fetch()             reqwest (or wreq if stealth feature)
+4. parse_html()                    html5ever produces a DomTree
+5. extract <link rel=stylesheet>   fetch all CSS in parallel
+                                   stored in globalThis.__obscura_css as a string
+6. init V8 runtime                 load bootstrap.js (V8 snapshot)
+7. classify <script> tags          regular / defer / async / module
+8. fetch + execute scripts         js.execute_script_guarded() per script
+9. (optional) network idle wait    5-second timeout, 500 ms idle window
 10. dump HTML / text / links / eval result
 ```
 
-What's missing vs. a real browser: **layout, painting, hit testing, GPU rasterization, font shaping, image decoding, video, audio playback, real WebGL, real Canvas, Service Workers, Web Workers, IndexedDB, WebRTC, WebSockets-from-page, push notifications.** Many of these have JS-side stubs that resolve `Promise.reject` or return empty objects, but nothing functional behind them.
+Two consequences of this pipeline are worth flagging:
 
-This is fine — *if* the target site is server-rendered HTML and the JS you care about is just data extraction or simple SPA hydration. It is not fine if the site does anything visual or fingerprint-aware.
+- **CSS is never applied.** It is fetched and exposed as a string in `globalThis.__obscura_css` ([page.rs:570](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-browser/src/page.rs)). There is no cascade, specificity resolution, or computed style. JavaScript that reads `getComputedStyle` will get stub values.
+- **Layout is not computed.** `Element.prototype.getBoundingClientRect` returns `{x:0, y:0, width:0, height:0, top:0, right:0, bottom:0, left:0}` for every element ([bootstrap.js:1998](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-js/js/bootstrap.js)).
+
+### V8 Snapshotting
+
+`obscura-js` builds a V8 startup snapshot at compile time so that per-page initialization is microseconds rather than milliseconds. The bootstrap script is included via `include_str!("../js/bootstrap.js")` and executed via `runtime.execute_script("<obscura:init>", "globalThis.__obscura_init();")` on each new runtime instance.
 
 ---
 
-## The Stealth Surface
+## Anti-Detection Mechanisms
 
-### Where it lives
+All anti-detection lives in `crates/obscura-js/js/bootstrap.js`. There are no C++ or binary-level patches — every override is JavaScript executed before any page script runs.
 
-`crates/obscura-js/js/bootstrap.js`. This file is compiled into a V8 startup snapshot at build time (`build.rs`) so per-page init is microseconds, not milliseconds.
-
-### `navigator` ([bootstrap.js:1043-1123](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-js/js/bootstrap.js))
+### `navigator` overrides
 
 ```javascript
+// bootstrap.js:1043-1123
 globalThis.navigator = {
   get userAgent() { return globalThis.__obscura_ua || "Mozilla/5.0 (X11; Linux x86_64) ... Chrome/145.0.0.0 ..."; },
   language: "en-US", languages: ["en-US","en"], platform: "Linux x86_64",
   hardwareConcurrency: 8, deviceMemory: 8,
   get webdriver() { return undefined; },
-  userAgentData: { brands: [{brand:"Google Chrome",version:"145"}, ...], platform: "Linux", ... },
-  // plugins, mimeTypes, mediaDevices, getBattery, etc. — all faked
+  userAgentData: {
+    brands: [{brand:"Google Chrome",version:"145"}, {brand:"Chromium",version:"145"}, {brand:"Not=A?Brand",version:"24"}],
+    mobile: false, platform: "Linux",
+    getHighEntropyValues(hints) { return Promise.resolve({ /* full UA-CH payload */ }); },
+  },
+  plugins: [ /* 5 PDF-viewer entries */ ],
+  // ... mediaDevices, getBattery, permissions, etc.
 }
 ```
 
-Solid coverage of the basic detection surface. **Two giveaways:**
-- **`navigator.platform: "Linux x86_64"`** is hardcoded. The macOS/Windows release binaries report Linux to JS unless you override `--user-agent` *and* nothing else queries `platform`.
-- **`hardwareConcurrency: 8` / `deviceMemory: 8`** are static. Real devices vary.
+What it covers:
+- `navigator.webdriver` returns `undefined` (matches real Chrome)
+- Full `navigator.userAgentData` with `getHighEntropyValues` payload
+- Plugin and mimeType lists matching modern Chrome
+- Faked `getBattery` using per-session randomized values
 
-### Function masking ([bootstrap.js:30-39](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-js/js/bootstrap.js))
+What is hardcoded and may be detectable:
+- `navigator.platform: "Linux x86_64"` is fixed regardless of the OS the binary runs on.
+- `hardwareConcurrency: 8` and `deviceMemory: 8` are static.
+- `userAgentData.platformVersion: "6.8.0"` is static.
+- The plugin list includes a `"WebKit built-in PDF"` entry, which does not appear in real Chrome.
+
+### `Function.prototype.toString` masking
 
 ```javascript
+// bootstrap.js:30-39
 const _nativeFns = new Set();
+const _origToString = Function.prototype.toString;
 Function.prototype.toString = function() {
   if (_nativeFns.has(this)) return `function ${this.name || ''}() { [native code] }`;
   return _origToString.call(this);
 };
+function _markNative(fn) { if (typeof fn === 'function') _nativeFns.add(fn); return fn; }
 ```
 
-Standard `[native code]` masking. Calls `_markNative(...)` against ~80 functions. Decent coverage but `Function.prototype.toString.toString()` returning `[native code]` is itself the masking — which detectors check by patching `Function.prototype.toString` and seeing if the patched version reports as native. Fixable but not currently fixed here.
+About 80 functions are marked as native via `_markNative(...)`. This handles the common `Function.prototype.toString().includes('[native code]')` check. Detectors that compare `Function.prototype.toString.toString()` (the masking function itself reporting as native) can still observe the override.
 
-### Per-session fingerprint ([bootstrap.js:62-116](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-js/js/bootstrap.js))
+### Per-session fingerprint randomization
 
 ```javascript
+// bootstrap.js:62-116
 let _fpSeed = 0;
 function _fpRand(salt) { /* xorshift over _fpSeed */ }
 
-// Pools the seed picks from:
 const gpuPool = [
   'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)',
   'ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)',
-  // ... 12 entries total, all Direct3D11
+  // ... 12 entries total, all Direct3D11 / D3D11
 ];
-const screenPool = [[1920,1080],[2560,1440],[1366,768], /* ...8 total */];
+const screenPool = [[1920,1080],[2560,1440],[1366,768],[1536,864],[1440,900],[1680,1050],[1280,720],[3840,2160]];
 ```
 
-Then `__obscura_init` re-seeds with `Date.now() ^ (Math.random() * 0xFFFFFFFF)` so each page session gets a different point in the pool. Solid idea, but:
+`__obscura_init` re-seeds with `Date.now() ^ (Math.random() * 0xFFFFFFFF)` so each new V8 runtime instance hits a different pool entry. The pools cover GPU strings (12), screens (8), audio sample rates (2), and randomized compressor / battery values.
 
-- **`Direct3D11` GPU strings on a process advertising `navigator.platform: "Linux x86_64"` is an instant inconsistency.** Real Linux Chrome reports `OpenGL` ANGLE strings. Any detector cross-referencing GPU + platform flags this immediately.
-- **Pool is 12 entries.** Cheap to fingerprint — repeated visits from the same Obscura instance hit one of 12 GPUs at random. Statistical detection over a few requests is trivial.
-- `WebGLRenderingContext` itself is `class WebGLRenderingContext {}` — empty. The renderer returns `"WebKit WebGL"` for `GL_RENDERER` ([bootstrap.js:2406](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-js/js/bootstrap.js)), which is a Safari string, not Chrome.
+Observations:
+- The 12 GPU strings all reference `Direct3D11`. If `navigator.platform` reports `"Linux x86_64"`, real Linux Chrome would expose OpenGL ANGLE strings, not Direct3D11. A consistency-checking detector flags this.
+- `WebGL.getParameter` returns `"WebKit WebGL"` for the renderer constant ([bootstrap.js:2406](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-js/js/bootstrap.js)), which is a Safari string rather than Chrome.
+- The pool size is small enough that a detector aggregating values across requests can recognize the distribution.
 
-### Canvas ([bootstrap.js:99-101, 2434-2455](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-js/js/bootstrap.js))
+### Canvas
 
 ```javascript
+// bootstrap.js:99-101, 2434-2455
 let cfp = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg';
 for (let i = 0; i < 40; i++) cfp += chars[Math.floor(_fpRand(500 + i) * 64)];
 cfp += '==';
@@ -130,154 +196,318 @@ cfp += '==';
 Element.prototype.toDataURL = function(type) { return _fp('canvasFingerprint'); };
 ```
 
-This is **not canvas fingerprint protection**, it's a fixed string masquerading as a PNG. The base64 prefix `iVBORw0KGgoAAAANSUhEUg` is a real PNG header but everything after is random ASCII — it won't decode to a valid image. Any detector that tries to actually parse the data URL (or compares it to known-rendered-string fingerprints) sees garbage.
+`toDataURL` returns a fixed-per-session string starting with a real PNG header, but the bytes after are random base64 characters and do not decode to a valid image. There is no underlying canvas rasterizer. Anti-bot scripts that decode the data URL or compare it against known reference outputs will see a non-image.
 
-### Audio ([bootstrap.js:2535-2559](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-js/js/bootstrap.js))
-
-`AudioContext`, `OfflineAudioContext`, `webkitAudioContext` all return synthetic compressor params. There is no actual audio processing — `getByteFrequencyData` fills the array with `_fpRand(...)` noise. Sophisticated audio fingerprinters (which run real DSP) get bytes that are statistically different from any real Chrome.
-
-### `event.isTrusted` ([bootstrap.js:1839-1840](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-js/js/bootstrap.js))
+### Audio
 
 ```javascript
-constructor(t,o={}) { ... this.timeStamp=Date.now(); }
-get isTrusted() { return true; }
+// bootstrap.js:2535-2559
+globalThis.AudioContext = class AudioContext {
+  constructor() { this.sampleRate=_fp('audioSampleRate'); this.baseLatency=_fp('audioBaseLatency'); ... }
+  createDynamicsCompressor() { return {threshold:{value:_fp('compThreshold')}, ...}; }
+  createAnalyser() { return { getByteFrequencyData(a) { for(let i=0;i<a.length;i++) a[i]=Math.floor(_fpRand(600+i)*10); }, ... }; }
+};
 ```
 
-`isTrusted` is supposed to be the browser's seal that an event came from real user input, not `dispatchEvent`. Setting it to `true` for *all* events — including ones explicitly created via `new MouseEvent(...)` — is the kind of tell anti-bots specifically test for.
+Audio context, compressor parameters, and analyser data are all synthetic. There is no real digital signal processing. Audio fingerprinters that run a real DSP graph and hash the output will get values that don't match any real Chrome.
 
-### Mouse / Keyboard ([crates/obscura-cdp/src/domains/input.rs](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-cdp/src/domains/input.rs))
+### `event.isTrusted`
+
+```javascript
+// bootstrap.js:1839-1840
+class Event {
+  constructor(t,o={}) { ... }
+  get isTrusted() { return true; }
+}
+```
+
+`isTrusted` is the browser's signal that an event came from real user input rather than `dispatchEvent`. Setting it to `true` for all events — including ones explicitly created via `new MouseEvent(...)` — is a known anti-bot tell.
+
+### Mouse and keyboard input
 
 ```rust
+// crates/obscura-cdp/src/domains/input.rs
 "mousePressed" => {
     var target = globalThis.__obscura_click_target || document.activeElement || document.body;
-    var click = new MouseEvent('click', { clientX: x, clientY: y });
+    var click = new MouseEvent('click', {clientX: x, clientY: y});
     target.dispatchEvent(click);
 }
 ```
 
-**The `(x, y)` coordinates passed by Puppeteer/Playwright are decorative.** There is no hit testing — clicks are dispatched on whatever is in `__obscura_click_target` or `document.activeElement`. This works for `await page.click('selector')` (Playwright sets activeElement first) but breaks any scenario where the test expects "click at coordinates and have the right element receive it." Also: `getBoundingClientRect()` returns `{x:0,y:0,width:0,height:0,...}` for everything ([bootstrap.js:1998](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-js/js/bootstrap.js)) — any anti-bot using element geometry is going to flag every element as off-screen.
+Mouse coordinates passed by Puppeteer or Playwright are not used for hit testing. The dispatched event carries `clientX` / `clientY`, but the *target* is `__obscura_click_target` (set by the JS layer when a selector is resolved) or `document.activeElement`. This works correctly for `await page.click('selector')` flows but breaks scenarios that require hit testing at coordinates. Combined with `getBoundingClientRect` returning all-zeros, anti-bot scripts that verify click geometry against element bounds will detect inconsistency.
 
 ---
 
-## Network: The Stealth Mode Split
+## Network Layer & Stealth Mode
 
-### Without `--features stealth`
+### Default build (no feature flags)
 
-`reqwest` with `native-tls-vendored`. Chrome-shaped headers (`sec-ch-ua`, `sec-fetch-*`, `upgrade-insecure-requests`) are added manually in [client.rs:285-330](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-net/src/client.rs), but the **TLS handshake is whatever native-tls produces** — JA3/JA4 will look like a Rust HTTP client. Any decent CDN compares the TLS fingerprint to the User-Agent and flags the mismatch.
-
-### With `--features stealth` ([wreq_client.rs](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-net/src/wreq_client.rs))
+The HTTP client is `reqwest` with `native-tls-vendored`. Chrome-shaped headers are added manually:
 
 ```rust
+// crates/obscura-net/src/client.rs:285-330
+headers.insert(USER_AGENT, ...);
+headers.insert("sec-ch-ua", "\"Google Chrome\";v=\"145\", ...");
+headers.insert("sec-ch-ua-mobile", "?0");
+headers.insert("sec-ch-ua-platform", "\"Linux\"");
+headers.insert("sec-fetch-dest", "document");
+headers.insert("upgrade-insecure-requests", "1");
+// ...
+```
+
+The headers look like Chrome, but the TLS handshake is whatever `native-tls` produces. JA3 / JA4 fingerprints will match a Rust HTTP client, not Chrome. CDNs that compare TLS fingerprint against User-Agent can detect the mismatch.
+
+### `--features stealth` build
+
+```rust
+// crates/obscura-net/src/wreq_client.rs
 let emulation_opts = wreq_util::EmulationOption::builder()
     .emulation(wreq_util::Emulation::Chrome145)
     .emulation_os(wreq_util::EmulationOS::Linux)
     .build();
 ```
 
-Single hardcoded profile: Chrome 145 on Linux. `wreq` is a real TLS impersonation library (similar to `curl_cffi`) so JA3/JA4 will pass for Chrome — but always *the same* Chrome. No rotation, no per-session variation. If you scrape 10k URLs from one IP they all share one TLS fingerprint.
+`wreq` is a TLS impersonation library similar to `curl_cffi`. With this feature enabled, JA3 / JA4 fingerprints match Chrome 145 on Linux. The profile is hardcoded — there is no rotation, no per-session variation, and no other emulation targets. Pre-built release binaries that aren't compiled with `--features stealth` fall back to the default `reqwest` client.
 
-### Tracker blocklist ([blocklist.rs](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-net/src/blocklist.rs))
+### Tracker blocking
 
-3,520 domains from `pgl_domains.txt` (Peter Lowe's blocklist). Exact + suffix match — when a script tag references `google-analytics.com` it never gets fetched. Real benefit: pages load faster, fewer fingerprinting scripts run client-side. Not a stealth feature in itself; it's hygiene.
+```rust
+// crates/obscura-net/src/blocklist.rs
+const PGL_LIST: &str = include_str!("pgl_domains.txt");  // 3,520 domains
+```
+
+Peter Lowe's tracker domain list is embedded at compile time. Lookup is exact match plus suffix match (so `www.google-analytics.com` matches `google-analytics.com`). When a script or subresource references a blocked domain, it is never fetched. This is privacy hygiene rather than stealth — it speeds up loads and prevents fingerprinting scripts from running, but doesn't itself disguise the client.
 
 ---
 
 ## CDP Implementation
 
-`obscura-cdp` implements ~9 domains. Coverage is **just enough** to satisfy puppeteer-core / playwright-core's connect handshake and basic operation:
+`obscura-cdp` implements a subset of the Chrome DevTools Protocol sufficient to support Puppeteer and Playwright clients connecting via `connectOverCDP` / `puppeteer.connect`.
 
-| Domain | What's implemented | What's missing |
+| Domain | Implemented Methods | Notable Gaps |
 |---|---|---|
-| Target | createTarget, attachToTarget, browser contexts | targetCrashed, targetInfoChanged events |
-| Page | navigate, getFrameTree, addScriptToEvaluateOnNewDocument, lifecycleEvents | screencast, captureScreenshot (no rendering!) |
-| Runtime | evaluate, callFunctionOn, getProperties, addBinding | exception details, async stacks |
-| DOM | getDocument, query selectors, getOuterHTML, resolveNode | layout queries (no layout engine) |
-| Network | enable, setCookies, setExtraHTTPHeaders, setUserAgentOverride | response bodies, websocket frames |
-| Fetch | continueRequest, fulfillRequest, failRequest | rules-based interception |
-| Storage | basic cookie ops | IndexedDB, localStorage events |
-| Input | dispatch{Mouse,Key,Touch}Event | hit testing, modifier state |
-| LP | DOM-to-Markdown (custom domain) | — |
+| Target | createTarget, closeTarget, attachToTarget, createBrowserContext | targetCrashed events |
+| Page | navigate, getFrameTree, addScriptToEvaluateOnNewDocument, lifecycleEvents | captureScreenshot (no rendering), printToPDF |
+| Runtime | evaluate, callFunctionOn, getProperties, addBinding | exception details, async stack traces |
+| DOM | getDocument, querySelector, querySelectorAll, getOuterHTML, resolveNode | layout queries |
+| Network | enable, setCookies, getCookies, setExtraHTTPHeaders, setUserAgentOverride | response body retrieval, websocket frames |
+| Fetch | enable, continueRequest, fulfillRequest, failRequest | rules-based interception |
+| Storage | getCookies, setCookies, deleteCookies | IndexedDB, localStorage events |
+| Input | dispatchMouseEvent, dispatchKeyEvent | hit testing, modifier state, dispatchTouchEvent (stubbed) |
+| LP | getMarkdown (DOM-to-Markdown, custom domain) | — |
 
-**`Page.captureScreenshot` is unanswered.** That's correct — there's nothing to screenshot. Any scraper relying on visual checks doesn't work.
+The frame-ID convention deliberately sets `frame_id == target_id` ([page.rs:49-54](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-browser/src/page.rs)) for Playwright compatibility, with an inline comment explaining the rationale. This indicates the implementation has been tested against real Playwright clients.
 
-The frame ID convention (`frame_id == target_id`, [page.rs:49-54](https://github.com/h4ckf0r0day/obscura/blob/main/crates/obscura-browser/src/page.rs)) is documented inline as a Playwright compatibility hack, which suggests the author actually tested against the real client. That's a good sign.
+`Page.captureScreenshot` is unimplemented because there is nothing to render — there is no compositor or raster output.
 
 ---
 
-## Performance: Where the 30 MB / 85 ms Numbers Come From
+## Performance
 
-The benchmarks in the README aren't dishonest — they're the natural consequence of skipping 90% of what a browser does:
+The README's benchmark numbers are consistent with the architecture:
 
-| Cost a real browser pays | Obscura pays |
+| Operation | Obscura | Headless Chrome |
+|---|---|---|
+| Memory | ~30 MB | 200+ MB |
+| Binary size | ~70 MB | 300+ MB |
+| Startup | Instant (V8 snapshot) | ~2 s |
+| Static HTML page load | ~51 ms | ~500 ms |
+| JS + XHR + fetch | ~84 ms | ~800 ms |
+
+The savings come from skipping work a real browser performs: layout, style cascade, font shaping (HarfBuzz), image decode, raster, GPU compositor, and the surrounding Chromium infrastructure.
+
+For multi-URL workloads, `obscura scrape` spawns child worker processes (`obscura-worker` binary) and communicates over stdin / stdout with a JSON protocol, with a configurable concurrency limit. `obscura serve --workers N` runs N CDP server child processes behind a TCP load balancer.
+
+---
+
+## Pros and Cons
+
+### Advantages
+
+| Advantage | Description |
 |---|---|
-| Skia compositor + GPU process | nothing |
-| Blink layout + style cascade | nothing |
-| Image decode + raster | nothing |
-| Font shaping (HarfBuzz) | nothing |
-| 100+ MB of base Chromium | ~30 MB Rust binary |
-| ~2s startup (process spawn + V8 + Blink init) | V8 snapshot, ~instant |
+| Lightweight footprint | ~30 MB resident, ~70 MB binary, no Chrome / Node.js dependency |
+| Fast startup | V8 snapshot brings per-runtime init to microseconds |
+| Single-binary deployment | Cross-compiled releases for Linux x86_64, macOS (Intel + ARM), Windows |
+| CDP API surface | Compatible with `puppeteer-core` and `playwright-core` for common flows |
+| Tracker blocking | 3,520-domain PGL list embedded at compile time |
+| Multi-worker mode | Built-in process supervisor + TCP load balancer for parallel scraping |
+| Optional TLS impersonation | `--features stealth` enables Chrome 145 JA3 / JA4 via `wreq` |
+| Clean Rust workspace | Six small crates, readable code, deno_core foundation |
 
-You're effectively comparing `cargo run` against a full Chromium. The 85 ms page-load number is plausible for static HTML; for JS-heavy SPAs, real Chrome would be hitting layout and you wouldn't, but you'd also be getting the wrong answer on anything that depends on layout.
+### Limitations
 
----
-
-## Anti-Bot Coverage (Realistic)
-
-| Service | Verdict | Why |
-|---|:---:|---|
-| Static HTML behind a UA filter | ✅ | UA + headers look fine |
-| Cloudflare WAF (free tier) | ⚠️ | Stealth mode JA3 helps; managed challenge JS may break on missing layout |
-| Cloudflare Turnstile | ❌ | Needs real canvas/WebGL/audio rendering — all faked |
-| DataDome | ❌ | Cross-checks GPU/platform consistency, BoundingClientRect, audio DSP |
-| Akamai Bot Manager | ❌ | Sensor data uses real input timing + layout |
-| PerimeterX / HUMAN | ❌ | Behavioral + layout-aware |
-| Kasada | ❌ | Heavy on canvas/WebGL |
-| Imperva | ❌ | Same |
-| reCAPTCHA v3 | ❌ | Score depends on real browser signals |
-| Simple `navigator.webdriver` checks | ✅ | Returns `undefined` |
-| Sannysoft test page | ⚠️ | Will pass the basic checks (webdriver, plugins, languages) and fail any layout/canvas-aware ones |
-
----
-
-## When Obscura Is the Right Tool
-
-- You need to scrape **server-rendered HTML at high concurrency** and your bottleneck is RAM/CPU, not detection sophistication.
-- You're behind a **moderately gated content site** — UA filtering, basic JS challenges, no behavioral fingerprinting.
-- You want a **single-binary CDP server** for prototype Puppeteer/Playwright code without installing Chrome.
-- You're running **disposable workers** (1 URL, then exit) where TLS fingerprint reuse isn't a concern.
-- You want to **render JS-driven content** where the JS is well-behaved (data extraction, no DOM measurement).
-
-## When It's Not
-
-- Anti-bot protection above "low effort." Anything that runs canvas/WebGL fingerprinting, BoundingClientRect checks, or audio fingerprinting will detect Obscura immediately.
-- Sites whose JS calls `getComputedStyle`, `getBoundingClientRect`, or expects layout to actually happen.
-- Anything visual (screenshots, PDF, video).
-- Sites requiring Service Workers or Web Workers to function.
-- High-volume scraping where TLS fingerprint diversity matters.
-- Any compliance/legal context where "I told the server I was Chrome on Linux" needs to be true.
+| Limitation | Description |
+|---|---|
+| No layout engine | CSS is fetched but never applied; `getComputedStyle` returns stubs |
+| No real rendering | No painting, no compositor, no GPU; `captureScreenshot` is unimplemented |
+| `getBoundingClientRect` returns zeros | Any script depending on element geometry sees `{0,0,0,0,...}` |
+| Canvas / WebGL are stubs | `toDataURL` returns a fixed string; WebGL renderer reports `"WebKit WebGL"` |
+| No real Service Workers / Web Workers | All stubbed as no-ops |
+| Hit testing absent in input | Mouse `(x,y)` coordinates are not used to resolve targets |
+| Hardcoded `navigator.platform` | Reports `"Linux x86_64"` regardless of host OS |
+| GPU strings inconsistent with platform | All ANGLE entries reference Direct3D11 |
+| Default build has no TLS impersonation | Without `--features stealth`, JA3 / JA4 looks like a Rust HTTP client |
+| Single TLS profile in stealth mode | Chrome 145 Linux only; no rotation or alternative targets |
+| Pool sizes for fingerprints are small | 12 GPUs, 8 screens, 2 sample rates |
+| `event.isTrusted` always `true` | Including for events created via `new MouseEvent(...)` |
+| License inconsistency | LICENSE file says Apache 2.0; `Cargo.toml` declares MIT |
 
 ---
 
-## Comparison vs. Other Tools in This Repo
+## Installation & Usage
 
-| Dimension | Obscura | Patchright | Camoufox | CloakBrowser | Scrapling (HTTP) |
+### Pre-built binaries
+
+```bash
+# Linux x86_64
+curl -LO https://github.com/h4ckf0r0day/obscura/releases/latest/download/obscura-x86_64-linux.tar.gz
+tar xzf obscura-x86_64-linux.tar.gz
+
+# macOS Apple Silicon
+curl -LO https://github.com/h4ckf0r0day/obscura/releases/latest/download/obscura-aarch64-macos.tar.gz
+
+# Windows: download .zip from the releases page
+```
+
+### Build from source
+
+```bash
+git clone https://github.com/h4ckf0r0day/obscura.git
+cd obscura
+cargo build --release
+
+# With TLS impersonation + tracker blocking
+cargo build --release --features stealth
+```
+
+Requires Rust 1.75+. First build takes about five minutes because V8 compiles from source; subsequent builds are cached.
+
+### Fetch a page
+
+```bash
+obscura fetch https://example.com --eval "document.title"
+obscura fetch https://example.com --dump links
+obscura fetch https://example.com --wait-until networkidle0
+```
+
+### Start a CDP server
+
+```bash
+obscura serve --port 9222 --stealth
+```
+
+### Use from Puppeteer
+
+```javascript
+import puppeteer from 'puppeteer-core';
+
+const browser = await puppeteer.connect({
+  browserWSEndpoint: 'ws://127.0.0.1:9222/devtools/browser',
+});
+const page = await browser.newPage();
+await page.goto('https://example.com');
+console.log(await page.title());
+await browser.disconnect();
+```
+
+### Use from Playwright
+
+```javascript
+import { chromium } from 'playwright-core';
+
+const browser = await chromium.connectOverCDP({
+  endpointURL: 'ws://127.0.0.1:9222',
+});
+const page = await browser.newContext().then(ctx => ctx.newPage());
+await page.goto('https://example.com');
+await browser.close();
+```
+
+### Parallel scraping
+
+```bash
+obscura scrape url1 url2 url3 \
+  --concurrency 25 \
+  --eval "document.querySelector('h1').textContent" \
+  --format json
+```
+
+---
+
+## Comparison with Alternatives
+
+| Dimension | Obscura | Patchright | Camoufox | CloakBrowser | Scrapling (HTTP tier) |
 |---|---|---|---|---|---|
 | Underlying engine | V8 + html5ever (no layout) | Real Chromium | Real Firefox | Real Chromium | curl_cffi |
-| Renders pages | ❌ | ✅ | ✅ | ✅ | ❌ |
-| TLS impersonation | Optional (`wreq`, 1 profile) | ❌ | ❌ | ❌ | ✅ (curl_cffi, many profiles) |
-| Canvas fingerprint | Hardcoded fake string | Real | C++ noise | C++ noise | N/A |
-| WebGL | Empty stubs | Real | Real (C++) | Real (C++) | N/A |
-| Memory | ~30 MB | ~200 MB | ~200 MB | ~200 MB | ~10 MB |
-| Stealth ceiling | Cosmetic | High | Very high | Very high | High (HTTP-only) |
+| Renders pages | No | Yes | Yes | Yes | No |
+| Real Canvas / WebGL | No (stubs) | Yes | Yes (C++ noise) | Yes (C++ noise) | N/A |
+| TLS impersonation | Optional, single profile | None | None | None | Yes, multiple profiles |
+| Layout / `getComputedStyle` | Not implemented | Native | Native | Native | N/A |
+| Memory footprint | ~30 MB | ~200 MB | ~200 MB | ~200 MB | ~10 MB |
+| Stealth approach | JS-level shim | CDP protocol patches | C++ source patches | C++ source patches | TLS only |
+| Detection ceiling | Basic anti-bot | Enterprise anti-bot | Enterprise anti-bot | Enterprise anti-bot | High for HTTP-only targets |
 
-**Where Obscura sits in the landscape:** between `curl_cffi` (HTTP-only, fast, no JS) and a real headless Chromium fork (slow, heavy, real fingerprints). It runs JS that `curl_cffi` can't, and it's far lighter than any real browser — but it pays for that with a stealth surface that's largely theatrical.
+Obscura sits between an HTTP-only client like `curl_cffi` (very fast, no JS) and a real headless Chromium fork (heavy, real fingerprints). It runs JavaScript that pure HTTP clients cannot, while remaining far lighter than any actual browser.
 
 ---
 
-## Honest Verdict
+## Anti-Bot Service Coverage
 
-Obscura is an **impressive piece of Rust engineering** — a from-scratch V8-backed scraping engine, custom CDP server, Playwright/Puppeteer compat — that markets itself one tier above what it actually delivers. The "Built-in anti-detect" claim in the README is true in the sense that it ticks the obvious boxes (`navigator.webdriver`, UA-CH, plugins, function masking), and false in the sense that the next layer down (canvas, WebGL, layout, audio DSP, GPU/platform consistency) is faked in ways a competent detector cracks in milliseconds.
+| Service | Verdict | Reasoning |
+|---|:---:|---|
+| Static HTML behind UA filter | ✅ | UA and headers look like Chrome |
+| Cloudflare WAF (free tier) | ⚠️ | Stealth mode TLS helps; managed challenges may break on missing layout / canvas |
+| Cloudflare Turnstile | ❌ | Requires real canvas / WebGL / audio |
+| DataDome | ❌ | Cross-checks GPU vs platform, BoundingClientRect, audio DSP |
+| Akamai Bot Manager | ❌ | Sensor data uses real input timing + layout |
+| PerimeterX / HUMAN | ❌ | Behavioral and layout-aware |
+| Kasada | ❌ | Heavy on canvas / WebGL |
+| Imperva | ❌ | Layout and rendering checks |
+| reCAPTCHA v3 | ❌ | Score depends on real browser signals |
+| Sannysoft basic checks | ✅ | Passes `webdriver`, plugins, languages |
+| Sannysoft layout-aware checks | ❌ | `getBoundingClientRect` returns zeros |
 
-**Use it when you want a fast V8-driven HTML scraper with a CDP API.** Don't use it when you want to actually pretend to be Chrome.
+Legend: ✅ Reliably bypasses · ⚠️ Partial / conditional · ❌ Not effective.
 
-If you need to clear real bot protection: pair it with [Scrappey](https://scrappey.com/) for the protected pages and use Obscura for the HTML that's already accessible — same tiered-fetcher pattern as [Scrapling](./scrapling.md).
+---
+
+## When to Use
+
+### Best For
+- Scraping server-rendered HTML at high concurrency where memory and startup time are bottlenecks
+- Sites with light protection (UA filters, basic JS challenges) that don't run fingerprint-aware scripts
+- Quick CDP-driven prototypes without installing Chrome
+- Disposable workers (one URL per process) where TLS fingerprint reuse isn't a concern
+- JavaScript-driven content where the JS does data extraction rather than DOM measurement
+
+### Not Ideal For
+- Sites protected by enterprise anti-bot services (Cloudflare Turnstile, DataDome, Akamai, Kasada)
+- Pages whose JS calls `getComputedStyle`, `getBoundingClientRect`, or expects layout to actually run
+- Anything visual: screenshots, PDF rendering, video playback, image decoding
+- Sites that rely on Service Workers or Web Workers
+- High-volume scraping where TLS fingerprint diversity is needed
+- Use cases where the User-Agent claim must accurately reflect the client (compliance / legal contexts)
+
+---
+
+## Resources
+
+- [GitHub Repository](https://github.com/h4ckf0r0day/obscura)
+- [deno_core](https://github.com/denoland/deno_core) — V8 runtime crate used by Obscura
+- [wreq](https://crates.io/crates/wreq) — TLS impersonation library used in stealth mode
+- [html5ever](https://github.com/servo/html5ever) — HTML parser used for the DOM tree
+
+---
+
+## Summary
+
+Obscura is a **from-scratch headless browser engine** that uses V8 for JavaScript execution and html5ever for HTML parsing, with a JavaScript shim providing the `navigator`, `document`, `window`, and other browser globals. It is a careful piece of Rust engineering that delivers genuine performance gains over headless Chrome by skipping layout, rendering, and the surrounding browser infrastructure.
+
+The trade-off is that the same architectural choices that make it fast also limit its anti-detection ceiling. The stealth surface covers the obvious checks (`navigator.webdriver`, UA-CH, plugin list, function masking, per-session randomization) but does not extend to the layers anti-bot vendors actually probe at the high end: real layout, real canvas / WebGL output, audio DSP, and consistency between GPU strings and platform.
+
+**Effectiveness Rating:** Moderate — passes basic detection, fails layout / canvas-aware probes
+
+**Complexity:** Low — single binary, CDP server, drop-in for Puppeteer / Playwright clients
+
+**Best Use Case:** Lightweight, high-concurrency scraping of server-rendered HTML or lightly-protected sites
