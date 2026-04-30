@@ -45,6 +45,7 @@ This repository provides:
 | [**XDriver**](./xdriver.md) | Playwright CDP patch | Python | Quick stealth without code changes | [Read →](./xdriver.md) |
 | [**CloakBrowser**](./cloakbrowser.md) | Custom Chromium build | Python, Node.js | C++ stealth + human behavior + Chromium API | [Read →](./cloakbrowser.md) |
 | [**Scrapling**](./scrapling.md) | All-in-one scraping framework | Python | TLS stealth + adaptive parsing + spider framework | [Read →](./scrapling.md) |
+| [**Obscura**](./obscura.md) | Custom Rust headless engine | Rust (CLI), Puppeteer/Playwright clients | Lightweight V8 scraper with CDP API | [Read →](./obscura.md) |
 
 ---
 
