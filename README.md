@@ -16,7 +16,7 @@ web-scraping, anti-detection, bot-bypass, cloudflare-bypass, captcha-bypass,
 playwright, selenium, puppeteer, browser-automation, fingerprint-spoofing,
 anti-bot, stealth-browser, datadome-bypass, kasada-bypass, akamai-bypass,
 camoufox, patchright, seleniumbase, botasaurus, undetected-chromedriver,
-cloakbrowser, scrapling, obscura, web-automation, scraping-tools, antibot-bypass, turnstile-bypass,
+cloakbrowser, scrapling, obscura, stealthfox, web-automation, scraping-tools, antibot-bypass, turnstile-bypass,
 browser-fingerprinting, cdp-stealth, juggler, firefox-automation
 -->
 
@@ -46,6 +46,7 @@ This repository provides:
 | [**CloakBrowser**](./cloakbrowser.md) | Custom Chromium build | Python, Node.js | C++ stealth + human behavior + Chromium API | [Read →](./cloakbrowser.md) |
 | [**Scrapling**](./scrapling.md) | All-in-one scraping framework | Python | TLS stealth + adaptive parsing + spider framework | [Read →](./scrapling.md) |
 | [**Obscura**](./obscura.md) | Custom Rust headless engine | Rust (CLI), Puppeteer/Playwright clients | Lightweight V8 scraper with CDP API | [Read →](./obscura.md) |
+| [**Stealthfox**](./stealthfox.md) | Custom Firefox build | Python | Camoufox-style stack with Bayesian sampler (binary-only, very new) | [Read →](./stealthfox.md) |
 
 ---
 
@@ -53,37 +54,39 @@ This repository provides:
 
 ### Stealth Capabilities
 
-| Feature | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling | Obscura |
-|---------|:--------:|:----------:|:------------:|:----------:|:-------:|:------------:|:---------:|:-------:|
-| `navigator.webdriver` bypass | ✅ C++ | ✅ | ✅ | ✅ | ✅ | ✅ C++ | ✅ (via Patchright/Camoufox) | ✅ JS shim |
-| `Runtime.enable` bypass | ✅ Juggler | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ (via Patchright) | N/A (custom engine) |
-| Fingerprint rotation | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐ | ❌ | ⭐⭐⭐⭐ | ❌ | ⭐⭐ (small pools) |
-| Human mouse simulation | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ | ❌ | ❌ (no hit testing) |
-| CDP fingerprint evasion | N/A | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (via Patchright) | ⭐⭐⭐ (custom CDP server) |
-| Cross-platform parity | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ (UA hardcoded Linux) |
-| CAPTCHA solving | ❌ | ❌ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ❌ | ❌ | ⚠️ Cloudflare only | ❌ |
-| Cloudflare bypass | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (auto-solve) | ⭐⭐ (free tier only) |
-| Ease of use | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (single binary) |
-| TLS fingerprint impersonation | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ curl_cffi (HTTP tier) | ⚠️ Optional (`--features stealth`, single profile) |
-| Built-in parser | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (784x faster than BS4) | ⚠️ html5ever + selectors |
-| Spider/crawler framework | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Scrapy-like | ❌ (CLI scrape only) |
-| Real layout / rendering | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (browser tier) | ❌ (no layout engine) |
-| Memory footprint | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~10 MB (HTTP) | ~30 MB |
-| Cost | Free | Free | Free | Free | Free | Free* | Free | Free |
+| Feature | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling | Obscura | Stealthfox |
+|---------|:--------:|:----------:|:------------:|:----------:|:-------:|:------------:|:---------:|:-------:|:----------:|
+| `navigator.webdriver` bypass | ✅ C++ | ✅ | ✅ | ✅ | ✅ | ✅ C++ | ✅ (via Patchright/Camoufox) | ✅ JS shim | ✅ C++ (claimed) |
+| `Runtime.enable` bypass | ✅ Juggler | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ (via Patchright) | N/A (custom engine) | ✅ Juggler |
+| Fingerprint rotation | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐ | ❌ | ⭐⭐⭐⭐ | ❌ | ⭐⭐ (small pools) | ⭐⭐⭐⭐⭐ (Bayesian, hidden coherence var) |
+| Human mouse simulation | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ | ❌ | ❌ (no hit testing) | ⭐⭐⭐⭐ (Juggler Bezier, default-on) |
+| CDP fingerprint evasion | N/A | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (via Patchright) | ⭐⭐⭐ (custom CDP server) | N/A (Firefox) |
+| Cross-platform parity | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ (UA hardcoded Linux) | ⭐⭐ (Win+Linux x86_64 only, no macOS/ARM) |
+| CAPTCHA solving | ❌ | ❌ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ❌ | ❌ | ⚠️ Cloudflare only | ❌ | ❌ |
+| Cloudflare bypass | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (auto-solve) | ⭐⭐ (free tier only) | ⚠️ Claimed Turnstile pass, unverified |
+| Ease of use | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (single binary) | ⭐⭐⭐⭐⭐ (Playwright drop-in) |
+| TLS fingerprint impersonation | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ curl_cffi (HTTP tier) | ⚠️ Optional (`--features stealth`, single profile) | ⚠️ Claimed (JA3/JA4), patches not public |
+| Built-in parser | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (784x faster than BS4) | ⚠️ html5ever + selectors | ❌ |
+| Spider/crawler framework | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Scrapy-like | ❌ (CLI scrape only) | ❌ |
+| Real layout / rendering | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (browser tier) | ❌ (no layout engine) | ✅ |
+| Memory footprint | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~10 MB (HTTP) | ~30 MB | ~200 MB |
+| Cost | Free | Free | Free | Free | Free | Free* | Free | Free | Free** |
 
 > **\*** CloakBrowser wrapper is MIT open-source; the Chromium binary is proprietary but free to use. See [security audit notes](./cloakbrowser.md#security-audit).
+>
+> **\*\*** Stealthfox wrapper is MIT; the patched Firefox binary is MPL-2.0 but **the patch source repo (`P0st3rw-max/firefox-stealth`) returns 404 at audit time** — the binary is effectively trust-only. See [audit notes](./stealthfox.md#verifiable-vs-unverifiable-claims).
 
 ### Anti-Bot Service Coverage
 
-| Service | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling | Obscura |
-|---------|:--------:|:----------:|:------------:|:----------:|:-------:|:------------:|:---------:|:-------:|
-| Cloudflare WAF | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (Stealth) / ⚠️ (HTTP) | ⚠️ (free tier) |
-| Cloudflare Turnstile | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (auto-solve) | ❌ |
-| DataDome | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ (via Patchright/Camoufox) | ❌ |
-| Kasada | ⚠️ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ (via Patchright) | ❌ |
-| PerimeterX | ✅ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ | ❌ |
-| Akamai | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ⚠️ | ⚠️ | ❌ |
-| Imperva | ✅ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ | ❌ |
+| Service | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling | Obscura | Stealthfox |
+|---------|:--------:|:----------:|:------------:|:----------:|:-------:|:------------:|:---------:|:-------:|:----------:|
+| Cloudflare WAF | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (Stealth) / ⚠️ (HTTP) | ⚠️ (free tier) | ⚠️ (claimed, unverified) |
+| Cloudflare Turnstile | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (auto-solve) | ❌ | ⚠️ (claimed, unverified) |
+| DataDome | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ (via Patchright/Camoufox) | ❌ | ⚠️ (claimed, unverified) |
+| Kasada | ⚠️ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ (via Patchright) | ❌ | ⚠️ |
+| PerimeterX | ✅ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
+| Akamai | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ |
+| Imperva | ✅ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ | ❌ | ⚠️ |
 
 ✅ = Reliably bypasses | ⚠️ = Partial/conditional | ❌ = Not effective
 
@@ -115,6 +118,7 @@ This repository provides:
 | **AI-integrated scraping** | [Scrapling](./scrapling.md) | MCP server for Claude/Cursor workflows |
 | **Lightweight high-concurrency scraping** | [Obscura](./obscura.md) | ~30 MB / ~85 ms page load, single Rust binary |
 | **Server-rendered HTML at scale** | [Obscura](./obscura.md) | V8 + html5ever, no Chrome dependency |
+| **Camoufox-style Firefox stack, evaluating alternatives** | [Stealthfox](./stealthfox.md) | Bayesian sampler with hidden coherence variable; ⚠️ patches not public, 1 commit, treat as experimental |
 
 ---
 
@@ -181,6 +185,27 @@ Understanding detection helps you choose the right tool:
 | Medium (CF Pro, PerimeterX) | 60-80% | 90%+ |
 | Enterprise (Akamai, DataDome) | 20-40% | 70-85% |
 | Custom ML-based | <20% | 50-70% |
+
+---
+
+## Stealthfox Binary Security Audit
+
+Stealthfox ships a closed-source patched Firefox 150 binary, and the patch source repo (`P0st3rw-max/firefox-stealth`) currently 404s — so behavioral testing is the only verification path available. A reproducible Docker harness for that audit lives in [stealthfox-audit/](./stealthfox-audit/):
+
+```bash
+git clone https://github.com/P0st3rw-max/stealthfox stealthfox-audit/stealthfox-src
+docker build -f stealthfox-audit/Dockerfile.security-audit -t stealthfox-audit stealthfox-audit/
+docker run --rm \
+  --security-opt=no-new-privileges \
+  --cap-drop=ALL --cap-add=NET_ADMIN --cap-add=NET_RAW \
+  --memory=4g --pids-limit=512 \
+  --tmpfs /tmp:exec,size=512m \
+  stealthfox-audit
+```
+
+The harness runs 9 behavioral tests inside an isolated container — strings analysis, network capture on `about:blank`, `strace` for filesystem and network access, process tree audit, DNS audit, ELF section analysis, an environment-variable canary test, network-blocked launch, and a VirusTotal hash lookup. See [stealthfox-audit/README.md](./stealthfox-audit/README.md) for what each test checks and what a clean result looks like.
+
+**Result of one run** (May 9 2026, BuildID `20260508142825`, libxul SHA-256 `e5010fe7…`): all 9 tests passed; the binary made zero outbound connections on a 60-second idle, accessed no host credentials, and the wrapper's claimed `zoom.stealth.*` pref consumers were verified present in `libxul.so` (24 keys, all matching `prefs.py`). Behavioral signal is clean — see the audit's own Bottom Line section for the caveats (time bombs, conditional payloads, encrypted exfil all remain unreachable by behavioral testing).
 
 ---
 
@@ -290,7 +315,7 @@ web-scraping, anti-detection, bot-bypass, cloudflare-bypass, captcha-bypass,
 playwright, selenium, puppeteer, browser-automation, fingerprint-spoofing,
 anti-bot, stealth-browser, datadome-bypass, kasada-bypass, akamai-bypass,
 camoufox, patchright, seleniumbase, botasaurus, undetected-chromedriver,
-cloakbrowser, scrapling, obscura, web-automation, scraping-tools, antibot-bypass, turnstile-bypass,
+cloakbrowser, scrapling, obscura, stealthfox, web-automation, scraping-tools, antibot-bypass, turnstile-bypass,
 browser-fingerprinting, cdp-stealth, perimeter-x, imperva-bypass
 ```
 
