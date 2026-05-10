@@ -25,12 +25,3 @@ desktop.ini
 # Misc
 *.log
 *.tmp
-
-# Stealthfox audit — keep the Dockerfile + README.md, ignore everything
-# generated/copied at audit time (cloned source, output transcript, pcaps)
-stealthfox-audit/stealthfox-src/
-stealthfox-audit/audit-results.txt
-stealthfox-audit/extra-checks.txt
-stealthfox-audit/proposed-github-issue.md
-stealthfox-audit/*.pcap
-stealthfox-audit/*.log
