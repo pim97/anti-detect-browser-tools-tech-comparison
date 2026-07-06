@@ -3,20 +3,23 @@
 > **Tool Type:** Custom Firefox Build (Anti-Detect Browser)
 > **Repository:** [github.com/daijro/camoufox](https://github.com/daijro/camoufox)
 > **Approach:** C++ level fingerprint injection + Juggler protocol isolation
-> **Effectiveness:** Very High (statistically-accurate fingerprint rotation)
-> **Maintenance:** Active development
+> **Effectiveness:** Very High (statistically-accurate fingerprint rotation + real-fingerprint presets)
+> **Maintenance:** Actively developed — latest release `v152.0.2-alpha` (2026-07-06); latest stable `v150.0.2-beta.25` (2026-05-11). Python wrapper `camoufox` 0.4.11 on PyPI (repo `pyproject.toml` at 0.5.2 dev). *(status as of 2026-07)*
 
 ---
 
 ## Table of Contents
 
 - [What is Camoufox?](#what-is-camoufox)
+- [Version & Status (2026-07)](#version--status-2026-07)
 - [How It Works](#how-it-works)
 - [Why This Approach is Superior](#why-this-approach-is-superior)
 - [Fingerprint Capabilities](#fingerprint-capabilities)
+- [What's New Since the Last Analysis](#whats-new-since-the-last-analysis)
 - [Pros and Cons](#pros-and-cons)
 - [Installation & Usage](#installation--usage)
 - [When to Use](#when-to-use)
+- [Key Files](#key-files)
 
 ---
 
@@ -25,6 +28,29 @@
 Camoufox is a **custom-built Firefox browser** designed specifically for web scraping and automation stealth. Unlike tools that patch or inject into existing browsers, Camoufox compiles Firefox from source with modifications at the C++ implementation level.
 
 **Key differentiator:** All fingerprint spoofing happens in the browser's native C++ code, making it impossible for JavaScript to detect the modifications through property descriptor checks, prototype inspection, or timing analysis.
+
+The project is authored by **daijro** (also the author of [BrowserForge](https://github.com/daijro/browserforge)). As of 2026-07 it has ~9.9k GitHub stars. The C++ browser fork tracks upstream Firefox — the current base is **Firefox 152.0.4** (`upstream.sh`). A thin Python library (`camoufox`) wraps Playwright's Firefox driver to launch the binary and feed it a fingerprint config.
+
+---
+
+## Version & Status (2026-07)
+
+| Item | Value | Evidence |
+|------|-------|----------|
+| Latest release | `v152.0.2-alpha` (pre-release), 2026-07-06 | GitHub Releases API |
+| Latest non-pre-release | `v150.0.2-beta.25`, 2026-05-11 | GitHub Releases API |
+| Upstream Firefox base | **152.0.4** | `upstream.sh` → `version=152.0.4` |
+| Python package (PyPI) | **0.4.11** (latest published) | `pip index` / PyPI |
+| Python package (repo dev) | **0.5.2** | `pythonlib/pyproject.toml` → `version = "0.5.2"` |
+| Browser license | **MPL-2.0** (Firefox fork) | root `LICENSE` |
+| Python wrapper license | **MIT** | `pythonlib/pyproject.toml` → `license = "MIT"` |
+| Primary language | **C++** (browser), Python (wrapper) | GitHub repo language stats |
+| Last commit | 2026-07-05 (`Version 152.0.2 Upgrade #658`) | `git log` |
+| Camoufox source patches | **32** stealth/debloat patches + **2** Playwright/Juggler patches | `patches/*.patch` (32), `patches/playwright/*.patch` (2) |
+
+> Note the two-license split: the browser is a Firefox fork and is therefore **MPL-2.0**, while the `camoufox` Python launcher library is **MIT**. Earlier analyses that called the whole project "MIT" or "MPL" were only half right.
+
+> The recent `v152.0.2-alpha` release **drops support for 32-bit systems and macOS x86_64** (Apple Silicon / x86_64-Linux / x86_64-Windows / arm64 going forward).
 
 ---
 
@@ -39,39 +65,47 @@ Camoufox is a **custom-built Firefox browser** designed specifically for web scr
 │                                                                  │
 │  ┌─────────────────┐    ┌─────────────────┐                     │
 │  │  Python Library │───▶│  BrowserForge   │                     │
-│  │  (camoufox.py)  │    │  Fingerprints   │                     │
+│  │  (camoufox)     │    │  Fingerprints   │                     │
+│  │                 │    │  OR real presets│                     │
 │  └────────┬────────┘    └────────┬────────┘                     │
 │           │                      │                               │
 │           ▼                      ▼                               │
 │  ┌─────────────────────────────────────────┐                    │
-│  │         JSON Config Generation          │                    │
-│  │   (Statistically accurate profiles)     │                    │
+│  │      JSON Config Generation (MaskConfig) │                    │
+│  │   (Statistically accurate profiles OR    │                    │
+│  │    real in-the-wild fingerprint presets) │                    │
 │  └────────────────────┬────────────────────┘                    │
-│                       │                                          │
+│                       │  (passed via CAMOU_CONFIG env / config)  │
 │                       ▼                                          │
 │  ┌─────────────────────────────────────────┐                    │
-│  │      CUSTOM FIREFOX BUILD               │                    │
+│  │      CUSTOM FIREFOX 152 BUILD            │                    │
 │  │  ┌───────────────────────────────────┐  │                    │
 │  │  │  C++ Fingerprint Injection        │  │                    │
+│  │  │  (MaskConfig::Get* lookups)       │  │                    │
 │  │  │  - Navigator properties           │  │                    │
 │  │  │  - Screen/Window dimensions       │  │                    │
-│  │  │  - WebGL parameters               │  │                    │
-│  │  │  - Audio context                  │  │                    │
+│  │  │  - WebGL params + shader precision│  │                    │
+│  │  │  - Audio context (seeded noise)   │  │                    │
+│  │  │  - Fonts / voices / media devices │  │                    │
+│  │  │  - HTTP UA + Accept-Language      │  │                    │
 │  │  └───────────────────────────────────┘  │                    │
 │  │  ┌───────────────────────────────────┐  │                    │
 │  │  │  Patched Juggler Protocol         │  │                    │
 │  │  │  - Isolated execution scope       │  │                    │
 │  │  │  - No page-visible artifacts      │  │                    │
 │  │  │  - webdriver = false (C++ level)  │  │                    │
+│  │  │  - Optional main-world eval (mw:) │  │                    │
 │  │  └───────────────────────────────────┘  │                    │
 │  └─────────────────────────────────────────┘                    │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+The config is read by a single C++ helper, `additions/camoucfg/MaskConfig.hpp`, which every patch calls into. Patches ask it for a value (`MaskConfig::GetDouble("window.innerWidth")`, `MaskConfig::GetString("headers.User-Agent")`, etc.); if the user/BrowserForge set one, the spoofed value is returned, otherwise the code falls through to the real Firefox implementation.
+
 ### C++ Level Fingerprint Injection
 
-The core innovation is modifying Firefox's C++ source code to intercept property getters. From `fingerprint-injection.patch`:
+The core innovation is modifying Firefox's C++ source code to intercept property getters. From `patches/fingerprint-injection.patch` (real, current source):
 
 ```cpp
 // dom/base/nsGlobalWindowInner.cpp
@@ -85,11 +119,12 @@ double nsGlobalWindowInner::GetInnerWidth(ErrorResult& aError) {
 
 int32_t nsGlobalWindowInner::GetScreenX(CallerType aCallerType,
                                         ErrorResult& aError) {
-  if (auto value = MaskConfig::GetInt32("window.screenX"))
-    return value.value();  // Spoofed screen position
+  if (auto value = MaskConfig::GetInt32("window.screenX")) return value.value();
   FORWARD_TO_OUTER_OR_THROW(GetScreenXOuter, (aCallerType, aError), aError, 0);
 }
 ```
+
+The same `patches/fingerprint-injection.patch` also hooks `GetInnerHeight`, `GetOuterWidth/Height`, `GetScreenY`, `GetDevicePixelRatio`, scroll min/max and more — all through `MaskConfig::Get*`.
 
 **Why this is undetectable:**
 - The getter returns the spoofed value directly from C++
@@ -98,9 +133,22 @@ int32_t nsGlobalWindowInner::GetScreenX(CallerType aCallerType,
 - `toString()` returns `[native code]`
 - No timing difference between real and spoofed values
 
+### HTTP Header Spoofing (network layer, not TLS)
+
+`patches/network-patches.patch` hooks `netwerk/protocol/http/nsHttpHandler.cpp` to override the `User-Agent` and `Accept-Language` request headers from the config:
+
+```cpp
+// netwerk/protocol/http/nsHttpHandler.cpp
+if (auto value = MaskConfig::GetString("headers.User-Agent")) { /* use spoofed UA */ }
+...
+if (auto value = MaskConfig::GetString("headers.Accept-Language")) { /* use spoofed AL */ }
+```
+
+> **Important limitation:** this is HTTP-header spoofing, **not TLS/JA3/JA4 fingerprint impersonation.** Camoufox sends a real Firefox TLS ClientHello (because it *is* Firefox), which is coherent for a Firefox persona but cannot be changed to look like Chrome. There is no ja3/ja4 rewriting in the source.
+
 ### Juggler Protocol Isolation
 
-Camoufox uses **Juggler** (Firefox's automation protocol) instead of CDP. It patches Juggler to run in an isolated scope:
+Camoufox uses **Juggler** (Firefox's automation protocol used by Playwright) instead of CDP. The full Juggler implementation lives under `additions/juggler/` and is patched to run in an isolated scope:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -120,38 +168,42 @@ Camoufox uses **Juggler** (Firefox's automation protocol) instead of CDP. It pat
 │  └──────────────────────┘  └──────────────────────┘         │
 │                                                              │
 │  🔒 Complete isolation - no __playwright__ variables leak   │
+│  🔓 Opt-in main-world eval via "mw:" script prefix          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-From `1-leak-fixes.patch` - the webdriver property fix at C++ level:
+From `patches/playwright/1-leak-fixes.patch` — the webdriver property fix at C++ level. Upstream Firefox's `Navigator::Webdriver()` returns `true` under automation; Camoufox rewrites it to a flat `false`:
 
 ```cpp
 // dom/base/Navigator.cpp
+/* static */
 bool Navigator::Webdriver() {
-  // Camoufox: simply return false at the C++ level
-  // No JavaScript patching needed
+  // Camoufox: strip the Marionette/RemoteAgent checks and just return false
   return false;
 }
 ```
 
-### BrowserForge Integration
+The same leak-fixes patch also neutralizes Playwright's other automation tells (enterprise-policy hints, etc.). A separate opt-in, `main_world_eval=True`, lets you run a script in the page's main world by prefixing it with `mw:` (e.g. `page.evaluate("mw:" + script)`) — otherwise Playwright scripts stay in the isolated world.
 
-Camoufox uses **BrowserForge** to generate statistically accurate fingerprints:
+### BrowserForge Integration (default fingerprint synthesis)
+
+When you don't supply values, Camoufox fills them with **BrowserForge**, which models the real-world statistical distribution of device characteristics:
 
 ```python
 # pythonlib/camoufox/fingerprints.py
 from browserforge.fingerprints import FingerprintGenerator
 
-FP_GENERATOR = FingerprintGenerator(
-    browser='firefox',
-    os=('linux', 'macos', 'windows')
-)
+FP_GENERATOR = FingerprintGenerator(browser='firefox', os=('linux', 'macos', 'windows'))
 ```
 
 This means:
 - ~5% of fingerprints will be Linux (matching real market share)
 - Screen resolutions follow actual usage distribution
-- Hardware combinations are realistic (no Windows + M1 GPU)
+- Hardware combinations are realistic (no Windows + Apple GPU)
+
+### Real Fingerprint Presets (newer, opt-in)
+
+For evasion against consistency checks that BrowserForge synthesis can trip, Camoufox now ships a bundle of **real** fingerprints scraped from in-the-wild Firefox traffic (`pythonlib/camoufox/fingerprint-presets-v150.json`). Verified counts from the file: **312 presets** — 180 Windows / 67 macOS / 65 Linux — covering Firefox v149–v152 (`min_firefox_version: 149`, `source: roverfox_fingerprints`). Opt in with `fingerprint_preset=True`; the library auto-routes by binary version and rewrites UA strings to match the active binary. Pass a preset dict instead of `True` to pin a specific identity.
 
 ---
 
@@ -163,7 +215,7 @@ This means:
 |-----------------|--------------|----------|
 | `Object.getOwnPropertyDescriptor` check | ❌ Detectable | ✅ Native |
 | `Function.toString()` returns `[native code]` | ❌ Often fails | ✅ Always |
-| Worker vs main context mismatch | ❌ Detectable | ✅ Consistent |
+| Worker vs main context mismatch | ❌ Detectable | ✅ Consistent (C++ applies everywhere) |
 | Property access timing analysis | ❌ Delay | ✅ Native speed |
 
 ### vs. CDP-based Solutions (Playwright/Chrome, Puppeteer)
@@ -171,24 +223,47 @@ This means:
 | Detection Method | CDP-based | Camoufox |
 |-----------------|-----------|----------|
 | `navigator.webdriver` | Patchable but leaky | ✅ C++ level false |
-| `window.__playwright__` | ❌ Present | ✅ Isolated scope |
-| Runtime.enable detection | ❌ Detectable | ✅ Uses Juggler |
+| `window.__playwright__` | ❌ Present | ✅ Isolated Juggler scope |
+| `Runtime.enable` detection | ❌ Detectable | ✅ Uses Juggler, not CDP |
 
 ---
 
 ## Fingerprint Capabilities
 
-### Full Coverage
+Coverage is broad and applied natively. The 32 source patches map onto these areas:
 
-| Category | Properties Spoofed |
-|----------|-------------------|
-| **Navigator** | userAgent, platform, vendor, hardwareConcurrency, deviceMemory, languages |
-| **Screen** | width, height, availWidth, availHeight, colorDepth, pixelDepth |
-| **Window** | innerWidth/Height, outerWidth/Height, screenX/Y, devicePixelRatio |
-| **WebGL** | Vendor, renderer, extensions, shader formats, max textures |
-| **Audio** | sampleRate, outputLatency, maxChannelCount, voices |
-| **Network** | WebRTC IP (protocol level), User-Agent header, Accept-Language |
-| **Other** | Geolocation, timezone, locale, battery, media devices, fonts |
+| Category | Properties Spoofed | Patch(es) |
+|----------|-------------------|-----------|
+| **Navigator** | userAgent, platform, vendor, hardwareConcurrency, deviceMemory, languages, oscpu | `navigator-spoofing.patch`, `fingerprint-injection.patch` |
+| **Screen** | width, height, availWidth/Height, colorDepth, pixelDepth | `screen-spoofing.patch` |
+| **Window** | innerWidth/Height, outerWidth/Height, screenX/Y, devicePixelRatio | `fingerprint-injection.patch` |
+| **WebGL** | vendor, renderer (UNMASKED_*), supported extensions, context attributes, shader precision formats | `webgl-spoofing.patch` |
+| **Audio** | sampleRate, output latency, channel counts + seeded per-context noise | `audio-context-spoofing.patch`, `audio-fingerprint-manager.patch` |
+| **Fonts** | font list + metrics spoofing, anti font-fingerprinting, system-UI font | `font-list-spoofing.patch`, `font-hijacker.patch`, `anti-font-fingerprinting.patch`, `system-ui-font-spoofing.patch` |
+| **Speech/Voices** | speechSynthesis voices | `speech-voices-spoofing.patch`, `voice-spoofing.patch` |
+| **Media devices** | enumerateDevices output | `media-device-spoofing.patch` |
+| **Network** | WebRTC ICE IP (protocol level), HTTP User-Agent + Accept-Language | `webrtc-ip-spoofing.patch`, `network-patches.patch` |
+| **Geo/Locale** | geolocation, timezone, locale (Intl) | `geolocation-spoofing.patch`, `timezone-spoofing.patch`, `locale-spoofing.patch` |
+| **DOM/behavior** | closed shadow-root piercing for automation, forced default pointer, disabled CSS animations | `shadow-root-bypass.patch`, `force-default-pointer.patch`, `no-css-animations.patch` |
+
+WebRTC spoofing is a real protocol-level implementation (implemented in `webrtc-ip-spoofing.patch`, keyed per user-context), not just a JS toggle — though you can also fully disable WebRTC with `block_webrtc=True`.
+
+---
+
+## What's New Since the Last Analysis
+
+The prior page was accurate on the core architecture, but a lot has shipped:
+
+- **Firefox base moved to 152** (from the 130s era). Releases now track modern Firefox; the current line is `v152.0.2-alpha` (2026-07-06) and stable `v150.0.2-beta.25` (2026-05-11).
+- **Real fingerprint presets** (`fingerprint_preset=True`): 312 real Firefox fingerprints (180 Win / 67 macOS / 65 Linux, v149–v152) as an alternative to synthetic BrowserForge output. `pythonlib/camoufox/fingerprint-presets-v150.json`.
+- **Per-context fingerprint identities**: `new_context()` now mints a fresh real-preset identity (navigator, screen, WebGL, fonts) per context, with **unique per-context seeds for audio, canvas, and font-spacing noise**, plus per-context proxy, geolocation, and WebRTC IP — the values are applied via `addInitScript` that **self-destructs before page scripts can observe it** (`pythonlib/camoufox/async_api.py`, `sync_api.py`).
+- **Auto geo/timezone/WebRTC-IP from proxy exit IP**: when a per-context proxy is set, Camoufox derives WebRTC IP and timezone from the proxy's exit IP automatically.
+- **`disable_coop`**: disables Cross-Origin-Opener-Policy so elements inside cross-origin iframes (e.g. a Turnstile checkbox) can be clicked.
+- **Main-world eval** (`main_world_eval=True` + `"mw:"` script prefix) to run scripts in the page's main world when needed.
+- **Human-like cursor is native C++**: `additions/camoucfg/MouseTrajectories.hpp`, ported to C++ from riflosnake/HumanCursor; enabled with `humanize=True` (or a float max-duration in seconds; ~1.5s typical across-window move).
+- **Font control**: `fonts=[...]`, `custom_fonts_only=True`.
+- **Rich launch flags**: `block_images`, `block_webgl`, `screen`, `window`, `ff_version`, `virtual_display`, `enable_cache`, `exclude_addons`, `addons` (load unpacked Firefox addons with no debug server).
+- **Platform support tightened**: `v152.0.2-alpha` drops 32-bit and macOS x86_64.
 
 ---
 
@@ -198,22 +273,26 @@ This means:
 
 | Pro | Details |
 |-----|---------|
-| **C++ level spoofing** | Completely native, undetectable via JS |
-| **Juggler isolation** | No page-visible automation artifacts |
-| **Statistical accuracy** | BrowserForge mimics real traffic patterns |
-| **Comprehensive** | Navigator, Screen, WebGL, Audio, WebRTC, etc. |
-| **Active development** | Regular updates |
-| **Human-like mouse** | Built-in natural movement algorithm |
-| **Debloated** | ~200MB less memory than standard Firefox |
+| **C++ level spoofing** | Completely native, undetectable via JS descriptor/prototype/timing checks |
+| **Juggler isolation** | No page-visible automation artifacts; not CDP, so no `Runtime.enable` tell |
+| **Statistical accuracy** | BrowserForge mimics real traffic; or opt into 312 real fingerprint presets |
+| **Per-context identities** | Fresh real-preset identity + seeded noise + proxy/geo per context, applied via self-destructing init script |
+| **Comprehensive** | Navigator, Screen, WebGL (+shader precision), Audio, Fonts, Voices, WebRTC, geo/locale |
+| **Active development** | Tracks current Firefox (base 152); latest release 2026-07 |
+| **Human-like mouse** | Native C++ cursor trajectories (`humanize=True`) |
+| **Debloated** | Stripped Mozilla services; README states ~200 MB (less than stock Firefox) |
+| **Open source** | Browser MPL-2.0, Python wrapper MIT — patches are all readable in `patches/` |
 
 ### Disadvantages
 
 | Con | Details |
 |-----|---------|
-| **Firefox only** | Can't impersonate Chrome (~65% market share) |
-| **SpiderMonkey detection** | Some WAFs detect Firefox engine specifically |
-| **Build complexity** | Requires Linux to build from source |
-| **Market share** | Firefox ~3% may flag on some systems |
+| **Firefox only** | Cannot impersonate Chrome; Firefox is a small share of real traffic |
+| **No TLS impersonation** | Sends genuine Firefox TLS (coherent, but can't be reshaped to Chrome JA3/JA4) |
+| **SpiderMonkey detection** | Some WAFs treat Firefox engine more suspiciously |
+| **Build complexity** | Building the browser from source needs a Linux toolchain (most users just download the prebuilt binary) |
+| **Platform trims** | Latest alpha drops 32-bit and macOS x86_64 |
+| **PyPI lag** | Newest launcher code (repo 0.5.2) may be ahead of the last PyPI publish (0.4.11) |
 
 ---
 
@@ -222,8 +301,9 @@ This means:
 ### Quick Start
 
 ```bash
-pip install camoufox
-playwright install firefox
+pip install -U camoufox[geoip]
+# fetch the matching Camoufox browser binary:
+python -m camoufox fetch
 ```
 
 ```python
@@ -244,7 +324,7 @@ async with AsyncCamoufox() as browser:
     await page.goto("https://example.com")
 ```
 
-### Custom Fingerprint
+### Custom Fingerprint (raw config)
 
 ```python
 config = {
@@ -257,15 +337,29 @@ with Camoufox(config=config) as browser:
     page = browser.new_page()
 ```
 
-### With Proxy + Auto Geolocation
+### Real Fingerprint Preset
+
+```python
+# Use a real in-the-wild fingerprint instead of synthetic BrowserForge output
+with Camoufox(fingerprint_preset=True, os="macos") as browser:
+    page = browser.new_page()
+```
+
+### With Proxy + Auto Geo/Timezone + Humanized Cursor
 
 ```python
 with Camoufox(
-    proxy={"server": "http://proxy:8080"},
-    geoip=True,  # Auto-detect geo from proxy IP
+    proxy={"server": "http://user:pass@proxy:8080"},
+    geoip=True,        # derive lat/long/timezone/locale from the proxy's exit IP
+    humanize=True,     # native C++ human-like cursor movement
+    block_webrtc=True, # or leave it on and let webrtc-ip-spoofing use the proxy IP
 ) as browser:
     page = browser.new_page()
 ```
+
+### Useful launch options (from `pythonlib/camoufox/utils.py`)
+
+`os`, `block_images`, `block_webrtc`, `block_webgl`, `disable_coop`, `webgl_config`, `geoip` / `geoip_db`, `humanize`, `locale`, `addons` / `exclude_addons`, `fonts` / `custom_fonts_only`, `screen`, `window`, `fingerprint` / `fingerprint_preset`, `ff_version`, `headless`, `main_world_eval`, `enable_cache`, `virtual_display`, `firefox_user_prefs`, `proxy`.
 
 ---
 
@@ -275,16 +369,18 @@ with Camoufox(
 
 - Firefox-tolerant targets
 - High stealth requirements (JS injection fails)
-- Fingerprint rotation needs
+- Fingerprint rotation needs (BrowserForge synthesis or real presets)
+- Per-identity isolation at scale (per-context presets + proxy/geo)
 - Python projects
 - Long-running sessions
 
 ### Not Recommended For
 
-- Chrome-only sites
+- Chrome-only sites (cannot present a Chromium engine or Chrome TLS)
 - SpiderMonkey-detecting WAFs
-- Quick prototyping (heavier setup)
-- Non-Python projects (server mode needed)
+- Workflows that need TLS/JA3 impersonation of a non-Firefox client
+- Quick prototyping (heavier setup than a pip-only stealth shim)
+- Non-Python projects (use the CLI/server mode via `python -m camoufox server`)
 
 ---
 
@@ -292,11 +388,21 @@ with Camoufox(
 
 | File | Purpose |
 |------|---------|
-| `patches/fingerprint-injection.patch` | C++ hooks for all values |
-| `patches/playwright/1-leak-fixes.patch` | webdriver=false, isolation |
-| `patches/webgl-spoofing.patch` | WebGL parameter interception |
-| `patches/webrtc-ip-spoofing.patch` | Protocol-level IP spoofing |
-| `pythonlib/camoufox/fingerprints.py` | BrowserForge integration |
+| `additions/camoucfg/MaskConfig.hpp` | Central C++ config reader every patch calls into |
+| `patches/fingerprint-injection.patch` | C++ hooks for window/screen/navigator values |
+| `patches/playwright/1-leak-fixes.patch` | `webdriver=false`, Playwright leak fixes |
+| `patches/playwright/0-playwright.patch` | Juggler/Playwright integration |
+| `patches/webgl-spoofing.patch` | WebGL params, extensions, shader precision |
+| `patches/webrtc-ip-spoofing.patch` | Protocol-level WebRTC ICE IP (see `webrtc-ip-spoofing.patch`) |
+| `patches/network-patches.patch` | HTTP User-Agent + Accept-Language override |
+| `patches/audio-context-spoofing.patch`, `patches/audio-fingerprint-manager.patch` | Audio spoofing + seeded noise |
+| `patches/shadow-root-bypass.patch` | Closed shadow-root piercing for automation |
+| `additions/camoucfg/MouseTrajectories.hpp` | Native C++ human-like cursor movement |
+| `additions/juggler/` | Full patched Juggler automation protocol |
+| `pythonlib/camoufox/fingerprints.py` | BrowserForge integration + config synthesis |
+| `pythonlib/camoufox/fingerprint-presets-v150.json` | 312 real fingerprint presets (v149–v152) |
+| `pythonlib/camoufox/async_api.py` / `sync_api.py` | Per-context real-preset identity + self-destructing init scripts |
+| `upstream.sh` | Pins the upstream Firefox base version (currently 152.0.4) |
 
 ---
 
@@ -306,20 +412,21 @@ with Camoufox(
 |---------|:--------:|:-------:|:----------:|:-----------------:|
 | Spoofing Level | C++ | CDP | Binary | JavaScript |
 | Browser | Firefox | Chromium | Chromium | Chromium |
-| Fingerprint Rotation | ✅ Full | ❌ None | Partial | Partial |
-| Automation Isolation | ✅ Complete | ✅ Good | ✅ Good | ❌ Partial |
+| Fingerprint Rotation | ✅ Full (+real presets) | ❌ None | Partial | Partial |
+| Automation Isolation | ✅ Complete (Juggler) | ✅ Good | ✅ Good | ❌ Partial |
+| TLS impersonation | ❌ (real Firefox TLS) | ❌ | ❌ | ❌ |
 | Detection Difficulty | Very Hard | Hard | Hard | Medium |
 
 ---
 
 ## Conclusion
 
-Camoufox represents the **gold standard for Firefox-based anti-detection**. By modifying Firefox at the C++ level, it achieves truly native-appearing fingerprint spoofing that JavaScript inspection cannot detect.
+Camoufox remains the **gold standard for Firefox-based anti-detection**. By modifying Firefox at the C++ level, it achieves truly native-appearing fingerprint spoofing that JavaScript inspection cannot detect, and it has matured considerably: a modern Firefox 152 base, real-fingerprint presets, per-context seeded-noise identities, proxy-derived geo/WebRTC, and a native C++ humanized cursor.
 
-**Best for:** Maximum stealth when target doesn't discriminate against Firefox users.
+**Best for:** Maximum stealth when the target doesn't discriminate against Firefox users, especially high-volume scraping where each context needs a distinct, statistically-plausible (or genuinely real) identity.
 
-**Limitation:** Firefox's ~3% market share inherently makes you a minority browser user.
+**Limitation:** It is Firefox — small real-world share, and its genuine (unmodifiable) TLS fingerprint means you cannot masquerade as Chrome at the network layer.
 
 ---
 
-*Analysis conducted for educational purposes. Use responsibly.*
+*Analysis conducted for educational purposes. Facts verified against the cloned source tree and GitHub/PyPI release metadata as of 2026-07. Use responsibly.*

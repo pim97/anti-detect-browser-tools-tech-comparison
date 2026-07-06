@@ -40,13 +40,29 @@ This repository provides:
 |------|------|----------|----------|----------|
 | [**Camoufox**](./camoufox.md) | Custom Firefox build | Python | C++ level stealth, fingerprint rotation | [Read →](./camoufox.md) |
 | [**Patchright**](./patchright.md) | Playwright binary patch | Python, Node.js, .NET | Maximum stealth with Playwright API | [Read →](./patchright.md) |
-| [**SeleniumBase**](./seleniumbase.md) | Selenium + UC Mode | Python | CAPTCHA solving, testing framework | [Read →](./seleniumbase.md) |
-| [**Botasaurus**](./botasaurus.md) | Selenium wrapper | Python | Human-like mouse movements | [Read →](./botasaurus.md) |
+| [**SeleniumBase**](./seleniumbase.md) | Selenium + UC/CDP Mode + Stealthy Playwright | Python | CAPTCHA solving, testing framework | [Read →](./seleniumbase.md) |
+| [**Botasaurus**](./botasaurus.md) | Native-CDP stealth driver + framework | Python | Human mouse + Cloudflare challenge automation | [Read →](./botasaurus.md) |
 | [**XDriver**](./xdriver.md) | Playwright CDP patch | Python | Quick stealth without code changes | [Read →](./xdriver.md) |
-| [**CloakBrowser**](./cloakbrowser.md) | Custom Chromium build | Python, Node.js | C++ stealth + human behavior + Chromium API | [Read →](./cloakbrowser.md) |
+| [**CloakBrowser**](./cloakbrowser.md) | Custom Chromium build | Python, Node.js, .NET | C++ stealth + human behavior + Chromium API | [Read →](./cloakbrowser.md) |
 | [**Scrapling**](./scrapling.md) | All-in-one scraping framework | Python | TLS stealth + adaptive parsing + spider framework | [Read →](./scrapling.md) |
-| [**Obscura**](./obscura.md) | Custom Rust headless engine | Rust (CLI), Puppeteer/Playwright clients | Lightweight V8 scraper with CDP API | [Read →](./obscura.md) |
-| [**Clearcote**](./clearcote.md) | Custom Chromium build (open source) | Python, Node.js | Auditable engine-level stealth + real-fingerprint import | [Read →](./clearcote.md) |
+| [**Obscura**](./obscura.md) | Custom Rust headless engine | Rust (CLI/lib), Puppeteer/Playwright, MCP | Lightweight V8 scraper with CDP + MCP server | [Read →](./obscura.md) |
+| [**Clearcote**](./clearcote.md) | Custom Chromium build (open source) | Python, Node.js | Auditable engine-level stealth + real-fingerprint import (Win + Linux) | [Read →](./clearcote.md) |
+
+### Current Versions
+
+> _Re-verified against upstream source, July 2026. Each tool's page cites the exact files/commits._
+
+| Tool | Latest version | Released |
+|------|----------------|----------|
+| Camoufox | browser `v152.0.2-alpha` (Firefox 152 base) · py `0.4.11` | 2026-07 |
+| Patchright | `1.61.x` (tracks Playwright 1.61.1) | 2026-07 |
+| SeleniumBase | `4.50.5` | 2026-07 |
+| Botasaurus | core `4.0.97` · `botasaurus-driver` `4.0.92` | 2026-01 / 2025-09 |
+| XDriver | `v1.0.1` (dormant; not on PyPI) | 2025-09 |
+| CloakBrowser | wrapper `0.4.8` · Chromium 146 (free) / 148 (Pro) | 2026-07 |
+| Scrapling | `0.4.10` | 2026-07 |
+| Obscura | `v0.1.9` | 2026-06 |
+| Clearcote | browser `v0.1.0-pre.17` (Chromium 149) · SDK `0.11.1` | 2026-07 |
 
 ---
 
@@ -58,10 +74,10 @@ This repository provides:
 |---------|:--------:|:----------:|:------------:|:----------:|:-------:|:------------:|:---------:|:-------: | :--: |
 | `navigator.webdriver` bypass | ✅ C++ | ✅ | ✅ | ✅ | ✅ | ✅ C++ | ✅ (via Patchright/Camoufox) | ✅ JS shim | ✅ C++ |
 | `Runtime.enable` bypass | ✅ Juggler | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ (via Patchright) | N/A (custom engine) | ✅ |
-| Fingerprint rotation | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐ | ❌ | ⭐⭐⭐⭐ | ❌ | ⭐⭐ (small pools) | ⭐⭐⭐ (per-seed / import) |
-| Human mouse simulation | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ | ❌ | ❌ (no hit testing) | ⭐⭐⭐⭐ |
+| Fingerprint rotation | ⭐⭐⭐⭐⭐ | ❌ | ⭐⭐ | ⭐⭐ | ❌ | ⭐⭐⭐⭐ | ⚠️ headers only | ⭐⭐⭐ (coherent profiles) | ⭐⭐⭐ (per-seed / import) |
+| Human mouse simulation | ⭐⭐⭐⭐ | ❌ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ❌ | ⭐⭐⭐⭐⭐ | ❌ | ❌ (no motion model) | ⭐⭐⭐⭐ |
 | CDP fingerprint evasion | N/A | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (via Patchright) | ⭐⭐⭐ (custom CDP server) | ⭐⭐⭐⭐ |
-| Cross-platform parity | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ (UA hardcoded Linux) | ⭐ (Windows only) |
+| Cross-platform parity | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ (coherent Win/mac/Linux) | ⭐⭐ (Windows + Linux) |
 | CAPTCHA solving | ❌ | ❌ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ❌ | ❌ | ⚠️ Cloudflare only | ❌ | ❌ |
 | Cloudflare bypass | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (auto-solve) | ⭐⭐ (free tier only) | ❓ unbenchmarked |
 | Ease of use | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (single binary) | ⭐⭐⭐⭐ |
@@ -70,9 +86,9 @@ This repository provides:
 | Spider/crawler framework | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Scrapy-like | ❌ (CLI scrape only) | ❌ |
 | Real layout / rendering | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (browser tier) | ❌ (no layout engine) | ✅ |
 | Memory footprint | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~10 MB (HTTP) | ~30 MB | ~200 MB |
-| Cost | Free | Free | Free | Free | Free | Free* | Free | Free | Free |
+| Cost | Free | Free | Free | Free | Free | Freemium* | Free | Free | Free |
 
-> **\*** CloakBrowser wrapper is MIT open-source; the Chromium binary is proprietary but free to use. See [security audit notes](./cloakbrowser.md#security-audit).
+> **\*** CloakBrowser wrapper is MIT open-source; the older Chromium binary (v146) is free, but the newest (Pro, v148) is paid. See [security audit notes](./cloakbrowser.md#security-audit).
 
 ### Anti-Bot Service Coverage
 
@@ -80,8 +96,8 @@ This repository provides:
 |---------|:--------:|:----------:|:------------:|:----------:|:-------:|:------------:|:---------:|:-------: | :--: |
 | Cloudflare WAF | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (Stealth) / ⚠️ (HTTP) | ⚠️ (free tier) | ❓ |
 | Cloudflare Turnstile | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (auto-solve) | ❌ | ❓ |
-| DataDome | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ (via Patchright/Camoufox) | ❌ | ❓ |
-| Kasada | ⚠️ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ (via Patchright) | ❌ | ❓ |
+| DataDome | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ (via Patchright) | ❌ | ❓ |
+| Kasada | ⚠️ | ✅ | ✅ | ❌ | ✅ | ✅ | ⚠️ (via Patchright) | ❌ | ❓ |
 | PerimeterX | ✅ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ | ❌ | ❓ |
 | Akamai | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ⚠️ | ⚠️ | ❌ | ❓ |
 | Imperva | ✅ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ | ❌ | ❓ |
@@ -103,21 +119,21 @@ This repository provides:
 | **Undetectable fingerprint spoofing** | [Camoufox](./camoufox.md) | C++ level = truly native, JS can't detect |
 | **Need fingerprint rotation** | [Camoufox](./camoufox.md) | BrowserForge statistical accuracy |
 | **Enterprise-level anti-bot** (Akamai, DataDome) | [Patchright](./patchright.md) + [Camoufox](./camoufox.md) | Combine protocol stealth with fingerprint rotation |
-| **Need CAPTCHA solving** | [SeleniumBase](./seleniumbase.md) | Built-in Turnstile/reCAPTCHA handling |
+| **Need CAPTCHA solving** | [SeleniumBase](./seleniumbase.md) | Built-in click/slide solving: Turnstile, reCAPTCHA, DataDome slider, hCaptcha |
 | **Maximum Chromium stealth + free** | [Patchright](./patchright.md) | Protocol-level CDP bypass |
-| **C++ Chromium stealth + Playwright API** | [CloakBrowser](./cloakbrowser.md) | 33 source-level patches, 0.9 reCAPTCHA score |
+| **C++ Chromium stealth + Playwright API** | [CloakBrowser](./cloakbrowser.md) | 66 source-level patches (latest binary), 0.9 reCAPTCHA v3 score |
 | **Human-like behavior (one flag)** | [CloakBrowser](./cloakbrowser.md) | `humanize=True` — Bézier mouse, typing, scroll |
 | **Human-like mouse movements** | [Botasaurus](./botasaurus.md) | Best Bézier curve implementation |
-| **Existing Playwright code** | [XDriver](./xdriver.md) or [CloakBrowser](./cloakbrowser.md) | No code changes needed (drop-in replacement) |
+| **Existing Playwright code** | [Patchright](./patchright.md) or [CloakBrowser](./cloakbrowser.md) | Drop-in, no code changes (Patchright is the actively-maintained choice; XDriver is a dormant rebrowser repackage) |
 | **Open-source + auditable engine-level stealth** | [Clearcote](./clearcote.md) | Readable patches, reproducible + signed builds — verify, don't trust |
-| **Present a real machine's fingerprint** | [Clearcote](./clearcote.md) | Import a captured/real profile (+ curated library) and verify it loaded |
+| **Present a real machine's fingerprint** | [Clearcote](./clearcote.md) or [Camoufox](./camoufox.md) | Clearcote imports a captured/real profile and verifies it loaded; Camoufox `fingerprint_preset=True` ships 312 real in-the-wild Firefox fingerprints |
 | **Quick prototype** | [Botasaurus](./botasaurus.md) | Simplest API |
-| **Node.js / TypeScript** | [Patchright](./patchright.md) or [CloakBrowser](./cloakbrowser.md) | Multi-language support |
+| **Node.js / TypeScript** | [Patchright](./patchright.md) or [CloakBrowser](./cloakbrowser.md) | Multi-language support (CloakBrowser also ships a .NET/C# client) |
 | **Testing framework needed** | [SeleniumBase](./seleniumbase.md) | pytest/unittest integration |
 | **All-in-one scraping framework** | [Scrapling](./scrapling.md) | Fetching + parsing + crawling + stealth in one package |
 | **HTTP-only stealth (no browser)** | [Scrapling](./scrapling.md) | TLS impersonation via curl_cffi — fastest option |
 | **Adaptive scraping (sites change often)** | [Scrapling](./scrapling.md) | Auto-relocates selectors when DOM changes |
-| **AI-integrated scraping** | [Scrapling](./scrapling.md) | MCP server for Claude/Cursor workflows |
+| **AI-integrated scraping** | [Scrapling](./scrapling.md) or [Obscura](./obscura.md) | Both ship a built-in MCP server for Claude/Cursor workflows |
 | **Lightweight high-concurrency scraping** | [Obscura](./obscura.md) | ~30 MB / ~85 ms page load, single Rust binary |
 | **Server-rendered HTML at scale** | [Obscura](./obscura.md) | V8 + html5ever, no Chrome dependency |
 

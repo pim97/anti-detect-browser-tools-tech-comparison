@@ -1,251 +1,155 @@
 # XDriver - Technical Analysis
 
-> **Repository:** [nicebots-xyz/x_driver](https://github.com/nicebots-xyz/x_driver)
-> **Category:** Playwright Stealth Patcher
-> **Language:** Python
-> **Type:** Runtime patching of Playwright driver files
+> **Repository:** [arjun-sha/XDriver](https://github.com/arjun-sha/XDriver) *(the old `nicebots-xyz/x_driver` URL now 404s)*
+> **Category:** Playwright Driver Patcher (rebrowser-patches derivative)
+> **Language:** Python (CLI) + bundled JavaScript (patched `playwright-core`)
+> **Type:** File-replacement patching of the local Playwright driver
+> **Version:** v1.0.1 (released 2025-09-10) — *as of 2026-07*
+> **Maintenance:** Effectively dormant. Single author, no commits since 2025-09, 5 stars / 4 forks, no PyPI package.
 
 ---
 
 ## Overview
 
-XDriver is a stealth patching tool that modifies Playwright's driver at the binary/JavaScript level to evade bot detection. Unlike script-injection approaches, it directly replaces Playwright's core files with hardened versions.
+XDriver is a stealth patching tool that swaps out the JavaScript files inside a locally installed Playwright's `driver/package` directory with a pre-patched copy, then prints an "XDriver Session Active" banner from Playwright's `__init__.py`. Unlike script-injection approaches, it replaces Playwright's bundled Node driver payload with a hardened build.
+
+**What it actually ships (verified from source):** the bundled "patched" driver is **not original work**. `x_driver/bundles/package/package.json` identifies it as `turnstilebroweser-playwright-core` v1.49.0 (the package `name` is misspelled verbatim in the source) — a `playwright-core` fork carrying the `turnstilebrowser-patches` set (a [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches) lineage). Every stealth modification in the bundle is gated behind `TURNSTILEBROWSER_PATCHES_*` environment variables. XDriver's own Python code (`~200 lines`) only does file backup/replace + version validation; it contains no browser-patching logic of its own.
 
 ## Verdict
 
 | Aspect | Rating | Notes |
 |--------|--------|-------|
-| **Overall Quality** | ⭐⭐⭐⭐ | Well-engineered patching approach |
-| **Anti-Detection** | ⭐⭐⭐⭐ | Comprehensive CDP leak prevention |
-| **Ease of Use** | ⭐⭐⭐⭐⭐ | One-command activation |
-| **Maintenance Risk** | ⭐⭐ | Version-locked to Playwright 1.52.0 |
-| **Documentation** | ⭐⭐⭐ | Basic but functional |
+| **Overall Quality** | ⭐⭐⭐ | Thin CLI wrapper around a third-party patched `playwright-core` |
+| **Anti-Detection** | ⭐⭐⭐ | Real Runtime.enable-leak fix (rebrowser-lineage), but no fingerprinting/behavioral layer |
+| **Ease of Use** | ⭐⭐⭐⭐⭐ | One-command activation, no code changes |
+| **Maintenance Risk** | ⭐ | Dormant (~10 months no commits), version-locked, bundle/host version mismatch |
+| **Documentation** | ⭐⭐ | README overstates capabilities ("C-level", WebRTC); examples are empty stubs |
 
-**TL;DR:** Convenient one-command stealth for Playwright. Great for quick testing, but version lock is a significant limitation for production use.
+**TL;DR:** A convenient one-command wrapper that drops a `turnstilebrowser`/rebrowser-patched Playwright driver into your install. The core Runtime.enable leak fix is real and effective, but the README's "C-level," "WebRTC leak protection," and broad anti-bot claims are not backed by the source. Fine for quick testing; the dormancy, missing PyPI package, and a bundle-vs-required-version mismatch make it a poor choice for production.
 
 ---
 
 ## How It Works - Technical Deep Dive
 
-### Two-Stage Patching Mechanism
+### The Real Mechanism (verified in `x_driver/activator_script.py`)
 
-XDriver uses a fundamentally different approach than other tools - it **replaces Playwright's driver files entirely** rather than injecting scripts or wrapping APIs.
+XDriver does **not** inject scripts or wrap APIs at runtime. On `x_driver activate` it:
 
-### Stage 1: File Replacement
+1. Renames the existing `playwright/driver/package` → `package_1` (backup).
+2. `shutil.copytree`s its own `x_driver/bundles/package` into `playwright/driver/package`.
+3. Prepends a green `[-] XDriver INFO: Session Active` `print(...)` line to `playwright/__init__.py`.
 
-```bash
-x_driver activate
-```
-
-This command performs:
+That is the entire patch. Notably, the Node binary swap is **commented out** in the source (`# os.rename(NODE_PATH, ...)` / `# shutil.copy2(PATCH_NODE, ...)`), so only the JS driver payload is replaced. The `x_driver/bundles/node` file is a **82 MB Git-LFS pointer**, not a real binary, and is never installed.
 
 ```
 Original Playwright:
 playwright/
 ├── driver/
-│   └── package/           ← Original CDP implementation
-│       ├── crConnection.js
-│       ├── crPage.js
-│       ├── browserContext.js
-│       └── frames.js
+│   └── package/           ← Upstream playwright-core (1.52.0)
+│       └── lib/server/... (compiled JS)
 └── __init__.py
 
-After Activation:
+After `x_driver activate`:
 playwright/
 ├── driver/
-│   ├── package/           ← Patched (from bundles/)
-│   │   ├── crConnection.js    [PATCHED]
-│   │   ├── crPage.js          [PATCHED]
-│   │   ├── browserContext.js  [PATCHED]
-│   │   └── frames.js          [PATCHED]
+│   ├── package/           ← REPLACED with turnstilebrowser-playwright-core 1.49.0
+│   │   └── lib/server/... (6 files carry TURNSTILEBROWSER_PATCHES_*)
 │   └── package_1/         ← Backup of original
-└── __init__.py            [MODIFIED]
+└── __init__.py            ← 1 print() line prepended
 ```
 
-**Why this approach:**
-- Modifies at the source level - no runtime overhead
-- Changes persist across sessions
-- No code changes required in user scripts
-- Completely transparent to existing Playwright code
+> **⚠️ Version mismatch (verified):** `x_driver/utils.py` and `rolling.yml` require the *host* `playwright==1.52.0`, but the bundled replacement `package.json` declares `"version": "1.49.0"`. Activation copies the 1.49.0 driver over a 1.52.0 install. In practice the patched `playwright-core` still functions because the Python client talks to the driver over the wire protocol, but the version pin is cosmetic/inconsistent, and `--force` bypasses the check entirely.
 
-### Stage 2: CDP Leak Prevention
+### What the Bundled Driver Actually Patches
 
-The patched files implement multiple anti-detection techniques:
+Grepping the bundle, exactly **6 JavaScript files** (out of 282 in `lib/`) carry the `turnstilebrowser-patches` changes:
 
-#### A. CDP Connection Cloaking (`crConnection.js`)
+| File | Patch |
+|------|-------|
+| `lib/server/chromium/crConnection.js` | Utility-world binding setup (`RUNTIME_FIX_MODE`, `UTILITY_WORLD_NAME`, `getIsolatedWorld`) |
+| `lib/server/chromium/crPage.js` | Isolated-world execution context handling gated on `RUNTIME_FIX_MODE` |
+| `lib/server/chromium/crServiceWorker.js` | Conditionally skips `Runtime.enable` for service workers |
+| `lib/server/chromium/crDevTools.js` | `Runtime.enable` behavior gated on `RUNTIME_FIX_MODE` |
+| `lib/server/page.js` | Execution-context creation path for the fix |
+| `lib/server/frames.js` | World/context resolution for the isolated utility world |
+
+The central technique is the **Runtime.enable leak fix**, the same well-known evasion popularized by rebrowser-patches: instead of calling `Runtime.enable` (which lets detectors observe a CDP-controlled execution context), the driver creates an isolated world via `Page.createIsolatedWorld` and adds bindings there.
+
+#### A. Runtime.enable Leak Fix (`crConnection.js`)
+
+The real, verified code (paraphrased from the bundle) is env-var driven, not the hand-written `_shouldHideMessage`/`PatchedTransport` class the previous version of this page showed (that code does not exist):
 
 ```javascript
-// Original Playwright exposes CDP connection artifacts
-// XDriver patches to hide these
+// x_driver/bundles/package/lib/server/chromium/crConnection.js
+const fixMode = process.env['TURNSTILEBROWSER_PATCHES_RUNTIME_FIX_MODE'] || 'addBinding';
+const utilityWorldName =
+  process.env['TURNSTILEBROWSER_PATCHES_UTILITY_WORLD_NAME'] !== '0'
+    ? process.env['TURNSTILEBROWSER_PATCHES_UTILITY_WORLD_NAME'] || 'util'
+    : '__playwright_utility_world__';
 
-class CRConnection {
-    constructor(transport, protocolLogger, browserLogsCollector) {
-        // PATCHED: Remove identifiable session IDs
-        this._sessions = new Map();
-
-        // PATCHED: Intercept and sanitize CDP messages
-        this._transport = new PatchedTransport(transport);
-    }
-
-    // PATCHED: Hide connection from page scripts
-    _onMessage(message) {
-        // Filter out detectable CDP artifacts
-        if (this._shouldHideMessage(message)) {
-            return;
-        }
-        // ... handle message
-    }
+if (fixMode === 'addBinding') {
+  await client.send('Runtime.addBinding', { name: '...', /* worldName: utilityWorldName */ });
 }
+// getIsolatedWorld(): Page.createIsolatedWorld({ worldName }) → returns executionContextId
 ```
 
-#### B. Script Injection Concealment (`crPage.js`)
+Default behavior (no env vars set): `RUNTIME_FIX_MODE = 'addBinding'` and the utility world is renamed to `util`. Setting `RUNTIME_FIX_MODE='0'` reverts to stock (leaky) Playwright behavior — you can see the `=== '0'` guards throughout the six files.
+
+#### B. Service Worker Runtime Isolation (`crServiceWorker.js`)
 
 ```javascript
-// Original Playwright leaks init script artifacts:
-// - window.__pwInitScripts
-// - __playwright__binding__
-// - Page.addScriptToEvaluateOnNewDocument traces
-
-// XDriver patches:
-async _addInitScript(source) {
-    // PATCHED: Remove script identification markers
-    const sanitizedSource = this._removePlaywrightMarkers(source);
-
-    // PATCHED: Use isolated execution context
-    await this._client.send('Page.addScriptToEvaluateOnNewDocument', {
-        source: sanitizedSource,
-        worldName: '__playwright_utility_world__'  // Isolated from page
-    });
-}
-
-_removePlaywrightMarkers(source) {
-    // Remove identifiable patterns
-    return source
-        .replace(/__playwright/g, '_' + randomId())
-        .replace(/__pwInitScripts/g, '_' + randomId());
+// Only call Runtime.enable for workers when the fix is disabled:
+if (process.env['TURNSTILEBROWSER_PATCHES_RUNTIME_FIX_MODE'] === '0') {
+  session.send('Runtime.enable', {}).catch(e => {});
 }
 ```
 
-#### C. Developer Tools Evasion (`browserContext.js`)
+This is the real basis for the README's "runs in an isolated Service Worker scope" line — it does not *block* service workers (the previous page's `_blockServiceWorkers`/`navigator.serviceWorker.register` override does **not** exist in the source).
 
-```javascript
-// Detection scripts check for DevTools/Inspector access
-// XDriver patches to hide these signals
+#### C. What Is NOT in the Source (claims that don't hold up)
 
-class BrowserContext {
-    async _initialize() {
-        // PATCHED: Don't expose Runtime.enable
-        // await this._client.send('Runtime.enable');  // REMOVED
+The following, claimed in the README and/or the prior version of this page, have **no corresponding code** in the repository:
 
-        // PATCHED: Use isolated contexts instead
-        await this._setupIsolatedContexts();
-    }
-
-    async _setupIsolatedContexts() {
-        // Create utility world without Runtime.enable
-        await this._client.send('Page.createIsolatedWorld', {
-            frameId: this._frameId,
-            worldName: '__utility__',
-            grantUniveralAccess: true
-        });
-    }
-}
-```
-
-#### D. Binding Exposure Prevention
-
-```javascript
-// Original Playwright exposes:
-// - window.__pwBinding
-// - exposeFunctionLeak vulnerabilities
-
-// XDriver patches PageBinding class:
-class PageBinding {
-    async add(name, callback) {
-        // PATCHED: Add to isolated world only
-        await this._context._client.send('Runtime.addBinding', {
-            name: this._obfuscateName(name),
-            executionContextName: '__playwright_utility_world__'
-        });
-    }
-
-    _obfuscateName(name) {
-        // Randomize binding names
-        return '_' + crypto.randomBytes(8).toString('hex');
-    }
-}
-```
-
-#### E. WebRTC Leak Protection
-
-```javascript
-// Prevents WebRTC from leaking real IP addresses
-async _patchWebRTC(page) {
-    await page.addInitScript(() => {
-        // Override RTCPeerConnection
-        const originalRTCPeerConnection = window.RTCPeerConnection;
-        window.RTCPeerConnection = function(...args) {
-            const pc = new originalRTCPeerConnection(...args);
-            // Filter ICE candidates to prevent IP leakage
-            const originalAddIceCandidate = pc.addIceCandidate.bind(pc);
-            pc.addIceCandidate = function(candidate) {
-                if (candidate && candidate.candidate) {
-                    // Filter local IP addresses
-                    if (candidate.candidate.includes('.local')) {
-                        return Promise.resolve();
-                    }
-                }
-                return originalAddIceCandidate(candidate);
-            };
-            return pc;
-        };
-    });
-}
-```
-
-#### F. Service Worker Interception
-
-```javascript
-// Block service worker registration that could detect automation
-async _blockServiceWorkers(page) {
-    await page.addInitScript(() => {
-        // Override navigator.serviceWorker.register
-        if (navigator.serviceWorker) {
-            navigator.serviceWorker.register = () => {
-                return Promise.reject(new Error('Service workers disabled'));
-            };
-        }
-    });
-}
-```
+- **"Stealth-hardened … at C-level" / C++ patches** — there is no C/C++ in the repo; the patches are pure JavaScript in `playwright-core`, and the browser binary itself is stock Chromium.
+- **WebRTC Leak Protection** — no ICE-candidate / `.local` filtering, no `RTCPeerConnection` override anywhere in the tree.
+- **Script-marker scrubbing** (`_removePlaywrightMarkers`, `__pwInitScripts` string-replacement) — not present; the isolated-world approach is what hides the init-script context, not string rewriting.
+- **Binding name obfuscation** (`_obfuscateName` / random binding names) — not present.
+- **Behavioral / mouse patches** — `crInput.js` is unmodified (0 patch markers); there is no human-movement layer.
 
 ---
 
 ## Architecture
 
 ```
-XDriver Patching Flow:
+XDriver Patching Flow (verified):
 ┌────────────────────────────────────────────────────────┐
-│  pip install x_driver                                  │
+│  pip install git+https://github.com/arjun-sha/XDriver  │
+│               .git@v1.0.1                              │
+│  (NOTE: not on PyPI — git install only)                │
 └────────────────────────────────────────────────────────┘
                           ↓
 ┌────────────────────────────────────────────────────────┐
-│  x_driver activate                                     │
+│  x_driver activate   [--force to skip version check]   │
 │  ┌──────────────────────────────────────────────────┐ │
-│  │ 1. Backup: /driver/package → /driver/package_1   │ │
-│  │ 2. Replace: /bundles/package → /driver/package   │ │
-│  │ 3. Modify: playwright/__init__.py                │ │
+│  │ 1. validate_playwright(): require ==1.52.0       │ │
+│  │ 2. rename driver/package → driver/package_1      │ │
+│  │ 3. copytree bundles/package → driver/package     │ │
+│  │    (= turnstilebrowser-playwright-core 1.49.0)   │ │
+│  │ 4. prepend banner print() to __init__.py         │ │
+│  │    (node binary swap is COMMENTED OUT)           │ │
 │  └──────────────────────────────────────────────────┘ │
 └────────────────────────────────────────────────────────┘
                           ↓
 ┌────────────────────────────────────────────────────────┐
 │  from playwright.async_api import async_playwright     │
-│  # Uses patched driver automatically                   │
+│  # Patched driver runs the Runtime.enable-leak fix     │
+│  # (TURNSTILEBROWSER_PATCHES_RUNTIME_FIX_MODE default) │
 └────────────────────────────────────────────────────────┘
                           ↓
 ┌────────────────────────────────────────────────────────┐
 │  x_driver deactivate                                   │
-│  # Restores original files from backup                 │
+│  # rmtree package; rename package_1 → package          │
+│  # strip banner line from __init__.py                  │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -253,30 +157,30 @@ XDriver Patching Flow:
 
 ## Services Bypassed
 
-According to the project's performance claims:
+**These are the project's own claims** (README "Performance" table), not independently benchmarked here. Given that the actual evasion is a single Runtime.enable leak fix over stock Chromium — with no fingerprint spoofing, no TLS work, and no behavioral layer — treat the enterprise-anti-bot rows as optimistic/marketing. The Runtime.enable fix alone reliably passes the rebrowser bot-detector, which is its designed target.
 
-### Enterprise Anti-Bot
-| Service | Status |
-|---------|--------|
-| Cloudflare WAF | ✅ |
-| Cloudflare Turnstile | ✅ |
-| Kasada | ✅ |
-| DataDome | ✅ |
-| PerimeterX | ✅ |
-| Imperva | ✅ |
-| Fingerprint.com | ✅ |
+### Enterprise Anti-Bot (README claims)
+| Service | Claimed | Reality check |
+|---------|:-------:|---------------|
+| Cloudflare WAF / Turnstile | ✅ | Plausible for the interstitial/WAF; no CAPTCHA-solving code |
+| Kasada | ✅ | Claimed; no Kasada-specific code |
+| DataDome | ✅ | Claimed; relies entirely on the Runtime.enable fix + IP |
+| PerimeterX | ✅ | Claimed |
+| Imperva | ✅ | Claimed |
+| Fingerprint.com | ✅ | Claimed; no fingerprint spoofing in source |
 
-### Fingerprinting Tests
-| Test | Result |
-|------|--------|
+### Fingerprinting / Detector Tests (README claims)
+| Test | Claimed Result |
+|------|----------------|
+| Rebrowser Bot Detector | Passed all tests *(this is the technique's actual sweet spot)* |
 | CreepJS | 100% Anonymous |
 | BrowserScan | 87% |
-| Rebrowser Bot Detector | All tests pass |
-| IP-API Bot Detection | Pass |
-| IPQualityScore | Pass |
 | Whoer.net | High Anonymity |
 | AmIUnique | No unique fingerprint |
 | Cover Your Tracks (EFF) | Strong protection |
+| TLS Fingerprint (browserleaks) | "No anomalies" *(but there is no TLS impersonation in the code — this is stock Chromium TLS)* |
+
+> The TLS and WebRTC rows are the clearest tells that the README's table is aspirational: **neither TLS impersonation nor WebRTC filtering exists in the source.** Stock Chromium TLS "having no anomalies" is true because it *is* a real browser, not because XDriver does anything.
 
 ---
 
@@ -284,12 +188,17 @@ According to the project's performance claims:
 
 ### Installation & Activation
 ```bash
-pip install x_driver
-pip install playwright==1.52.0  # Version-locked!
+# NOT on PyPI — install straight from GitHub:
+pip install git+https://github.com/arjun-sha/XDriver.git@v1.0.1
+
+# Windows only, before installing:
+set PYTHONUTF8=1
+
+pip install playwright==1.52.0   # required by the version check
 playwright install chromium
 
 # Activate patching
-x_driver activate
+x_driver activate                # add --force to skip the version check
 ```
 
 ### Basic Usage (No Code Changes)
@@ -300,20 +209,22 @@ async def main():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False)
         page = await browser.new_page()
-
-        # All requests now use patched driver
-        await page.goto("https://bot.sannysoft.com")
-        # Tests should pass
-
+        await page.goto("https://bot-detector.rebrowser.net/")  # its actual target
         await browser.close()
 
 import asyncio
 asyncio.run(main())
 ```
 
+Optional tuning (from the bundled patch set — undocumented in XDriver's README):
+```bash
+export TURNSTILEBROWSER_PATCHES_RUNTIME_FIX_MODE=addBinding   # default; '0' = disable fix
+export TURNSTILEBROWSER_PATCHES_UTILITY_WORLD_NAME=util       # default; '0' = legacy name
+```
+
 ### Deactivation
 ```bash
-x_driver deactivate  # Restores original Playwright
+x_driver deactivate  # restores original Playwright from package_1 backup
 ```
 
 ---
@@ -324,87 +235,102 @@ x_driver deactivate  # Restores original Playwright
 
 | Advantage | Details |
 |-----------|---------|
-| **One-Command Activation** | `x_driver activate` - done |
-| **No Code Changes** | Existing Playwright scripts work as-is |
-| **Comprehensive Patching** | CDP, bindings, WebRTC, service workers |
-| **Reversible** | Clean deactivation restores original |
-| **Wide Detection Coverage** | Passes major anti-bot tests |
-| **Open Source** | Apache 2.0 license |
-| **Transparent** | User doesn't need to understand internals |
+| **One-Command Activation** | `x_driver activate` — done, no code changes |
+| **Reversible** | `deactivate` restores from the `package_1` backup |
+| **Real Runtime.enable fix** | The bundled rebrowser/turnstilebrowser patch genuinely closes the Runtime.enable leak |
+| **Transparent** | Existing Playwright scripts run unchanged |
+| **Open Source** | Apache-2.0 (the wrapper); bundled core is the turnstilebrowser fork |
 
 ### Limitations
 
 | Limitation | Details |
 |------------|---------|
-| **Version Lock** | Only works with Playwright 1.52.0 |
-| **Invasive Approach** | Directly modifies library files |
-| **Single Author** | Limited community support |
-| **Beta Status** | v1.0.1 with limited production track record |
-| **Chromium Only** | No Firefox/WebKit support |
-| **Backup Dependency** | Corrupted backup = manual recovery |
-| **Empty Examples** | Example files in repo are empty |
+| **Not original stealth** | Bundles `turnstilebrowser-playwright-core` 1.49.0; XDriver adds only a copy/backup CLI |
+| **No PyPI package** | `x-driver`/`x_driver` 404 on PyPI; the README's PyPI badge is fake (v0.0.1, links nowhere). Git install only |
+| **Overstated README** | "C-level," WebRTC protection, marker scrubbing, binding obfuscation — none exist in the source |
+| **Version mismatch** | Requires host `playwright==1.52.0` but ships a 1.49.0 driver |
+| **Version-locked** | Hard-pinned to `["1.52.0"]`; `--force` needed for anything else |
+| **Dormant** | No commits since 2025-09-10; single author; 5 stars / 4 forks |
+| **Chromium only** | No Firefox/WebKit stealth |
+| **No fingerprint/behavior layer** | No canvas/WebGL/screen spoofing, no mouse/timing simulation |
+| **Empty examples** | `examples/playwright_async.py` and `playwright_sync.py` are 0-byte files (still, as of v1.0.1) |
+| **Backup dependency** | A corrupted/lost `package_1` means manual recovery |
+| **LFS node stub** | `bundles/node` is an 82 MB LFS pointer that is never actually installed (swap is commented out) |
 
 ---
 
 ## Comparison with Patchright
 
+Both are rebrowser-patches-lineage Runtime.enable-leak fixes for Playwright. The practical difference is packaging and upkeep.
+
 | Feature | XDriver | Patchright |
 |---------|:-------:|:----------:|
-| **Patching Approach** | Runtime file replacement | Compile-time source patching |
-| **Installation** | `pip install` + activate | Separate package (`pip install patchright`) |
-| **Version Flexibility** | Locked to 1.52.0 | Tracks Playwright releases |
-| **Reversibility** | Easy `deactivate` | N/A (separate package) |
-| **Code Changes** | None required | Import from `patchright` instead |
-| **Maintenance** | Single author | Active community |
-| **Maturity** | Beta (v1.0.1) | Established |
+| **Underlying technique** | rebrowser/turnstilebrowser Runtime.enable fix | rebrowser-lineage Runtime.enable fix |
+| **Patching approach** | Copies a pre-patched `playwright-core` over your install | Ships as a separate patched package you import |
+| **Installation** | `pip install git+…` (no PyPI) + `activate` | `pip install patchright` (real PyPI/npm) |
+| **Version flexibility** | Hard-locked to 1.52.0 (bundle is 1.49.0) | Tracks Playwright releases |
+| **Reversibility** | `deactivate` restores backup | N/A (separate package) |
+| **Code changes** | None (patches your real Playwright) | Import from `patchright` instead |
+| **Maintenance** | Dormant since 2025-09, single author | Actively maintained community |
+| **Maturity** | v1.0.1, 5 stars | Established, widely used |
 | **Multi-Language** | Python only | Python, Node.js, .NET |
 
 ### When to Choose XDriver over Patchright
 
-**Choose XDriver if:**
-- You have existing Playwright code you can't modify
-- You need quick testing without code changes
-- You're okay with version lock
-- You want easy on/off switching
+**Choose XDriver only if:**
+- You specifically want to patch your *existing* `playwright==1.52.0` install in place with no import changes and easy on/off switching.
 
-**Choose Patchright if:**
-- You need version flexibility
-- You're starting a new project
-- You need Node.js or .NET support
-- You want active community support
+**Choose Patchright (recommended for almost everyone) if:**
+- You want a maintained package, real registry distribution, version flexibility, or Node.js / .NET support. Patchright delivers the same core evasion without the dormancy and the git-only install.
 
 ---
 
 ## When to Use XDriver
 
 ### Best For:
-- Quick Playwright stealth **without code changes**
-- Testing against multiple anti-bot services
-- Existing Playwright codebases
-- Rapid prototyping
+- Quick, throwaway testing of the Runtime.enable-leak fix against the rebrowser bot-detector **without touching your imports**
+- Existing `playwright==1.52.0` codebases where you want a one-command on/off toggle
 
 ### Not Ideal For:
-- Production systems needing **version flexibility**
-- Projects requiring **Firefox/WebKit**
-- Long-term maintenance concerns
-- Teams needing community support
+- Anything production (dormant, no PyPI, version-locked, bundle/host version mismatch)
+- Fingerprint spoofing or behavioral evasion (neither exists here)
+- Firefox/WebKit
+- Users who want a maintained, distributable dependency — use **Patchright** instead
+
+---
+
+## Key Files (verified paths in the repo)
+
+| Path | Role |
+|------|------|
+| `x_driver/activator_script.py` | The actual patcher: backup → copytree → banner |
+| `x_driver/utils.py` | `validate_playwright()` (pins `["1.52.0"]`), `get_playwright_path()` |
+| `x_driver/__main__.py` | argparse CLI: `activate [--force]` / `deactivate` |
+| `x_driver/rolling.yml` | Supported versions list (`1.52.0`) |
+| `x_driver/bundles/package/package.json` | Reveals the bundle = `turnstilebrowser-playwright-core` **1.49.0** |
+| `x_driver/bundles/package/lib/server/chromium/crConnection.js` | Utility-world / Runtime.enable fix core |
+| `x_driver/bundles/package/lib/server/{page,frames}.js` | Execution-context handling for the fix |
+| `x_driver/bundles/node` | 82 MB **Git-LFS pointer**, never installed (swap commented out) |
+| `examples/playwright_async.py`, `examples/playwright_sync.py` | **Empty (0-byte) stubs** |
+| `setup.py` | `name="x_driver"`, author Arjun Shankar, Apache-2.0, console_script `x_driver` |
 
 ---
 
 ## Bottom Line
 
-XDriver offers **convenient one-command stealth** for Playwright with comprehensive CDP leak prevention. The trade-off is being locked to a specific Playwright version and relying on invasive file modifications.
+XDriver is a **thin, single-author CLI** that copies a third-party rebrowser-patched Playwright driver (`turnstilebrowser-playwright-core` 1.49.0) over your local `playwright==1.52.0` install. The one real capability — the **Runtime.enable leak fix** — works and is exactly what passes the rebrowser bot-detector. Everything else the README advertises ("C-level" hardening, WebRTC leak protection, marker scrubbing, binding obfuscation, broad enterprise-anti-bot bypass) is **not present in the source**.
 
-**Good for:** Quick testing and existing codebases where you can't modify imports.
+**Good for:** a quick, reversible, no-import-changes toggle to test the Runtime.enable fix.
 
-**Consider Patchright instead:** For production use, version flexibility, or new projects.
+**Consider Patchright instead:** it delivers the same core evasion but is maintained, on real package registries, version-flexible, and multi-language — none of which XDriver offers.
 
-**Effectiveness:** High | **Complexity:** Very Low | **Best Use:** Quick Playwright stealth testing
+**Effectiveness:** Moderate (one real evasion, no fingerprint/behavior layer) | **Complexity:** Very Low | **Maintenance:** Dormant | **Best Use:** Quick throwaway Runtime.enable-leak testing on Playwright 1.52.0
 
 ---
 
 ## Resources
 
-- [GitHub Repository](https://github.com/nicebots-xyz/x_driver)
-- [PyPI Package](https://pypi.org/project/x-driver/)
+- [GitHub Repository](https://github.com/arjun-sha/XDriver) *(old `nicebots-xyz/x_driver` is dead)*
+- Upstream patch lineage: [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches) — the technique XDriver's bundle is built on
 - [Playwright Documentation](https://playwright.dev/python/)
+- ~~PyPI Package~~ — **does not exist**; install via `pip install git+https://github.com/arjun-sha/XDriver.git@v1.0.1`
