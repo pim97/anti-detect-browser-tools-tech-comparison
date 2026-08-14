@@ -1,6 +1,59 @@
 # Changelog
 
-## 2026-08-14 — Objectivity pass + refresh against upstream
+## 2026-08-14b — Full claim re-verification; all evaluative content removed
+
+Re-verified every asserted numeric and behavioural claim against source, and removed
+remaining subjective content so the report states only what is checkable.
+
+### Claims corrected on re-verification
+
+Three were wrong in the 2026-08-14a revision published earlier the same day; two had
+been wrong since before it.
+
+| Claim | Prior state | Verified state |
+|-------|-------------|----------------|
+| SeleniumBase `Runtime.enable` handling | Stated as handled via CDP Mode (also asserted in the July revision) | **No handling located in source.** Downgraded to Tier D. CDP Mode attaches no WebDriver, but no explicit countermeasure exists in the tree |
+| CloakBrowser `Runtime.enable` handling | Stated as a C++ patch (also asserted in the July revision) | **Not addressed in the wrapper README's patch list**, and the binary is closed. Downgraded to Tier D |
+| SeleniumBase input simulation | Stated as present | **No mouse-motion model exists.** Input realism is OS-level PyAutoGUI clicks (`browser_launcher.py:1071-1082`) plus timing jitter. Zero Bézier/trajectory matches in the tree |
+| Camoufox patch count | 32 stealth patches + 2 Playwright | **34** in `patches/` + **2** in `patches/playwright/` |
+| XDriver bundle package name | Asserted the name was misspelled "turnstilebroweser" in source | The name is **`turnstilebrowser-playwright-core`**, spelled correctly. The typo claim was false |
+| XDriver original code size | "~200 lines" | **295 lines** across `x_driver/*.py` |
+
+Also verified as correct and left unchanged: Camoufox Firefox base 152.0.4 and 3
+`humanize` config properties; Patchright driver patch 265 lines; Clearcote 32 patches on
+Chromium 149.0.7827.114; Botasaurus 58 CDP binding files and zero Selenium imports;
+SeleniumBase 4.51.12 and 187 CDP-related files; Scrapling 0.4.14 with `curl_cffi>=0.16.0`
+and `patchright>=1.61.2`; Obscura render engine 66,826 lines with `default = []`;
+CloakBrowser 71 patches on Chromium 150 and 58 on 146.
+
+### Evaluative content removed
+
+- **All star ratings deleted** (previously 40+ cells across five pages). Labelling them
+  as editorial was insufficient; they are replaced by mechanism descriptions and
+  measurable facts.
+- **Per-tool "Assessment" blocks** replaced with technical-summary tables stating
+  verified state and evidence tier per property.
+- **"Best for" / "Best Use" / "Recommendation" lines** replaced with applicability
+  statements naming the verified capability and the constraints that bound it.
+- **Evaluative vocabulary removed** throughout: "best-in-class", "gold standard",
+  "excellent", "superior", "honest assessment", "disqualifying", "reality check",
+  "impossible to detect", and comparable terms.
+- **README decision guide** replaced with a capability-to-implementation index derived
+  from the architecture tables — a lookup, not a ranking.
+- **Overstatement corrected**: "impossible for JavaScript to detect" (Camoufox) now
+  states which specific detection methods the mechanism defeats and notes the residual
+  SpiderMonkey signal the project itself documents.
+
+### Structural changes
+
+- README no longer duplicates generated counts. Stars, forks, contributors, open issues,
+  and versions live only in [STATUS.md](STATUS.md). Cross-checking found the Camoufox
+  open-issue count had already drifted (121 → 122) within hours of being written.
+- Every table verified well-formed; every internal link and anchor verified to resolve.
+
+---
+
+## 2026-08-14a — Objectivity pass + refresh against upstream
 
 Re-verified all nine tools against upstream source and published releases, and
 reworked the report's evidence handling. The previous revision was dated 2026-07-06;
@@ -15,7 +68,7 @@ seven of the nine tools had shipped releases since.
 | CloakBrowser "33 C++ patches" (Strategy 6) | **Stale + self-contradictory** | Contradicted the same file's "66" and the tool page's explicit note that 33 was outdated. Removed. |
 | 7 services × 9 tools ✅/⚠️/❌ coverage grid | **Unsupported** | 63 verdicts presented as measurement, none benchmarked. Replaced with a provenance table recording *who claims what* and at which evidence tier. |
 | "Realistic Success Rates" (90%+, 60–80%, 20–40%, <20%) | **Unsourced** | No targets, sample size, or dates behind the figures. Replaced with the qualitative factors that dominate outcomes. |
-| Five-star capability ratings across ~15 rows | **Unfalsifiable** | No rubric defined the scale and no evidence backed any cell. Replaced with a source-verified architecture matrix (Tier A facts) plus an explicitly editorial decision guide. |
+| Five-star capability ratings across ~15 rows | **Unfalsifiable** | No rubric defined the scale and no evidence backed any cell. Replaced with a source-verified architecture matrix (Tier A facts) plus a capability-to-implementation index. |
 | Sponsorship shown without conflict-of-interest context | **Incomplete** | The sponsor is a commercial competitor to every tool rated. Now disclosed up front, with the mitigations stated. |
 
 ### Version refresh (verified 2026-08-14)

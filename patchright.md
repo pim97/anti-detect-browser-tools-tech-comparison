@@ -15,7 +15,7 @@
 - [What is Patchright?](#what-is-patchright)
 - [How It Works](#how-it-works)
 - [Detection Vectors Bypassed](#detection-vectors-bypassed)
-- [Services Bypassed](#services-bypassed)
+- [Services the project claims](#services-the-project-claims)
 - [Installation](#installation)
 - [Usage Example](#usage-example)
 - [Pros and Cons](#pros-and-cons)
@@ -173,7 +173,7 @@ Per the project's own README, with the right setup (proxies, and CDP-Patches for
 - BrowserScan ✅
 - Pixelscan ✅
 
-> Reality check: Patchright removes *CDP-level automation tells*. It does **not** rotate fingerprints, spoof canvas/WebGL, or impersonate a TLS/JA3 signature. On hard targets you still need residential proxies, and for trusted input events the project pairs it with the separate **CDP-Patches** library (native OS-level mouse/keyboard). "Undetectable" is the maintainers' framing under ideal conditions, not an absolute.
+> **Scope of the mechanism.** Patchright removes *CDP-level automation tells*. It does **not** rotate fingerprints, spoof canvas/WebGL, or impersonate a TLS/JA3 signature. On hard targets you still need residential proxies, and for trusted input events the project pairs it with the separate **CDP-Patches** library (native OS-level mouse/keyboard). "Undetectable" is the maintainers' framing under ideal conditions, not an absolute.
 
 ---
 
@@ -256,7 +256,7 @@ const { chromium } = require('patchright');
 | Init-script timing leak | Route-injected init scripts are theoretically timing-detectable (project-acknowledged, rated low risk) |
 | Route side-effects | Because init scripts use Playwright Routes, any Route-related quirks can appear |
 | Some Playwright tests fail | Passes most but not all upstream tests; a few bugs are deemed unfixable/irrelevant (see issue #30) |
-| Not truly "undetectable" | Marketing word; it's CDP-tell removal, effective *with* proxies + good setup |
+| "Undetectable" is the project's framing | The mechanism is CDP-tell removal; it addresses Layer 1 only |
 
 ---
 
@@ -383,4 +383,4 @@ The project is **healthy and current as of 2026-08-14**: version 1.61.x tracking
 
 **Complexity:** Low — drop-in Playwright replacement.
 
-**Best Use Case:** Production Chromium scraping/automation where the CDP automation signature is the thing getting you flagged.
+**Applicability:** Chromium automation where the CDP automation signature is the detection vector. Verified scope: an AST rewrite of the Playwright driver that avoids `Runtime.enable` by executing JS in isolated contexts, at the cost of the Console API. It implements no fingerprint spoofing (Layer 2), no TLS impersonation (Layer 4), and no input motion model (Layer 3) — the project pairs with the separate CDP-Patches library for trusted input.

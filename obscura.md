@@ -695,7 +695,7 @@ DataDome- or Kasada-class systems.
 
 ## Summary
 
-Obscura is a **from-scratch browser engine** that uses V8 for JavaScript execution and html5ever for HTML parsing, with a large JavaScript shim providing `navigator`, `document`, `window`, and the rest of the browser globals — and, since v0.2.0, a native Rust layout and paint engine underneath it. It is a careful piece of Rust engineering that delivers genuine performance gains over headless Chrome by implementing a narrower browser than Blink rather than by skipping rendering entirely. It also ships an embeddable Rust library, a 32-tool MCP server, and request/response interception.
+Obscura is a **from-scratch browser engine** that uses V8 for JavaScript execution and html5ever for HTML parsing, with a large JavaScript shim providing `navigator`, `document`, `window`, and the rest of the browser globals — and, since v0.2.0, a native Rust layout and paint engine underneath it. The project reports lower memory and page-load figures than headless Chrome (**Tier B**, not reproduced here), achieved by implementing a narrower browser than Blink rather than by omitting rendering entirely. It also ships an embeddable Rust library, a 32-tool MCP server, and request/response interception.
 
 The v0.1.x line has meaningfully raised the stealth floor since the first analysis: the persona is now Windows/Chrome-by-default and internally coherent (UA ↔ platform ↔ UA-CH ↔ GPU renderer ↔ timezone), `event.isTrusted` and `getBoundingClientRect` behave correctly, input events hit-test, and TLS impersonation ships in release binaries. But the architectural ceiling is unchanged: there is no real layout, no real canvas/WebGL/audio output, and finite fingerprint pools. It clears consistency-oriented auditors and basic-to-moderate defenses; it does not clear the render/behavior-aware checks that DataDome/Kasada/Akamai-class systems run.
 
@@ -703,6 +703,6 @@ The v0.1.x line has meaningfully raised the stealth floor since the first analys
 
 **Complexity:** Low — single binary, CDP server, MCP server, embeddable crate; drop-in for Puppeteer / Playwright clients
 
-**Best Use Case:** Lightweight, high-concurrency scraping of server-rendered HTML or lightly-protected sites, and AI-agent browsing via MCP
+**Applicability:** high-concurrency fetching where per-instance memory matters and the targets do not probe canvas, WebGL, or audio, plus AI-agent browsing over the MCP server. Layout-probing targets require a render-enabled build (release archive with no suffix or `-stealth`, or `--features render` from source). Memory and page-load figures are the project's own (Tier B).
 
 *Verified against the source at `github.com/h4ckf0r0day/obscura` @ `f458a7f` (v0.2.0), 2026-08-14. Read in an isolated container — see [METHODOLOGY.md](METHODOLOGY.md#source-handling).*

@@ -6,17 +6,18 @@
 > **Type:** File-replacement patching of the local Playwright driver
 > **Version:** v1.0.1 (released 2025-09-10) — **unchanged as of 2026-08-14**
 > **What is verified:** the bundled "patched" driver identifies itself as `turnstilebrowser-playwright-core` **1.49.0**; XDriver's own Python is ~295 lines doing file backup/replace and version validation, with no browser-patching logic of its own (**Tier A**)
-> **Anti-bot service claims:** the README claims **Cloudflare WAF, Turnstile, DataDome, Kasada** and "undetectable even against vendors like Kasada" (**Tier B**) — but these are September-2025 claims about a bundle pinned to `playwright-core` 1.49.0. In an adversarial field, **claims this old are stale by construction.**
-> **Maintenance:** **Effectively abandoned.** No commits in ~11 months (last: 2025-09-10). 5 stars, 4 forks, 2 contributors, no PyPI package. Apache-2.0.
+> **Anti-bot service claims:** the README claims **Cloudflare WAF, Turnstile, DataDome, Kasada** and "undetectable even against vendors like Kasada" (**Tier B**). The claims are dated September 2025 and describe a bundle pinned to `playwright-core` 1.49.0; no re-test has been published since.
+> **Maintenance:** No commits since 2025-09-10 (~11 months before the verification date). 5 stars, 4 forks, 2 contributors, no PyPI package. Apache-2.0.
 > **Verified:** 2026-08-14 against `arjun-sha/XDriver` @ `b610852`.
 
-> ### ⚠️ Not recommended for new work
+> ### Status
 >
-> XDriver is a repackaging of a [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches)-lineage
-> fork, frozen since September 2025 against a Playwright version that is now many
-> releases behind. [Patchright](./patchright.md) is the maintained expression of the
-> same idea and tracks Playwright releases automatically. This page is kept for
-> reference and because the tool still circulates in recommendations.
+> XDriver repackages a [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches)-lineage
+> `playwright-core` fork. Its last commit is 2025-09-10 and its bundle targets
+> `playwright-core` 1.49.0, against a current Playwright of 1.61.x.
+> [Patchright](./patchright.md) implements the same `Runtime.enable` countermeasure and
+> tracks Playwright releases automatically. This page documents XDriver because it
+> still appears in tool recommendations.
 
 ---
 
@@ -24,21 +25,26 @@
 
 XDriver is a stealth patching tool that swaps out the JavaScript files inside a locally installed Playwright's `driver/package` directory with a pre-patched copy, then prints an "XDriver Session Active" banner from Playwright's `__init__.py`. Unlike script-injection approaches, it replaces Playwright's bundled Node driver payload with a hardened build.
 
-**What it actually ships (verified from source):** the bundled "patched" driver is **not original work**. `x_driver/bundles/package/package.json` identifies it as `turnstilebroweser-playwright-core` v1.49.0 (the package `name` is misspelled verbatim in the source) — a `playwright-core` fork carrying the `turnstilebrowser-patches` set (a [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches) lineage). Every stealth modification in the bundle is gated behind `TURNSTILEBROWSER_PATCHES_*` environment variables. XDriver's own Python code (`~200 lines`) only does file backup/replace + version validation; it contains no browser-patching logic of its own.
+**What it actually ships (verified from source):** the bundled "patched" driver is **not original work**. `x_driver/bundles/package/package.json` identifies it as `turnstilebrowser-playwright-core` v1.49.0 — a `playwright-core` fork carrying the `turnstilebrowser-patches` set (a [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches) lineage). Every stealth modification in the bundle is gated behind `TURNSTILEBROWSER_PATCHES_*` environment variables. XDriver's own Python code (295 lines across `x_driver/*.py`, excluding the bundle) only does file backup/replace and version validation; it contains no browser-patching logic of its own.
 
-## Assessment
+## Technical summary
 
-> **Editorial judgment, not measurement.** Star ratings were removed from this report
-> in the 2026-08-14 revision — no rubric defined them and no evidence backed any cell.
-> What follows is reasoning from the verified architecture; disagree with the reasoning.
-
-| | |
+| Property | Verified state |
 |---|---|
-| **What is real** | The `Runtime.enable` leak fix. It is genuine and effective — because it is [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches) lineage, not XDriver's work. XDriver's own ~295 lines of Python do file backup/replace and version validation, nothing more. |
-| **Convenient at** | One-command activation with no code changes. |
-| **Disqualifying** | Dormancy. No commits since 2025-09-10 (~11 months), no PyPI package, 5 stars, 2 contributors, and a bundle pinned to `playwright-core` 1.49.0. In an adversarial field, an unmaintained stealth patch is a decaying asset. |
-| **Claims that outrun the source** | The README's "C-level" and "WebRTC leak protection" claims are not backed by anything in the repository; the shipped examples are empty stubs. Its anti-bot coverage list is the broadest in this report and comes from the least-maintained project in it. |
-| **Recommendation** | **Do not adopt for new work.** Use [Patchright](./patchright.md) — same core idea, actively maintained, tracks Playwright releases automatically. |
+| **Original code** | ~295 lines of Python performing file backup, file replacement, and version validation. No browser-patching logic. **Tier A** |
+| **Shipped bundle** | `turnstilebrowser-playwright-core` 1.49.0 — a prebuilt `playwright-core` fork of [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches) lineage. Not built from sources published in this repository. **Tier A** |
+| **`Runtime.enable` tell** | Addressed by the bundle, gated behind `TURNSTILEBROWSER_PATCHES_*` environment variables. Implementation is upstream, not this project's. **Tier A** |
+| **Fingerprint spoofing** | None in source. **Tier A** |
+| **Input simulation** | None. The only matches for Bézier/humanize strings are in bundled Playwright vendor assets (`codeMirrorModule`, `zipBundleImpl`). **Tier A** |
+| **Pinned Playwright version** | 1.49.0. Current Playwright at the verification date is 1.61.x |
+| **Commit activity** | Last commit 2025-09-10, approximately 11 months before the verification date |
+| **Distribution** | No PyPI package |
+| **Project state** | 5 stars, 4 forks, 2 contributors, 0 open issues |
+| **Documented claims vs. source** | The README claims Kasada, DataDome, PerimeterX, Imperva, and Fingerprint.com coverage. No code addressing any of them exists in the repository |
+
+Functional overlap: [Patchright](./patchright.md) implements the same `Runtime.enable`
+countermeasure, tracks Playwright releases automatically, and was last pushed
+2026-08-05.
 
 ---
 
@@ -168,7 +174,7 @@ XDriver Patching Flow (verified):
 
 ---
 
-## What the project claims — and why to discount it
+## Documented claims versus source
 
 > **Every row below is a vendor claim from September 2025** (README "Performance"
 > table), never independently benchmarked, about a bundle pinned to `playwright-core`
@@ -201,13 +207,13 @@ XDriver Patching Flow (verified):
 
 | Test | Claimed result | Comment |
 |------|----------------|---------|
-| Rebrowser Bot Detector | Passed all tests | The technique's actual sweet spot — and inherited from rebrowser-patches |
+| Rebrowser Bot Detector | Passed all tests | The detector this technique targets; the implementation is rebrowser-patches upstream |
 | CreepJS | "100% Anonymous" | CreepJS is a consistency auditor, not an anti-bot; the phrasing does not correspond to a CreepJS output field |
 | BrowserScan | 87% | No methodology or date given |
-| Whoer.net | High Anonymity |
-| AmIUnique | No unique fingerprint |
-| Cover Your Tracks (EFF) | Strong protection |
-| TLS Fingerprint (browserleaks) | "No anomalies" *(but there is no TLS impersonation in the code — this is stock Chromium TLS)* |
+| Whoer.net | High Anonymity | No methodology or date given |
+| AmIUnique | No unique fingerprint | No methodology or date given |
+| Cover Your Tracks (EFF) | Strong protection | No methodology or date given |
+| TLS Fingerprint (browserleaks) | "No anomalies" | Consistent with stock Chromium TLS; the repository contains no TLS impersonation code, so this reflects Chrome's own signature rather than a project feature |
 
 > The TLS and WebRTC rows are the clearest tells that the README's table is aspirational: **neither TLS impersonation nor WebRTC filtering exists in the source.** Stock Chromium TLS "having no anomalies" is true because it *is* a real browser, not because XDriver does anything.
 
@@ -351,9 +357,9 @@ XDriver is a **thin, single-author CLI** that copies a third-party rebrowser-pat
 
 **Good for:** a quick, reversible, no-import-changes toggle to test the Runtime.enable fix.
 
-**Consider Patchright instead:** it delivers the same core evasion but is maintained, on real package registries, version-flexible, and multi-language — none of which XDriver offers.
+**Functional overlap with Patchright:** both implement the same `Runtime.enable` countermeasure of rebrowser-patches lineage. Patchright is published to PyPI and npm, tracks Playwright releases automatically, supports Python/Node/.NET, and was last pushed 2026-08-05. XDriver has no registry package, pins `playwright-core` 1.49.0, is Python-only, and was last pushed 2025-09-10.
 
-**Effectiveness:** Moderate (one real evasion, no fingerprint/behavior layer) | **Complexity:** Very Low | **Maintenance:** Dormant | **Best Use:** Quick throwaway Runtime.enable-leak testing on Playwright 1.52.0
+**Layers addressed:** 1 only (`Runtime.enable`, via the bundle). Not Layer 2 (fingerprinting), 3 (behaviour), or 4 (TLS). **Applicability:** reproducing or testing the `Runtime.enable` leak fix against a Playwright 1.52.0 host install.
 
 ---
 

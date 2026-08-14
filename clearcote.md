@@ -5,7 +5,7 @@
 > **Approach:** Engine-level (C++) fingerprint controls compiled into an ungoogled-chromium fork, plus real-machine fingerprint import
 > **What is verified:** **32** human-readable patches in `patches/series`, applied over pinned Chromium `149.0.7827.114` (`UPSTREAM_REVISION`) — including `010-user-agent-and-webdriver`, `110-runtime-enable`, `100-webrtc-leak` (**Tier A**)
 > **Anti-bot service claims:** **none** — publishes open-auditor results (CreepJS) and a self-referential coherence gate, not commercial-WAF pass rates (**Tier D** for coverage; the auditor results are **Tier B**). The project's stated position is "don't trust us, verify us."
-> **Maintenance:** Active but **experimental pre-release**, and **single-maintainer (1 contributor)** — the weakest bus factor of any tool here. Browser `v0.1.0-pre.22` (2026-07-15; Chromium base still 149); SDK `clearcote` **0.26.1** on npm + PyPI (2026-08-13). 75 stars. BSD-3-Clause.
+> **Maintenance:** Active but **experimental pre-release**, and **single-maintainer (1 contributor)** — the lowest contributor count of the nine tools compared. Browser `v0.1.0-pre.22` (2026-07-15; Chromium base still 149); SDK `clearcote` **0.26.1** on npm + PyPI (2026-08-13). 75 stars. BSD-3-Clause.
 > **Verified:** 2026-08-14 against `clearcotelabs/clearcote-browser` @ `dea4387`.
 
 ---
@@ -26,16 +26,16 @@
 
 ## What is Clearcote?
 
-Clearcote is an **open-source, de-Googled Chromium build** (BSD-3-Clause, built on [ungoogled-chromium](https://github.com/ungoogled-software/ungoogled-chromium)) that moves fingerprint control **into the C++ engine** rather than injecting JavaScript. Like [Camoufox](./camoufox.md) (Firefox) and [CloakBrowser](./cloakbrowser.md) (Chromium), the spoofing is native — but Clearcote's emphasis is **verifiability and coherence**, not a marketed list of services it "beats."
+Clearcote is an **open-source, de-Googled Chromium build** (BSD-3-Clause, built on [ungoogled-chromium](https://github.com/ungoogled-software/ungoogled-chromium)) that moves fingerprint control **into the C++ engine** rather than injecting JavaScript. Like [Camoufox](./camoufox.md) (Firefox) and [CloakBrowser](./cloakbrowser.md) (Chromium), the substitution happens in C++. Unlike either, Clearcote publishes no anti-bot service claims; its published evidence is open-auditor output and a coherence regression gate.
 
 Two things define it:
 
 1. **A coherent identity from one seed.** A single `--fingerprint=<seed>` derives an internally consistent persona (GPU, screen, hardware, locale, audio, fonts, voices) and applies deterministic per-site "farbling" (canvas/WebGL/audio), in the model [Brave](https://brave.com/privacy-updates/3-fingerprint-randomization/) pioneered. Same seed ⇒ same identity; different seed ⇒ an unlinkable one. Notably the noise is derived **per eTLD+1** (registrable domain), not from one global value — `components/ungoogled/farble_seed.{cc,h}` (`ungoogled::GetFarbleSeed64`) mixes the session root with the site so one site is stable while different sites are mutually unlinkable.
 2. **Import of a *real* machine's fingerprint.** Beyond synthetic seeds, `--fingerprint-profile=<json>` makes the browser present a captured real Chrome's GPU / screen / fonts / voices / audio / WebGL `getParameter` table. Profiles come from a built-in collector, a curated library ([clearcote-profiles](https://github.com/clearcotelabs/clearcote-profiles)), or a converter for the open [10k-record dataset](https://github.com/Vinyzu/chrome-fingerprints).
 
-Everything ships as **readable patches** on a pinned Chromium revision (`UPSTREAM_REVISION` → `149.0.7827.114`), with **GPG-signed, SHA-256-checksummed** release builds — the project's stated stance is "don't trust us, verify us." (The build is designed to be reproducible from source; the maintainers note honestly in `docs/VERIFY.md` that Chromium cross-builds are **not yet bit-for-bit deterministic**, so a byte-identical hash match is the goal, not a guarantee today, and full build provenance/attestation is a roadmap item.)
+Everything ships as **readable patches** on a pinned Chromium revision (`UPSTREAM_REVISION` → `149.0.7827.114`), with **GPG-signed, SHA-256-checksummed** release builds — the project's stated stance is "don't trust us, verify us." (The build is designed to be reproducible from source; `docs/VERIFY.md` states that Chromium cross-builds are **not yet bit-for-bit deterministic**, so a byte-identical hash match is the goal, not a guarantee today, and full build provenance/attestation is a roadmap item.)
 
-Clearcote is positioned as a **privacy / fingerprint-coherence browser**, not a service-specific bypass tool. Its published evidence comes from open-source fingerprint auditors (below), not commercial-WAF pass rates — any anti-bot-service claims should get the same skepticism this repo applies across the board.
+Clearcote is positioned as a **privacy / fingerprint-coherence browser**, not a service-specific bypass tool. Its published evidence comes from open-source fingerprint auditors (below), not commercial-WAF pass rates. Service coverage is therefore evidence Tier D.
 
 ---
 
@@ -69,7 +69,7 @@ Clearcote is positioned as a **privacy / fingerprint-coherence browser**, not a 
 
 Identity getters are intercepted in C++ and seeded from the persona, so there is no JS wrapper, proxy, or `[native code]` mismatch for a page to inspect. The same approach Camoufox uses for Firefox, applied to Chromium across navigator/screen/WebGL/audio plus secondary surfaces (`getBattery`, `navigator.connection`, `keyboard.getLayoutMap`, `getScreenDetails`, CSS `@media`, `MediaCapabilities.decodingInfo()`, `enumerateDevices()`, `storage.estimate()`, `performance.memory`). The unmasked WebGL renderer is **session-constant** (one GPU on every origin, not a per-site tell), and canvas/WebGL/audio noise is **deterministic per eTLD+1** so it is stable within a session.
 
-The patch set (32 diffs, listed in `patches/series` and applied in order) is where the actual behavior lives — reading the diffs *is* the audit. A few load-bearing ones:
+The patch set (32 diffs, listed in `patches/series` and applied in order) contains the behavioural changes. Selected entries:
 
 - `001-farble-seed-core` — the per-eTLD+1 seed engine + the `FingerprintNoiseEnabled()` master toggle behind `--disable-fingerprint-noise`.
 - `002-persona-profile` — the coherent persona engine (`components/ungoogled/persona_profile.{cc,h}`) *and* the profile-import loader `ApplyProfileOverride`.
@@ -277,7 +277,9 @@ python tools/fingerprint-collect/verify_profile.py --executable <chrome> profile
 
 Clearcote's pitch isn't "we beat service X" — it's **"read the source, rebuild it, and verify it."** Among custom anti-detect browsers it's distinctive for being **fully open** (versus proprietary binaries), for **importing and verifying real-machine fingerprints** (versus only generating synthetic ones), and for its **real-GPU canvas bridge** (rendering on hardware that actually has the claimed GPU), on a Chrome-compatible Chromium base. Since the earlier pre-9 snapshot it has added a **native Linux x64 build** (alongside Windows), a **multi-OS SDK** that auto-downloads the right binary, **WebGPU/locale/speech coherence**, opt-in **Widevine/EME DRM**, a continuous **humanized cursor**, an **in-browser AI agent**, and a **stealth-coherence regression gate** — while keeping the honest caveat that builds aren't yet bit-for-bit reproducible.
 
-**Best for:** auditability-conscious, Chromium-required, Windows- or Linux-based automation where you want a coherent — ideally real-machine — identity and the ability to prove what the browser is presenting.
+**Applicability:** Chromium-based automation on Windows x64 or Linux x64 where the engine source must be readable and rebuildable. Distinguishing verified capabilities: 32 published patches, GPG-signed and SHA-256-checksummed builds, real-machine fingerprint import with a bundled verifier, and a `110-runtime-enable` patch.
+
+**Constraints:** no macOS build; browser is `v0.1.0-pre.22`; 1 contributor; no published commercial-WAF results (evidence Tier D for service coverage); builds are not yet bit-for-bit reproducible per the project's own `docs/VERIFY.md`.
 
 **Limitation:** still an early pre-release with **no macOS build** and **no published benchmarks against commercial anti-bot services** — its demonstrated results are against open-source fingerprint auditors (CreepJS, and the self-referential coherence gate).
 

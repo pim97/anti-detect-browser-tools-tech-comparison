@@ -6,7 +6,7 @@
 > **Type:** Selenium wrapper with UC Mode + CDP Mode (undetected Chromium automation)
 > **Approach:** ChromeDriver binary patching + disconnect/reconnect + CDP-native driver (based on NoDriver) + optional PyAutoGUI CAPTCHA solving
 > **What is verified:** `seleniumbase/undetected/` ships `patcher.py`, `cdp.py` and a full `cdp_driver/` package; 187 CDP-related Python files across the tree (**Tier A**)
-> **Anti-bot service claims:** narrower and more checkable than most — the README demonstrates **one Cloudflare challenge page** via a runnable example script (`examples/cdp_mode/raw_gitlab.py`) rather than a coverage grid (**Tier B**)
+> **Anti-bot service claims:** the README demonstrates a Cloudflare challenge page via a runnable example script (`examples/cdp_mode/raw_gitlab.py`) rather than publishing a coverage grid (**Tier B**)
 > **Maintenance:** Very actively maintained — **4.51.12** (2026-08-10, "CDP Mode: Patch 128"); near-daily releases. 12.9k stars, 33 contributors, last push 2026-08-14. MIT.
 > **Verified:** 2026-08-14 against `seleniumbase/SeleniumBase` @ `7cd42ef`.
 
@@ -14,24 +14,27 @@
 
 ## Overview
 
-SeleniumBase is a comprehensive Python framework built on Selenium 4.x that combines browser automation, E2E testing, web crawling/scraping, and anti-bot bypass. Its **UC Mode** (Undetected-Chromedriver Mode) and, more importantly now, its **CDP Mode** (a CDP-native driver based on NoDriver) make it one of the most effective Python tools for bypassing modern bot detection.
+SeleniumBase is a comprehensive Python framework built on Selenium 4.x that combines browser automation, E2E testing, web crawling/scraping, and anti-bot bypass. It provides two automation transports: **UC Mode** (Undetected-Chromedriver Mode) and **CDP Mode** (a CDP-native driver derived from NoDriver), the latter being the project's documented path for stealth work.
 
 As of the 4.50.x line, the project's own positioning has shifted: the README now brands SeleniumBase as **"Stealthy Chromium Automation with Python"** and states that **CDP Mode**, not UC Mode, is the recommended path "for maximum stealth." UC Mode is still present and is the on-ramp that launches and patches the browser, but the stealthy driving increasingly happens through CDP Mode and the newer **Stealthy Playwright Mode**.
 
-## Assessment
+## Technical summary
 
-> **Editorial judgment, not measurement.** Star ratings were removed from this report
-> in the 2026-08-14 revision — no rubric defined them and no evidence backed any cell.
-> What follows is reasoning from the verified architecture; disagree with the reasoning.
-
-| | |
+| Property | Verified state |
 |---|---|
-| **Strongest at** | Breadth. It is the only tool here that combines a stealth driver, a test framework, and built-in click-based CAPTCHA handling (Turnstile, reCAPTCHA, DataDome slider, Friendly Captcha, Incapsula hCaptcha) in one package. |
-| **Also good** | Release discipline — near-daily releases, 33 contributors, only 13 open issues. The healthiest maintenance profile of any tool in this report. |
-| **Weakest at** | Learning curve and footprint. The breadth that makes it capable also makes it heavy, and stealth is Chromium-only. |
-| **Notably honest** | Its claims are narrower than its peers': the README ships a runnable example against one Cloudflare challenge page rather than asserting a coverage grid. That is more checkable than most, and worth more. |
-| **Reasonable for** | Teams that need automation *and* testing in one stack, or anyone who needs CAPTCHA handling without bolting on a third-party solver. |
-| **Reach for something else if** | You want a minimal dependency footprint (Patchright) or Firefox (Camoufox). |
+| **Automation transports** | Two: patched ChromeDriver (UC Mode, `undetected/patcher.py`) and a CDP-native driver derived from nodriver (`undetected/cdp_driver/`). 187 CDP-related Python files. **Tier A** |
+| **ChromeDriver marker removal** | `window.cdc_*` / `$cdc_*` injection sites overwritten with equal-length whitespace; call-function cache name randomised. **Tier A** |
+| **`Runtime.enable` tell** | No handling located in source. CDP Mode attaches no WebDriver, but no explicit countermeasure was found. **Tier D** |
+| **Input simulation** | OS-level clicks via PyAutoGUI (`browser_launcher.py:1071-1082`) plus timing jitter. **No mouse-motion model** — no Bézier or trajectory code exists in the tree. **Tier A** |
+| **Fingerprint spoofing** | None implemented at the engine level; stealth is protocol- and driver-level. **Tier A** |
+| **CAPTCHA handling** | Click-based solving for Turnstile, reCAPTCHA, DataDome slider, Friendly Captcha, Incapsula hCaptcha. **Tier A** that the code paths exist |
+| **Engine coverage** | Chromium only for stealth features |
+| **Test integration** | pytest and unittest — the only tool of the nine providing this |
+| **Project state** | 33 contributors, 13 open issues, last push 2026-08-14, releases near-daily (4.51.12, "CDP Mode: Patch 128") |
+
+Claim scope: the project publishes runnable example scripts against named protected
+sites rather than a coverage grid. Script existence is verifiable (**Tier A**); outcomes
+are not published as measurements.
 
 > **Note on this analysis:** claims below were verified against the SeleniumBase source
 > at commit `7cd42ef` (2026-08-14, v4.51.12 line). Some code excerpts were first read at
@@ -86,7 +89,7 @@ with io.open(self.executable_path, "r+b") as fh:
 
 ### 2. Browser-First Launch Strategy
 
-This is a **key idea** that makes UC Mode effective:
+The launch ordering:
 
 ```
 Normal Selenium Flow (Detectable):
@@ -434,19 +437,15 @@ UC Mode / CDP Mode stealth targets Chromium-family browsers (Chrome, Chromium, B
 
 ## Comparison with Alternatives
 
-> **Star ratings below are the author's editorial judgment, not measurement.**
-> No rubric defines the scale and no benchmark backs any cell. They are retained
-> only as a rough relative ordering — see [METHODOLOGY.md](METHODOLOGY.md#rating-policy).
-
-| Feature | SeleniumBase | Patchright | Botasaurus | CloakBrowser |
-|---------|:------------:|:----------:|:----------:|:------------:|
-| **Anti-Bot Bypass** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **CAPTCHA (click-solve)** | ⭐⭐⭐⭐⭐ | ❌ | ⭐⭐ | ❌ |
-| **Human Mouse** | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **Testing Framework** | ⭐⭐⭐⭐⭐ | ❌ | ❌ | ❌ |
-| **Speed** | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ |
-| **Ease of Use** | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
-| **Cost** | Free (MIT) | Free | Free | $$ |
+| Property | SeleniumBase | Patchright | Botasaurus | CloakBrowser |
+|---|---|---|---|---|
+| **Automation transports** | 2 (UC Mode, CDP Mode) | 1 (patched Playwright driver) | 1 (raw CDP) | 1 (patched Chromium + Playwright API) |
+| **`Runtime.enable` tell** | Tier D — not located in source | isolated contexts, Console API disabled | not addressed | Tier D — not in wrapper README |
+| **CAPTCHA click-solving** | Turnstile, reCAPTCHA, DataDome slider, Friendly Captcha, Incapsula hCaptcha | none | Cloudflare challenge only | none |
+| **Mouse-motion model** | none (PyAutoGUI clicks + timing jitter) | none | Bézier + Gaussian noise | `humanize` (Tier B) |
+| **Engine-level fingerprint control** | none | none | none | C++ patches (Tier B) |
+| **Test-framework integration** | pytest, unittest | none | none | none |
+| **Languages** | Python | Python, Node, .NET | Python, Node | Python, Node, .NET |
 
 ---
 
@@ -471,12 +470,12 @@ UC Mode / CDP Mode stealth targets Chromium-family browsers (Chrome, Chromium, B
 
 ## Performance Characteristics
 
-| Mode | Speed | Stealth | Use Case |
-|------|:-----:|:-------:|----------|
-| Standard Selenium | ⭐⭐⭐⭐⭐ | ⭐ | No protection |
-| UC Mode | ⭐⭐ | ⭐⭐⭐⭐ | Medium protection |
-| CDP Mode (NoDriver-based) | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Heavy protection (recommended) |
-| Stealthy Playwright | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Playwright API + max stealth |
+| Mode | WebDriver attached | Mechanism | Project's stated use |
+|---|---|---|---|
+| Standard Selenium | yes | unmodified chromedriver | no stealth measures |
+| UC Mode | yes, with disconnect/reconnect | `cdc_` markers overwritten in the chromedriver binary; browser-first launch | medium protection |
+| CDP Mode (NoDriver-based) | **no** | driven over CDP with no WebDriver in the loop | the project's documented path for heavy protection |
+| Stealthy Playwright | **no** | CDP Mode stealth behind the Playwright API | Playwright API with the same transport |
 
 *(Relative speed here is qualitative; SeleniumBase publishes no hard throughput benchmarks and none are asserted in this analysis.)*
 
@@ -500,13 +499,13 @@ UC Mode / CDP Mode stealth targets Chromium-family browsers (Chrome, Chromium, B
 
 ## Bottom Line
 
-SeleniumBase is the **most comprehensive Python solution** for modern Chromium web automation with anti-bot bypass. The 4.5x line has re-centered around **CDP Mode** (a NoDriver-based, WebDriver-free driver) as the recommended maximum-stealth path, added **Stealthy Playwright Mode** to bring that stealth to Playwright's API, and broadened built-in click-solving to Turnstile, reCAPTCHA, DataDome slider, Friendly Captcha, and Incapsula hCaptcha.
+SeleniumBase covers a wider feature surface than any other tool compared here: two automation transports, a test framework, and CAPTCHA handling in one package. The 4.5x line re-centred on **CDP Mode** (NoDriver-derived, WebDriver-free) as the project's documented stealth path, added **Stealthy Playwright Mode**, and extended click-solving to Turnstile, reCAPTCHA, DataDome slider, Friendly Captcha, and Incapsula hCaptcha.
 
-The trade-offs remain complexity and slower performance, and stealth is Chromium-only. For simple scraping it's overkill; for serious Chromium anti-bot bypass with interactive CAPTCHAs, it's the best Python option available.
+**Applicability:** Chromium targets requiring interactive CAPTCHA handling, or projects that need automation and pytest/unittest integration in one dependency — the only tool of the nine providing the latter.
 
-**Recommendation:** Use CDP Mode (or Stealthy Playwright Mode) for complex protected Chromium sites, especially those with click/slide CAPTCHAs. Combine with residential proxies for best results.
+**Constraints:** Chromium only for stealth features. No engine-level fingerprint spoofing (Layer 2) and no TLS impersonation (Layer 4). No mouse-motion model: input realism is OS-level PyAutoGUI clicks plus timing jitter. `Runtime.enable` handling is Tier D — not located in source. IP reputation remains outside the tool's control.
 
-**Effectiveness:** Excellent | **Complexity:** Medium-High | **Best Use:** Complex Chromium sites with CAPTCHAs
+**Layers addressed:** 1 (driver markers), 3 (click timing), plus CAPTCHA handling · **Engine:** Chromium only · **Not addressed:** Layer 2 fingerprinting, Layer 4 TLS
 
 ---
 

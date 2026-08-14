@@ -26,19 +26,19 @@ Stars measure popularity, not stealth. The columns that matter for a build decis
 
 | Tool | Primary repo | License | Last push | Stars | Forks | Contributors | Open issues |
 |------|--------------|---------|-----------|------:|------:|-------------:|------------:|
-| **Camoufox** | [`daijro/camoufox`](https://github.com/daijro/camoufox) | MPL-2.0 | 2026-08-12 | 11,088 | 949 | 30 | 121 |
+| **Camoufox** | [`daijro/camoufox`](https://github.com/daijro/camoufox) | MPL-2.0 | 2026-08-12 | 11,088 | 949 | 30 | 122 |
 | **Patchright** | [`Kaliiiiiiiiii-Vinyzu/patchright`](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright) | Apache-2.0 | 2026-08-05 | 4,086 | 197 | 40 | 7 |
 | **SeleniumBase** | [`seleniumbase/SeleniumBase`](https://github.com/seleniumbase/SeleniumBase) | MIT | 2026-08-14 | 12,925 | 1,574 | 33 | 13 |
 | **Botasaurus** | [`omkarcloud/botasaurus`](https://github.com/omkarcloud/botasaurus) | MIT | 2026-07-26 | 5,664 | 494 | 9 | 57 |
 | **XDriver** | [`arjun-sha/XDriver`](https://github.com/arjun-sha/XDriver) | Apache-2.0 | 2025-09-10 | 5 | 4 | 2 | 0 |
-| **CloakBrowser** | [`CloakHQ/CloakBrowser`](https://github.com/CloakHQ/CloakBrowser) | MIT | 2026-08-11 | 30,021 | 2,477 | 19 | 194 |
-| **Scrapling** | [`D4Vinci/Scrapling`](https://github.com/D4Vinci/Scrapling) | BSD-3-Clause | 2026-08-11 | 73,881 | 7,391 | 30 | 3 |
-| **Obscura** | [`h4ckf0r0day/obscura`](https://github.com/h4ckf0r0day/obscura) | Apache-2.0 | 2026-08-14 | 21,366 | 1,536 | 47 | 73 |
+| **CloakBrowser** | [`CloakHQ/CloakBrowser`](https://github.com/CloakHQ/CloakBrowser) | MIT | 2026-08-11 | 30,027 | 2,478 | 19 | 194 |
+| **Scrapling** | [`D4Vinci/Scrapling`](https://github.com/D4Vinci/Scrapling) | BSD-3-Clause | 2026-08-11 | 73,892 | 7,391 | 30 | 3 |
+| **Obscura** | [`h4ckf0r0day/obscura`](https://github.com/h4ckf0r0day/obscura) | Apache-2.0 | 2026-08-14 | 21,369 | 1,536 | 47 | 73 |
 | **Clearcote** | [`clearcotelabs/clearcote-browser`](https://github.com/clearcotelabs/clearcote-browser) | BSD-3-Clause | 2026-08-13 | 75 | 6 | 1 | 4 |
 
 ## Repos cloned for source verification
 
-`scripts/clone_sources.sh` clones these into `sources/` (git-ignored). Claims marked **Tier A** in the report were read from this code.
+Claims marked **Tier A** in the report were read from this code. The trees are unaudited third-party projects, so they are cloned into a hardened, network-severed Docker sandbox by [`scripts/sandbox.sh`](scripts/sandbox.sh) — never onto a workstation. See [METHODOLOGY.md](METHODOLOGY.md#source-handling).
 
 - **Camoufox** — [`daijro/camoufox`](https://github.com/daijro/camoufox) · [`daijro/browserforge`](https://github.com/daijro/browserforge)
 - **Patchright** — [`Kaliiiiiiiiii-Vinyzu/patchright`](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright) · [`Kaliiiiiiiiii-Vinyzu/patchright-python`](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python) · [`Kaliiiiiiiiii-Vinyzu/patchright-nodejs`](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-nodejs) · [`Kaliiiiiiiiii-Vinyzu/CDP-Patches`](https://github.com/Kaliiiiiiiiii-Vinyzu/CDP-Patches) · [`DevEnterpriseSoftware/patchright-dotnet`](https://github.com/DevEnterpriseSoftware/patchright-dotnet)

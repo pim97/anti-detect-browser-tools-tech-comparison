@@ -33,7 +33,7 @@
 - [Human Behavior System](#human-behavior-system)
 - [GeoIP + WebRTC Integration](#geoip--webrtc-integration)
 - [Framework Integrations](#framework-integrations)
-- [Test Results](#test-results)
+- [Test results — the author's own, mostly on the paid binary](#test-results--the-authors-own-mostly-on-the-paid-binary)
 - [Security Audit](#security-audit)
 - [Pros and Cons](#pros-and-cons)
 - [Installation & Usage](#installation--usage)
@@ -430,7 +430,7 @@ Results are for the **latest Pro/current build** unless noted. **Last tested by 
 | Chromium binary (`chrome`) | **No** (Proprietary) | **Cannot inspect the C++ patches** |
 | SHA-256 checksums | **Ed25519-signed** (pinned pubkey) | Authenticity now verifiable, not just integrity |
 
-> **Improvement since the previous analysis:** the old "self-referential checksums" weakness is materially reduced. Since wrapper 0.4.0, `SHA256SUMS` carries a detached Ed25519 signature verified against a public key pinned in the wrapper source (`BINARY_SIGNING_PUBKEYS`). A compromised download mirror can no longer certify a tampered or downgraded binary. This proves the download is genuinely CloakHQ's — it still does **not** let you read the closed-source patches.
+> **Improvement since the previous analysis:** the old "self-referential checksums" weakness is materially reduced. Since wrapper 0.4.0, `SHA256SUMS` carries a detached Ed25519 signature verified against a public key pinned in the wrapper source (`BINARY_SIGNING_PUBKEYS`). A compromised download mirror can no longer certify a tampered or downgraded binary. This establishes that the download originates from the holder of the pinned signing key. It does not make the closed-source patches readable.
 
 ### Audit Results: 9/9 Tests Passed (on the Chromium 145 binary)
 
@@ -687,20 +687,15 @@ docker run -d --name cloak -p 127.0.0.1:9222:9222 cloakhq/cloakbrowser cloakserv
 
 ## Comparison
 
-> **Star ratings below are the author's editorial judgment, not measurement.**
-> No rubric defines the scale and no benchmark backs any cell. They are retained
-> only as a rough relative ordering — see [METHODOLOGY.md](METHODOLOGY.md#rating-policy).
-
-
 | Feature | CloakBrowser | Camoufox | Patchright | SeleniumBase | Botasaurus |
 |---------|:----------:|:--------:|:----------:|:------------:|:----------:|
 | Spoofing Level | C++ (Chromium) | C++ (Firefox) | Binary patch | Config + UC | JS wrapper |
 | Browser | Chromium | Firefox | Chromium | Chrome | Chrome |
 | Playwright API | ✅ Native | Via Juggler | ✅ Native | ❌ Selenium | ❌ Selenium |
 | Fingerprint Rotation | Seed-based | ✅ BrowserForge | Partial | Partial | Partial |
-| Human Simulation | ✅ Full (Bézier + typing) | ✅ Good | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| Human input simulation | `humanize` (Bézier + typing, Tier B) | `humanize` config | none | PyAutoGUI clicks + jitter | Bézier + Gaussian noise |
 | reCAPTCHA v3 Score | **0.9** (Pro) | 0.7-0.9 | 0.3-0.7 | 0.3-0.7 | 0.3-0.5 |
-| CAPTCHA Solving | ❌ | ❌ | ❌ | ✅ Built-in | ⭐⭐ |
+| CAPTCHA handling | none | none | none | click-solving, several vendors | Cloudflare challenge only |
 | Languages | Py / JS / .NET | Python | Py / JS / .NET | Python | Python |
 | Source Available | Wrapper only | Fully open | Fully open | Fully open | Fully open |
 | Detection Difficulty | Very Hard | Very Hard | Hard | Hard | Medium |
@@ -715,9 +710,9 @@ The `humanize=True` flag still adds comprehensive behavioral simulation (Bézier
 
 **The trade-offs are now sharper.** The Chromium binary is **closed-source** and proprietary, and the strongest results are gated behind a **paid Pro tier** — the free binary (Chromium 146) "goes stale within weeks." The independent security audit (9/9 tests passed, no malicious behavior) covers the **older Chromium 145** binary, not the 146/148 builds now shipping, so its conclusions do not fully transfer. The Ed25519 signing does close the old self-referential-checksum gap, but it proves authenticity, not what the patches actually do.
 
-**Best for:** Maximum Chromium stealth with Playwright API compatibility, zero configuration, and (for the top numbers) a Pro subscription.
+**Applicability:** Chromium automation via the Playwright or Puppeteer API where engine-level fingerprint control and built-in humanized input are required and a closed binary is acceptable. The published figures (reCAPTCHA v3 0.9, FingerprintJS pass) are Tier B and apply to the Pro binary only.
 
-**Limitation:** Proprietary binary requires trust in the CloakBrowser team; the best-performing binary is paid. If auditability is critical, use Camoufox, Clearcote, or Patchright instead.
+**Constraints:** the engine is proprietary — the 71 patches cannot be read or independently verified, and the MIT license covers only the wrapper. Free and Pro binaries differ in Chromium version (146 vs 150) and patch count (58 vs 71). The independent audit covered Chromium 145, which neither current binary matches. Of the nine tools compared, this is the only one whose engine source is unpublished; Camoufox, Clearcote, and Obscura publish theirs.
 
 ---
 

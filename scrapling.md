@@ -4,7 +4,7 @@
 > **Repository:** [github.com/D4Vinci/Scrapling](https://github.com/D4Vinci/Scrapling)
 > **Approach:** Three-tier fetching (HTTP/Dynamic/Stealth) + adaptive element tracking + spider framework
 > **What is verified:** `pyproject.toml` pins `curl_cffi>=0.16.0` (HTTP-tier TLS impersonation) and `patchright>=1.61.2` — **the browser-tier evasion is Patchright's**, inherited wholesale rather than implemented here (**Tier A**)
-> **Anti-bot service claims:** Cloudflare Turnstile handled out of the box (**Tier B**). Notably candid: the README **defers Akamai, DataDome, Kasada and Incapsula to a third-party paid API** rather than claiming them — an unusually honest scoping among the tools here.
+> **Anti-bot service claims:** Cloudflare Turnstile handled out of the box (**Tier B**). The README **defers Akamai, DataDome, Kasada and Incapsula to a third-party paid API** rather than claiming coverage of them.
 > **Maintenance:** Actively developed — **v0.4.14** (2026-08-10); 0.4.11–0.4.13 added feed spiders, AutoThrottle, and a smarter MCP server. 73.9k stars, 30 contributors, only 3 open issues. BSD-3-Clause.
 > **Verified:** 2026-08-14 against `D4Vinci/Scrapling` @ `5d213a2`.
 
@@ -78,8 +78,8 @@ Scrapling is an **all-in-one Python web scraping framework** that bundles fetchi
 │  │  │ curl_cffi        │    │ Playwright (Chromium)    │   │        │
 │  │  │ TLS impersonation│    │ JS rendering             │   │        │
 │  │  │ Chrome/FF/Safari │    │ Network idle detection   │   │        │
-│  │  │ Speed: ⭐⭐⭐⭐⭐│    │ Speed: ⭐⭐⭐           │   │        │
-│  │  │ Stealth: ⭐⭐    │    │ Stealth: ⭐⭐⭐         │   │        │
+│  │  │ no browser proc  │    │ full browser process     │   │        │
+│  │  │ TLS impersonated │    │ real Chrome TLS          │   │        │
 │  │  └──────────────────┘    └──────────────────────────┘   │        │
 │  │                                                           │        │
 │  │  Tier 3: StealthyFetcher                                 │        │
@@ -88,7 +88,7 @@ Scrapling is an **all-in-one Python web scraping framework** that bundles fetchi
 │  │  │ Canvas noise flag        Cloudflare auto-solve    │   │        │
 │  │  │ WebRTC → proxy-only      Timezone/locale match    │   │        │
 │  │  │ WebGL toggle             real_chrome / cdp_url    │   │        │
-│  │  │ Speed: ⭐⭐⭐            Stealth: ⭐⭐⭐⭐⭐     │   │        │
+│  │  │ full browser process, CDP tells patched out      │   │        │
 │  │  └──────────────────────────────────────────────────┘   │        │
 │  └───────────────────────┬─────────────────────────────────┘        │
 │                          │                                           │
@@ -461,7 +461,7 @@ It runs over stdio by default or `streamable-http` with `--http`. Smart CSS pre-
 | **All-in-one framework** | Fetching + parsing + crawling + stealth + AI in one package |
 | **Three fetch tiers** | HTTP-only (curl_cffi), dynamic (Playwright), or full stealth (Patchright) |
 | **TLS impersonation** | curl_cffi matches real browser JA3/JA4 signatures at the HTTP tier |
-| **Adaptive tracking** | Auto-relocate elements when sites change DOM (genuinely uncommon) |
+| **Adaptive tracking** | Auto-relocates elements when sites change DOM; none of the other eight tools implement this |
 | **Blazing-fast parser** | Tied with Parsel, ~784x faster than BeautifulSoup4 (parser micro-benchmark) |
 | **Cloudflare auto-solve** | Built-in Turnstile/Interstitial handling, no external API |
 | **Mature-ish spider framework** | Concurrency, pause/resume, caching, proxy rotation, robots.txt |
@@ -502,12 +502,10 @@ It runs over stdio by default or `streamable-http` with `--http`. Smart CSS pre-
 | Fingerprint spoofing (canvas/WebGL/audio) | **No** first-party implementation | **A** | Exposes flags (canvas noise, WebGL toggle, timezone/locale match, WebRTC→proxy) but implements no engine-level spoofing. Camoufox was removed entirely in the 0.4.x line. |
 | DataDome / Kasada / Akamai / Incapsula | **No** first-party handling | **A** | Notably, the project **does not claim these** — its README routes them to a third-party paid token API. |
 
-**The maintainer's own scoping is the most useful signal on this page.** Rather than
-asserting broad coverage, Scrapling's README explicitly hands Akamai, DataDome, Kasada
-and Incapsula to an external paid service. That is a narrower claim than several
-competing tools make, and narrower claims that match the source are worth more than
-broad ones that don't. Any assessment of Scrapling against those four services is
-really an assessment of Patchright plus your IP reputation.
+**Scope stated by the project.** Scrapling's README routes Akamai, DataDome, Kasada,
+and Incapsula to an external paid token API rather than claiming coverage. This matches
+the source: no first-party handling for those four exists in the tree. Any evaluation of
+Scrapling against them is an evaluation of Patchright plus the caller's IP reputation.
 
 > **Honest note:** Scrapling's own README explicitly says it handles **Cloudflare Turnstile** out of the box and points users to a paid third-party token API for **Akamai / DataDome / Kasada / Incapsula**. Treat any "bypasses DataDome/Kasada" claim as "only insofar as a well-configured Patchright Chromium + clean proxy does" — Scrapling adds no dedicated solver for those. The previous edition's confident ✅ marks for DataDome/Kasada via Camoufox no longer apply (Camoufox is gone).
 
@@ -533,11 +531,6 @@ really an assessment of Patchright plus your IP reputation.
 
 ### vs. Scraping Frameworks
 
-> **Star ratings below are the author's editorial judgment, not measurement.**
-> No rubric defines the scale and no benchmark backs any cell. They are retained
-> only as a rough relative ordering — see [METHODOLOGY.md](METHODOLOGY.md#rating-policy).
-
-
 | Feature | Scrapling | Scrapy | BeautifulSoup4 | Playwright (raw) |
 |---------|:---------:|:------:|:--------------:|:----------------:|
 | Parse speed (relative) | 1.0x | ~1.01x | ~784x slower | N/A |
@@ -546,7 +539,7 @@ really an assessment of Patchright plus your IP reputation.
 | Spider framework | ✅ | ✅ (more mature) | ❌ | ❌ |
 | JS rendering | ✅ | Via Splash/Playwright | ❌ | ✅ |
 | Scrapy interop | ✅ (`@scrapling_response`) | — | ❌ | ❌ |
-| Middleware ecosystem | Limited | ⭐⭐⭐⭐⭐ | ❌ | ❌ |
+| Middleware ecosystem | limited | extensive (Scrapy) | none | none |
 | Community/plugins | Growing | Massive | Massive | Large |
 | Async support | ✅ | ✅ | ❌ | ✅ |
 
@@ -666,9 +659,11 @@ all_cards = first_card.find_similar()
 
 Scrapling is a **framework, not a stealth engine**. Its browser anti-detection is inherited from **Patchright** (a patched Chromium/Playwright); what Scrapling adds is the *framework around it*: a unified classmethod API, a three-tier fetching strategy (curl_cffi HTTP → Playwright → Patchright stealth), adaptive element tracking, an async spider framework with checkpoints and proxy rotation, Scrapy interop, CLI tools, and a 10-tool MCP server.
 
-**Best for:** Teams that want an all-in-one Python scraping solution with built-in TLS/browser stealth options and adaptive parsing, especially against Cloudflare-Turnstile-class protection.
+**Applicability:** Python pipelines needing fetching, parsing, and crawling in one package. Verified first-party capabilities: `curl_cffi` TLS impersonation on the HTTP tier, a `solve_cloudflare` code path, adaptive element tracking, and a spider framework. Browser-tier evasion is Patchright's, reached via `patchright>=1.61.2`.
 
-**Honest assessment:** If you only need browser stealth, use Patchright (or Camoufox for Firefox) directly. If you need a full scraping pipeline with stealth baked in, Scrapling is one of the most complete single-package options — and it is genuinely well-maintained (0.4.10 shipped 2026-07-04, commits within days, ~92% coverage, BSD-3). Just size your expectations: its published benchmarks are parser speed, not WAF pass-rates, and its heavy-hitter stealth is only as good as the Patchright Chromium and proxies you give it.
+**Constraints:** no first-party fingerprint spoofing, and no first-party handling for Akamai, DataDome, Kasada, or Incapsula — the project routes those to an external paid API. Using Patchright directly provides the same browser-tier evasion without the framework layer.
+
+**Scope summary:** Scrapling's browser-tier stealth is Patchright's implementation, reached through a dependency (`patchright>=1.61.2`). Using Patchright directly provides the same evasion without the framework. Scrapling adds the HTTP tier (`curl_cffi` TLS impersonation), the parser, adaptive element tracking, and the spider framework. Project state at 2026-08-14: 0.4.14 shipped 2026-08-10, 30 contributors, 3 open issues, ~92% test coverage, BSD-3-Clause. Its published benchmarks measure parser throughput, not WAF outcomes.
 
 **Unique value:** The adaptive element tracking system remains the standout — automatic selector recovery when a site's DOM changes is something none of the other tools analyzed in this repository provide.
 

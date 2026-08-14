@@ -18,20 +18,22 @@ Botasaurus is a Python-based web scraping framework that markets itself as "The 
 
 **Important correction vs. earlier analysis:** Botasaurus is *no longer a Selenium wrapper*. The current core driver (`botasaurus_driver`) talks to Chrome **directly over the DevTools Protocol WebSocket** (`websocket-client`, a `Connection` class, and generated CDP bindings under `botasaurus_driver/cdp/`). Neither the core `botasaurus` package nor `botasaurus_driver` imports Selenium — the word "selenium" survives only as a PyPI keyword and a single doc comment (`core/browser.py:280`, "convenience function known from selenium"). Treat any "Selenium wrapper" description of Botasaurus as historical. It is closer in architecture to `nodriver`/`zendriver` (raw-CDP drivers) than to Selenium.
 
-## Assessment
+## Technical summary
 
-> **Editorial judgment, not measurement.** Star ratings were removed from this report
-> in the 2026-08-14 revision — no rubric defined them and no evidence backed any cell.
-> What follows is reasoning from the verified architecture; disagree with the reasoning.
-
-| | |
+| Property | Verified state |
 |---|---|
-| **Strongest at** | Human input simulation. The Bézier trajectory generator (verified in `human_curve_generator.py`) with Gaussian distortion and easing is among the more thorough implementations in this space, and CDP-dispatched events mean `event.isTrusted` is genuinely true. |
-| **Also good** | Ergonomics — the decorator-based API is the shortest path from zero to a working scraper of anything here. Documentation is thorough. |
-| **Weakest at** | Fingerprint surface. It does nothing about TLS/JA3, canvas, WebGL, or audio fingerprinting. Its evasion is behavioural and protocol-level only. |
-| **Watch out for** | The "undefeatable scrapers" marketing, and a maintenance split — the core monorepo is active but `botasaurus-driver`'s public repo lags its own PyPI releases by months. |
-| **Reasonable for** | Mid-tier targets where behaviour matters more than fingerprint depth, and for getting something working quickly. |
-| **Reach for something else if** | Your target fingerprints the rendering stack — Camoufox, Clearcote, or CloakBrowser address a layer Botasaurus does not touch. |
+| **Automation transport** | Raw CDP over WebSocket. 58 generated binding files in `botasaurus_driver/cdp/`; zero Selenium imports. **Tier A** |
+| **Input simulation** | Bézier trajectories with Gaussian distortion and `pytweening` easing (`human_curve_generator.py`); events dispatched via `Input.dispatchMouseEvent`, so `event.isTrusted` is `true`. **Tier A** |
+| **`Runtime.enable` tell** | Not addressed. The only source reference is a commented-out line at `connection.py:219`. **Tier A** |
+| **Fingerprint spoofing** | None implemented — no TLS/JA3, canvas, WebGL, or audio controls in the driver. **Tier A** |
+| **CAPTCHA handling** | Cloudflare challenge automation (`bypass_cloudflare=True`). **Tier A** that the code path exists |
+| **Detection layers addressed** | Layer 1 (partially: webdriver, not `Runtime.enable`), Layer 3 (mouse motion, click timing). Not Layer 2 or 4 |
+| **Package state** | Core `botasaurus` 4.0.97 (2026-01-06); `botasaurus-driver` 4.0.101 on PyPI (2026-08-10) while the repo `setup.py` reads 4.0.92 — PyPI is ahead of the published source |
+| **Project state** | 9 contributors, 57 open issues, last push 2026-07-26 |
+
+Vendor positioning ("The All in One Framework to Build Undefeatable Scrapers") is
+marketing copy; the fingerprint-layer gap above is the load-bearing technical
+constraint.
 
 ---
 
@@ -79,7 +81,7 @@ self.driver.run_cdp_command(
 
 **Why it works:** CDP-dispatched `Input.dispatchMouseEvent` events are generated inside the browser's real input pipeline, so `event.isTrusted === true` and the events look like genuine user input rather than JS-synthesized `MouseEvent`s.
 
-### 2. Bézier Curve Mouse Movement (Best-in-Class)
+### 2. Bézier Curve Mouse Movement
 
 The `HumanizeMouseTrajectory` class in `botasaurus_humancursor/src/botasaurus_humancursor/human_curve_generator.py` generates mathematically realistic mouse paths (verified against source):
 
@@ -233,21 +235,19 @@ Botasaurus JS Driver  (npm "botasaurus" 4.0.x, Apache-2.0, Node/TypeScript, on r
 ---
 
 ## Anti-Detection Effectiveness
+| Technique | Detection vector it targets | Implementation |
+|---|---|---|
+| CDP mouse events (`Input.dispatchMouseEvent`) | `event.isTrusted` checks, coordinate analysis | Events enter the browser's real input pipeline, so `isTrusted` is `true` |
+| Bézier curves + easing + Gaussian noise | Mouse-trajectory analysis | `human_curve_generator.py`; `distortion_frequency` 0.5, `target_points` 100, `pytweening.easeOutQuad` |
+| Cloudflare challenge automation | Interactive Cloudflare challenge | `bypass_cloudflare=True` code path |
+| `screenX`/`screenY` prototype patch | CDP window-position leakage | JS prototype patch, not engine-level |
+| Native-CDP connection | `navigator.webdriver`, chromedriver `cdc_` artifacts | No chromedriver in the loop, so there are no `cdc_` markers to remove |
+| Referrer spoofing (`google_get`) | Direct-visit detection | Sets a Google referrer |
+| Randomised timing (170–280 ms) | Timing-pattern analysis | `sleep(random.randint(170, 280) / 1000)` |
+| Profile persistence (full + tiny) | Session/history analysis | Reuses a user-data directory |
 
-> **Star ratings below are the author's editorial judgment, not measurement.**
-> No rubric defines the scale and no benchmark backs any cell. They are retained
-> only as a rough relative ordering — see [METHODOLOGY.md](METHODOLOGY.md#rating-policy).
-
-| Technique | What It Evades | Effectiveness |
-|-----------|---------------|---------------|
-| CDP Mouse Events (`Input.dispatchMouseEvent`) | `event.isTrusted` checks, coordinate analysis | ⭐⭐⭐⭐⭐ |
-| Bézier Curves + easing + noise | Mouse trajectory analysis | ⭐⭐⭐⭐⭐ |
-| Cloudflare Turnstile/challenge automation | Interactive CF challenge | ⭐⭐⭐⭐ |
-| screenX/Y prototype patch | CDP fingerprint leakage | ⭐⭐⭐ |
-| Native-CDP connection (no chromedriver/`cdc_`) | `navigator.webdriver`, driver artifacts | ⭐⭐⭐ |
-| Referrer spoofing (`google_get`) | Direct-visit detection | ⭐⭐ |
-| Random timing (170–280 ms) | Timing pattern analysis | ⭐⭐⭐ |
-| Profile persistence (full + tiny) | Session/history analysis | ⭐⭐⭐ |
+Not addressed by any of the above: canvas, WebGL, audio, and TLS fingerprinting
+(Layers 2 and 4), and the `Runtime.enable` tell.
 
 ---
 
@@ -270,7 +270,7 @@ Botasaurus JS Driver  (npm "botasaurus" 4.0.x, Apache-2.0, Node/TypeScript, on r
 | ❌ Not handled | Canvas / WebGL / audio fingerprinting | no spoofing in driver |
 | ❌ Not handled | TLS/JA3 fingerprinting (browser path) | no TLS control in the browser driver |
 
-**Reality check:** These bypasses target vendor demo pages and work under specific conditions (residential IP, headed mode, current Chrome). The README itself warns that headless mode "will surely be identified by services like Cloudflare, Datadome, and Imperva," and that datacenter proxies get flagged. Do not read the ✅ column as "reliably beats production deployments of these vendors."
+**Scope of these claims:** the tests target vendor demo pages and work under specific conditions (residential IP, headed mode, current Chrome). The README itself warns that headless mode "will surely be identified by services like Cloudflare, Datadome, and Imperva," and that datacenter proxies get flagged. Do not read the ✅ column as "reliably beats production deployments of these vendors."
 
 ---
 
@@ -325,7 +325,7 @@ python -m pip install botasaurus   # pulls botasaurus-driver, humancursor, api, 
 
 | Advantage | Details |
 |-----------|---------|
-| **Human Mouse Movement** | ⭐⭐⭐⭐⭐ Best-in-class Bézier curve implementation |
+| **Human Mouse Movement** | Bézier curve + Gaussian distortion + easing (`human_curve_generator.py`) |
 | **Native CDP driver** | No chromedriver/Selenium; fewer classic automation tells |
 | **Built-in Cloudflare automation** | `bypass_cloudflare=True` + Turnstile/challenge solver in-driver |
 | **Ease of Use** | Decorator-based `@browser`/`@request`/`@task` API is very intuitive |
@@ -340,7 +340,7 @@ python -m pip install botasaurus   # pulls botasaurus-driver, humancursor, api, 
 
 | Limitation | Details |
 |------------|---------|
-| **"Undefeatable" Claim** | Marketing hyperbole — not truly undefeatable |
+| **"Undefeatable" Claim** | Vendor marketing copy; no benchmark published |
 | **Headless Mode** | Per the docs, easily detected by Cloudflare/DataDome/Imperva; use headed for protected sites |
 | **Advanced Fingerprinting** | No canvas/WebGL/audio/font spoofing; fingerprint is real but not controllable/rotatable |
 | **Browser TLS Fingerprinting** | Browser path uses Chrome's real TLS; no ClientHello spoofing |
@@ -353,15 +353,13 @@ python -m pip install botasaurus   # pulls botasaurus-driver, humancursor, api, 
 
 ## Comparison with Alternatives
 
-| Feature | Botasaurus | Patchright | SeleniumBase | BotBrowser |
-|---------|:----------:|:----------:|:------------:|:----------:|
-| **Human Mouse** | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
-| **CDP Evasion** | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **Fingerprint Control** | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **CF Challenge Automation** | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
-| **Ease of Use** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
-| **Language** | Python | Multi | Python | Multi |
-| **Cost** | Free | Free | Free | $$ |
+| Property | Botasaurus | Patchright | SeleniumBase | CloakBrowser |
+|---|---|---|---|---|
+| **Mouse-motion model** | Bézier + Gaussian noise + easing | none | none (PyAutoGUI clicks + jitter) | `humanize` (Tier B) |
+| **`Runtime.enable` tell** | not addressed | isolated contexts, Console API disabled | Tier D — not located | Tier D — not in wrapper README |
+| **Engine-level fingerprint control** | none | none | none | C++ patches (Tier B, closed binary) |
+| **Cloudflare challenge automation** | `bypass_cloudflare=True` | none | click-solving for several vendors | none |
+| **Engine source published** | n/a (stock Chromium) | n/a (stock Chromium) | n/a (stock ChromeDriver) | **no** |
 
 ---
 
@@ -384,7 +382,7 @@ python -m pip install botasaurus   # pulls botasaurus-driver, humancursor, api, 
 
 ## Bottom Line
 
-Botasaurus is a **legitimate, well-engineered** scraping framework. Its human-mouse simulation (Bézier curves + Gaussian noise + easing over trusted CDP input) remains best-in-class among the tools reviewed, and the in-driver Cloudflare Turnstile/challenge automation is a real, useful capability rather than a marketing bullet. The 2024–2026 architecture is a **native-CDP driver, not a Selenium wrapper** — an important correction to older descriptions.
+Botasaurus implements mouse-motion simulation (Bézier curves, Gaussian noise, easing, dispatched over CDP so `event.isTrusted` is `true`) and in-driver Cloudflare challenge automation. Of the nine tools compared, four implement a mouse-motion model: Botasaurus, CloakBrowser, Clearcote, and Camoufox. The current architecture is a **native-CDP driver, not a Selenium wrapper**; descriptions stating otherwise predate the 2024 rewrite.
 
 "Undefeatable," however, is hyperbole. It does not control canvas/WebGL/audio/TLS fingerprints, warns against headless for protected sites itself, and only *detects* (doesn't defeat) PerimeterX. For serious anti-bot systems you still need:
 - Residential/mobile proxies
@@ -392,9 +390,9 @@ Botasaurus is a **legitimate, well-engineered** scraping framework. Its human-mo
 - A tool that actually spoofs/rotates fingerprints (Botasaurus doesn't)
 - Rate limiting and behavioral variation
 
-**Recommendation:** Excellent choice for mid-tier scraping where human-like behavior and Cloudflare-challenge automation matter, and where an all-in-one framework (caching, parallelism, UI/desktop) saves time. Pair with quality residential proxies; for hard fingerprinting targets, combine with a fingerprint-spoofing browser.
+**Applicability:** covers Layer 1 (partially) and Layer 3 of the [detection-layer taxonomy](README.md#detection-layers-and-which-tools-address-them), plus framework concerns (caching, parallelism, UI/desktop packaging). It implements nothing at Layer 2 (fingerprinting) or Layer 4 (TLS), so targets probing those layers require pairing it with a fingerprint-spoofing browser. IP reputation remains outside the tool's control in all cases.
 
-**Effectiveness:** Moderate-High | **Complexity:** Low | **Best Use:** Scraper apps with human-like behavior + Cloudflare challenges
+**Layers addressed:** 1 (webdriver only, not `Runtime.enable`), 3 (mouse motion, click timing) · **Not addressed:** Layer 2 fingerprinting, Layer 4 TLS
 
 ---
 

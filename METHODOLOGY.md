@@ -2,10 +2,9 @@
 
 How this comparison is produced, what its claims are worth, and where it stops.
 
-Read this before trusting any table in the report. The single most useful thing here
-is the [evidence tier system](#evidence-tiers) — every non-obvious claim in the report
-carries a tier, so you can tell a fact we read in the source from a number a vendor
-put on their own README.
+Every non-obvious claim in the report carries an [evidence tier](#evidence-tiers)
+indicating whether it was read from source, reported by the vendor, reported by the
+community, or not established.
 
 ---
 
@@ -37,9 +36,8 @@ conclusions. Where a hosted service is relevant it is named as context, never sc
 
 ## Evidence tiers
 
-Every substantive claim is tagged with the strength of evidence behind it. This is the
-core of the method: it makes the difference between *verified*, *claimed*, and
-*assumed* visible instead of flattening all three into the same confident prose.
+Every substantive claim is tagged with the strength of evidence behind it. The tier distinguishes verified,
+claimed, and unestablished statements, which are otherwise indistinguishable in prose.
 
 | Tier | Meaning | How it is produced |
 |:----:|---------|--------------------|
@@ -52,8 +50,8 @@ Two rules keep the tiers honest:
 
 1. **Anti-bot-service outcomes can never be Tier A here.** We do not run a benchmark
    suite against commercial WAFs (see below), so no "beats Cloudflare" claim in this
-   repo is ever better than Tier B. Anyone presenting such a claim as measured fact —
-   including a previous version of this report — is overstating it.
+   repo is ever better than Tier B. A previous revision of this report
+   presented such claims as measured; that was incorrect and has been corrected.
 2. **A vendor's own benchmark stays Tier B no matter how detailed it is.** Screenshots,
    score tables, and pass/fail grids published by the tool author are evidence of what
    the author observed on their setup, not independent results.
@@ -62,13 +60,13 @@ Two rules keep the tiers honest:
 
 ## What we did not do
 
-Stated plainly, because the omissions matter more than the inclusions:
+The following were not performed, and no claim in this repository should be read as implying them:
 
 - **No head-to-head anti-bot benchmark.** We did not point these nine tools at
   Cloudflare, DataDome, Kasada, Akamai, PerimeterX, or Imperva and count passes.
-  Doing it credibly needs a fixed target list, matched residential IPs, many trials
-  per cell, and controls for time-of-day and IP reputation. Anything less produces
-  numbers that look rigorous and aren't.
+  A credible benchmark requires a fixed target list, matched residential IPs, multiple
+  trials per cell, and controls for time-of-day and IP reputation. Results produced
+  without those controls are not reproducible.
 - **No CAPTCHA solve-rate measurement.**
 - **No performance benchmarking of our own.** Throughput, memory, and page-load
   figures quoted anywhere in the report are the projects' own numbers (Tier B).
@@ -127,9 +125,10 @@ date across nine tools without any visible signal that it had — hand-maintaine
 version tables always lose. Every claim in STATUS.md is reproducible by re-running one
 command.
 
-Health columns are chosen for build decisions, not vanity: **license** (can you ship
-it), **last push** (is anyone home), **contributors** (what happens if the maintainer
-stops). Star counts are included but should be read as popularity, never as stealth.
+Health columns are selected for build-decision relevance: **license** (redistribution
+and commercial-use constraints), **last push** (commit recency), **contributors**
+(maintenance concentration). Star counts are included for completeness; they measure
+repository popularity and have no established relationship to detection outcomes.
 
 ---
 
@@ -153,11 +152,6 @@ Mitigations, so you can judge rather than take our word:
 - **Sponsorship does not buy edits.** If you believe a rating is shaded by the
   sponsorship, open an issue quoting the claim — that is a bug like any other.
 
-The most common way a report like this gets slanted is not a false statement about a
-competitor; it is *selective rigor* — demanding source-level proof from alternatives
-while repeating the sponsor's marketing unexamined. The tier system exists partly to
-make that failure mode visible.
-
 ---
 
 ## Rating policy
@@ -172,9 +166,9 @@ What replaced them:
 - **Architecture facts** — stated as what the tool actually does, verifiable from
   source (Tier A). "Hides `navigator.webdriver` in C++" is checkable; "⭐⭐⭐⭐ stealth"
   is not.
-- **Editorial judgments** — kept where genuinely useful (the decision guide), but
-  labelled as opinion, with the reasoning attached so you can disagree with the
-  reasoning rather than the star count.
+- **A capability-to-implementation index** — maps a stated technical requirement to
+  the tools whose source implements it. It is a lookup derived from the architecture
+  tables, not a ranking, and contains no recommendation.
 
 Similarly removed: a "Realistic Success Rates" table giving percentage bands per
 protection tier. Those numbers had no measurement, sample size, target list, or date

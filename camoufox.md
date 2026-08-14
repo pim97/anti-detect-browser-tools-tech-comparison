@@ -3,7 +3,7 @@
 > **Tool Type:** Custom Firefox Build (Anti-Detect Browser)
 > **Repository:** [github.com/daijro/camoufox](https://github.com/daijro/camoufox)
 > **Approach:** C++ level fingerprint injection + Juggler protocol isolation
-> **What is verified:** 34 C++ patch files in `patches/`, including `fingerprint-injection`, `navigator-spoofing`, `screen-spoofing`, `locale-spoofing`, `webrtc-ip-spoofing`, `anti-font-fingerprinting`, `audio-fingerprint-manager` (**Tier A**)
+> **Verified in source (Tier A):** 34 C++ patch files in `patches/` plus 2 in `patches/playwright/`, including `fingerprint-injection`, `navigator-spoofing`, `screen-spoofing`, `locale-spoofing`, `webrtc-ip-spoofing`, `anti-font-fingerprinting`, `audio-fingerprint-manager`. Input simulation is exposed as the `humanize`, `humanize:minTime`, `humanize:maxTime` config properties (`settings/properties.json:69-71`). `Runtime.enable` is not applicable: automation runs over Juggler, not CDP.
 > **Anti-bot service claims:** **none** — the project makes no claims about Cloudflare, DataDome, Kasada or similar, and its README instead **documents a limitation**: some WAFs probe SpiderMonkey engine behaviour, which a Firefox fork cannot disguise (**Tier D** for coverage; the limitation is **Tier B**)
 > **Maintenance:** Actively developed — browser `v152.0.4-beta.28` (2026-07-19); Python wrapper `camoufox` **0.5.4** on PyPI (2026-07-16; repo `pythonlib` at 0.5.5 dev). 11.1k stars, 30 contributors, last push 2026-08-12. MPL-2.0.
 > **Verified:** 2026-08-14 against `daijro/camoufox` @ `7add1ef`.
@@ -15,7 +15,7 @@
 - [What is Camoufox?](#what-is-camoufox)
 - [Version & Status (2026-08)](#version--status-2026-08)
 - [How It Works](#how-it-works)
-- [Why This Approach is Superior](#why-this-approach-is-superior)
+- [Properties of C++-Level Spoofing](#properties-of-c-level-spoofing)
 - [Fingerprint Capabilities](#fingerprint-capabilities)
 - [What's New Since the Last Analysis](#whats-new-since-the-last-analysis)
 - [Pros and Cons](#pros-and-cons)
@@ -29,7 +29,7 @@
 
 Camoufox is a **custom-built Firefox browser** designed specifically for web scraping and automation stealth. Unlike tools that patch or inject into existing browsers, Camoufox compiles Firefox from source with modifications at the C++ implementation level.
 
-**Key differentiator:** All fingerprint spoofing happens in the browser's native C++ code, making it impossible for JavaScript to detect the modifications through property descriptor checks, prototype inspection, or timing analysis.
+**Mechanism:** fingerprint values are substituted inside Firefox's C++ getters, before any value reaches JavaScript. Consequently the substitution is not observable through the techniques that detect JS-level patching — property-descriptor inspection, prototype-chain checks, or `Function.prototype.toString` comparison — because no JS-level wrapper exists. This constrains one detection method; it does not make the browser undetectable, and the project's own README documents a residual signal (SpiderMonkey engine behaviour identifies the browser as Firefox-based).
 
 The project is authored by **daijro** (also the author of [BrowserForge](https://github.com/daijro/browserforge)). As of 2026-08-14 it has ~11.1k GitHub stars and 30 contributors. The C++ browser fork tracks upstream Firefox — the current base is **Firefox 152.0.4** (`upstream.sh`). A thin Python library (`camoufox`) wraps Playwright's Firefox driver to launch the binary and feed it a fingerprint config.
 
@@ -48,7 +48,7 @@ The project is authored by **daijro** (also the author of [BrowserForge](https:/
 | Python wrapper license | **MIT** | `pythonlib/pyproject.toml` → `license = "MIT"` |
 | Primary language | **C++** (browser), Python (wrapper) | GitHub repo language stats |
 | Last commit | 2026-08-12 (`7add1ef`) | `git log` |
-| Camoufox source patches | **32** stealth/debloat patches + **2** Playwright/Juggler patches | `patches/*.patch` (32), `patches/playwright/*.patch` (2) |
+| Camoufox source patches | **34** stealth/debloat patches + **2** Playwright/Juggler patches | `patches/*.patch` (34), `patches/playwright/*.patch` (2) |
 
 > Note the two-license split: the browser is a Firefox fork and is therefore **MPL-2.0**, while the `camoufox` Python launcher library is **MIT**. Earlier analyses that called the whole project "MIT" or "MPL" were only half right.
 
@@ -209,7 +209,7 @@ For evasion against consistency checks that BrowserForge synthesis can trip, Cam
 
 ---
 
-## Why This Approach is Superior
+## Properties of C++-Level Spoofing
 
 ### vs. JavaScript Injection (puppeteer-extra-stealth, etc.)
 
@@ -423,9 +423,9 @@ with Camoufox(
 
 ## Conclusion
 
-Camoufox remains the **gold standard for Firefox-based anti-detection**. By modifying Firefox at the C++ level, it achieves truly native-appearing fingerprint spoofing that JavaScript inspection cannot detect, and it has matured considerably: a modern Firefox 152 base, real-fingerprint presets, per-context seeded-noise identities, proxy-derived geo/WebRTC, and a native C++ humanized cursor.
+Camoufox is the only tool of the nine that forks Firefox rather than Chromium. Fingerprint values are substituted in C++ getters, so the substitution is not observable through JS property-descriptor or prototype inspection. Verified capabilities at the 2026-08-14 snapshot: Firefox 152.0.4 base, 34 patches in `patches/` plus 2 Playwright/Juggler patches, real-fingerprint presets, per-context seeded-noise identities, proxy-derived geo/WebRTC, and `humanize` cursor configuration.
 
-**Best for:** Maximum stealth when the target doesn't discriminate against Firefox users, especially high-volume scraping where each context needs a distinct, statistically-plausible (or genuinely real) identity.
+**Applicability constraint:** the engine is Firefox. Targets that treat Firefox differently from Chrome, or that probe SpiderMonkey engine behaviour (a residual signal the project documents), will identify the browser family regardless of fingerprint configuration.
 
 **Limitation:** It is Firefox — small real-world share, and its genuine (unmodifiable) TLS fingerprint means you cannot masquerade as Chrome at the network layer.
 
