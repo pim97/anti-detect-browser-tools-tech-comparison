@@ -1,5 +1,34 @@
 # Changelog
 
+## 2026-08-14c — Code review added
+
+Added **[CODE-REVIEW.md](CODE-REVIEW.md)**: an engineering assessment of all nine
+codebases covering structure, typing, tests, error handling, dependency hygiene, and
+security-relevant patterns, with file-and-line citations. Metrics are reproducible via
+`scripts/codemetrics.py`, which runs inside the sandbox and reads files as text/AST only.
+
+### Findings
+
+| Finding | Evidence |
+|---------|----------|
+| **CloakBrowser disables the Chromium sandbox on every launch** | `--no-sandbox` hardcoded in `cloakbrowser/config.py:54-66`. The arg merge (`browser.py:1395-1425`) overrides flags but cannot remove them; the only opt-out, `stealth_args=False`, also drops the fingerprint seed. Not mentioned in the project README. Combined with a closed binary: unauditable native code, no OS sandbox, hostile input |
+| **XDriver ships a frozen bundle with no drift detection** | 295 lines of first-party Python, zero tests, prebuilt `playwright-core` 1.49.0 |
+| **Patchright's patching is engineered to fail loudly** | `*OrThrow` ts-morph accessors throughout (47 in `crPagePatch.ts`, 40 in `framesPatch.ts`); `check_patch_impact.yml` diffs Playwright versions and can file an issue on breaking changes |
+| **SeleniumBase is large and effectively untyped** | 99,701 production lines; `base_case.py` 17,670 lines / 579 methods / 2 classes; 2.7% of 3,902 functions annotated; 506 broad excepts; 548 sleep calls. Its 42 `shell=True` calls are all in `console_scripts/` CLI tooling, not the driving path |
+| **Obscura relies on panic-on-failure** | 2,326 `.unwrap()` in production Rust, concentrated in CDP handlers (`io.rs` 18, `domsnapshot.rs` 10, `target.rs` 8); `catch_unwind` in only four files |
+| **Botasaurus swallows errors; driver is untested** | 38 bare `except:`; `botasaurus-driver` has zero test files across 50,169 lines |
+| **Scrapling has the cleanest Python in the set** | 83.5% annotation coverage, 59.1% docstrings, 0 bare excepts, 59 test files, the only pre-commit config |
+
+### Method note
+
+An earlier draft of the metrics applied vendored-directory exclusions to the line counts
+but not to the pattern searches, and reported 116 `eval` calls in a 295-line project
+because it was scanning a bundled Playwright tree. Both passes now share the same
+exclusions, and tests are separated from production code. The corrected figures are the
+ones published.
+
+---
+
 ## 2026-08-14b — Full claim re-verification; all evaluative content removed
 
 Re-verified every asserted numeric and behavioural claim against source, and removed

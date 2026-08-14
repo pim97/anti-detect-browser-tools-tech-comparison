@@ -73,6 +73,9 @@ The following were not performed, and no claim in this repository should be read
 - **No binary analysis of closed builds.** Where a tool ships a proprietary binary
   (CloakBrowser's Pro build), we can read the wrapper but not the binary. Claims about
   what the binary does are Tier B by construction.
+- **No dependency-vulnerability scanning.** The [code review](CODE-REVIEW.md) counts
+  security-relevant patterns in first-party source; it does not audit transitive
+  dependencies for known CVEs.
 - **No long-run stability testing.** A tool that works today may be detected next
   week; nothing here measures durability.
 
