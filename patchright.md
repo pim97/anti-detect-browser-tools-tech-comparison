@@ -149,9 +149,14 @@ and **adds**:
 
 ---
 
-## Services Bypassed
+## Services the project claims
 
-Per the project's own README (with the right setup — proxies, and CDP-Patches for input where noted). These are the maintainers' claims plus community testing, **not** independent guarantees:
+> **Tier B.** This is the maintainers' own list, published without methodology, targets,
+> dates, or trial counts, and reinforced by community reports (**Tier C**). It was not
+> reproduced here. Read it as "the maintainers believe this works with the right setup,"
+> which is what they actually say — not as a measured pass rate.
+
+Per the project's own README, with the right setup (proxies, and CDP-Patches for input where noted):
 
 - Brotector ✅ (with [CDP-Patches](https://github.com/Kaliiiiiiiiii-Vinyzu/CDP-Patches))
 - Cloudflare ✅

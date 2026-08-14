@@ -251,9 +251,12 @@ Botasaurus JS Driver  (npm "botasaurus" 4.0.x, Apache-2.0, Node/TypeScript, on r
 
 ---
 
-## Services Bypassed
+## What the project claims, and what the test suite actually targets
 
-The claims are demonstrated in the repo's `bot_detection_tests.py` (verified) and README. These test *demo* endpoints, and results depend heavily on IP reputation and headed mode.
+> **Tier A** for "these test functions exist and target these endpoints" — verified in
+> `bot_detection_tests.py`. **Tier B** for the claim that they pass. The tests hit
+> vendor *demo* pages, not production deployments, and outcomes depend heavily on IP
+> reputation and headed mode. Nothing was executed here.
 
 | Status | Service | Evidence |
 |--------|---------|----------|

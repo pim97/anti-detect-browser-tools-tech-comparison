@@ -168,26 +168,42 @@ XDriver Patching Flow (verified):
 
 ---
 
-## Services Bypassed
+## What the project claims — and why to discount it
 
-**These are the project's own claims** (README "Performance" table), not independently benchmarked here. Given that the actual evasion is a single Runtime.enable leak fix over stock Chromium — with no fingerprint spoofing, no TLS work, and no behavioral layer — treat the enterprise-anti-bot rows as optimistic/marketing. The Runtime.enable fix alone reliably passes the rebrowser bot-detector, which is its designed target.
+> **Every row below is a vendor claim from September 2025** (README "Performance"
+> table), never independently benchmarked, about a bundle pinned to `playwright-core`
+> 1.49.0 that has received no updates in ~11 months. **Tier B, and decaying.**
+>
+> Two structural reasons to discount them heavily:
+>
+> 1. **The mechanism doesn't reach most of these.** The entire evasion is one
+>    `Runtime.enable` leak fix over stock Chromium — no fingerprint spoofing, no TLS
+>    work, no behavioural layer (verified: XDriver's own Python is ~295 lines of file
+>    backup/replace). A single protocol-level fix cannot plausibly account for defeating
+>    fingerprint- and behaviour-driven systems.
+> 2. **Anti-bot claims decay.** Even if each was true when published, an unmaintained
+>    stealth patch loses ground continuously. Nothing here has been re-tested since.
+>
+> Where the technique genuinely works is the rebrowser bot-detector — its designed
+> target — and that result is inherited from
+> [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches), not original.
 
-### Enterprise Anti-Bot (README claims)
-| Service | Claimed | Reality check |
-|---------|:-------:|---------------|
-| Cloudflare WAF / Turnstile | ✅ | Plausible for the interstitial/WAF; no CAPTCHA-solving code |
-| Kasada | ✅ | Claimed; no Kasada-specific code |
-| DataDome | ✅ | Claimed; relies entirely on the Runtime.enable fix + IP |
-| PerimeterX | ✅ | Claimed |
-| Imperva | ✅ | Claimed |
-| Fingerprint.com | ✅ | Claimed; no fingerprint spoofing in source |
+| Service | README claims | What the source actually supports |
+|---------|:-------------:|-----------------------------------|
+| Cloudflare WAF / Turnstile | claimed pass | Plausible for the interstitial/WAF via the `Runtime.enable` fix; **no CAPTCHA-solving code exists** |
+| Kasada | claimed pass | No Kasada-specific code. Claim rests entirely on the leak fix + your IP |
+| DataDome | claimed pass | No DataDome-specific code |
+| PerimeterX | claimed pass | No behavioural layer, which is what PerimeterX primarily scores |
+| Imperva | claimed pass | Nothing specific in source |
+| Fingerprint.com | claimed pass | **No fingerprint spoofing in source at all** — the least supportable claim in the table |
 
-### Fingerprinting / Detector Tests (README claims)
-| Test | Claimed Result |
-|------|----------------|
-| Rebrowser Bot Detector | Passed all tests *(this is the technique's actual sweet spot)* |
-| CreepJS | 100% Anonymous |
-| BrowserScan | 87% |
+### Detector test results (README claims, Sept 2025, unverified)
+
+| Test | Claimed result | Comment |
+|------|----------------|---------|
+| Rebrowser Bot Detector | Passed all tests | The technique's actual sweet spot — and inherited from rebrowser-patches |
+| CreepJS | "100% Anonymous" | CreepJS is a consistency auditor, not an anti-bot; the phrasing does not correspond to a CreepJS output field |
+| BrowserScan | 87% | No methodology or date given |
 | Whoer.net | High Anonymity |
 | AmIUnique | No unique fingerprint |
 | Cover Your Tracks (EFF) | Strong protection |

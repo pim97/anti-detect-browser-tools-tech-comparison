@@ -287,9 +287,15 @@ sb.cdp.get_endpoint_url()          # for Stealthy Playwright attach
 
 ---
 
-## Services Bypassed
+## Targets the project ships examples for
 
-SeleniumBase ships **working example scripts** in the repo for real protected sites. Most stealth examples now live under `examples/cdp_mode/` (Pure CDP Mode) and `examples/cdp_mode/playwright/` (Stealthy Playwright):
+> **This is not a list of confirmed bypasses.** It is a list of protected sites the
+> project ships runnable example scripts against — which is a stronger form of evidence
+> than a ✅ grid (the file paths are verifiable, and you can run them yourself) but
+> weaker than a benchmark. Whether any given script still passes today depends on the
+> site's current configuration and your IP. Nothing here was executed. **Tier B.**
+
+Most stealth examples live under `examples/cdp_mode/` (Pure CDP Mode) and `examples/cdp_mode/playwright/` (Stealthy Playwright):
 
 | Service | Protection Type | Example File (verified present) |
 |---------|-----------------|---------------------------------|

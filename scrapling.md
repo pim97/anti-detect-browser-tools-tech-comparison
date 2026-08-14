@@ -486,22 +486,28 @@ It runs over stdio by default or `streamable-http` with `--http`. Smart CSS pre-
 
 ---
 
-## Services Bypassed
+## Anti-bot handling — what exists in the code, and what the project claims
 
-Effectiveness in StealthyFetcher mode is **inherited from Patchright + Chromium**, plus the built-in Cloudflare solver. Scrapling publishes no first-party pass-rate benchmarks, so the grades below are qualitative and follow the tool's own documentation/positioning.
+> The previous edition of this page carried a ✅/⚠️/❌ coverage grid with the legend
+> "✅ = Reliably bypasses." Scrapling publishes no pass-rate benchmarks and none were
+> run here, so that grid asserted more than anyone knows. It has been replaced with
+> what is actually checkable: which mechanisms exist in the source, and what the
+> maintainer claims. See [METHODOLOGY.md](METHODOLOGY.md#evidence-tiers).
 
-| Service | Fetcher (HTTP) | StealthyFetcher (Patchright) |
-|---------|:--------------:|:----------------------------:|
-| Cloudflare WAF | ⚠️ Basic only | ✅ |
-| Cloudflare Turnstile / Interstitial | ❌ | ✅ Auto-solved (`solve_cloudflare`) |
-| DataDome | ❌ | ⚠️ (Patchright-dependent; no built-in solver) |
-| Kasada | ❌ | ⚠️ (Patchright-dependent) |
-| PerimeterX | ❌ | ⚠️ |
-| Akamai | ❌ | ⚠️ |
-| Incapsula / Imperva | ❌ | ⚠️ |
-| TLS fingerprint checks | ✅ Impersonated | ✅ Real browser |
+| Capability | Present in source? | Tier | Notes |
+|---|---|:--:|---|
+| TLS impersonation (HTTP tier) | **Yes** — `curl_cffi>=0.16.0`, `--impersonate` with Chrome/Firefox/Safari profiles | **A** | Real JA3/JA4 impersonation. The most concretely verifiable stealth feature here. |
+| Cloudflare Turnstile / Interstitial solver | **Yes** — `solve_cloudflare` in StealthyFetcher | **A** | The code path exists and is first-party. Whether it succeeds on a given deployment is untested here. |
+| CDP-level automation-tell removal | **Delegated** — `patchright>=1.61.2` | **A** | Not Scrapling's work. Its browser-tier evasion is exactly Patchright's, with Patchright's strengths and limits. |
+| Fingerprint spoofing (canvas/WebGL/audio) | **No** first-party implementation | **A** | Exposes flags (canvas noise, WebGL toggle, timezone/locale match, WebRTC→proxy) but implements no engine-level spoofing. Camoufox was removed entirely in the 0.4.x line. |
+| DataDome / Kasada / Akamai / Incapsula | **No** first-party handling | **A** | Notably, the project **does not claim these** — its README routes them to a third-party paid token API. |
 
-✅ = Reliably bypasses | ⚠️ = Partial/conditional | ❌ = Not effective
+**The maintainer's own scoping is the most useful signal on this page.** Rather than
+asserting broad coverage, Scrapling's README explicitly hands Akamai, DataDome, Kasada
+and Incapsula to an external paid service. That is a narrower claim than several
+competing tools make, and narrower claims that match the source are worth more than
+broad ones that don't. Any assessment of Scrapling against those four services is
+really an assessment of Patchright plus your IP reputation.
 
 > **Honest note:** Scrapling's own README explicitly says it handles **Cloudflare Turnstile** out of the box and points users to a paid third-party token API for **Akamai / DataDome / Kasada / Incapsula**. Treat any "bypasses DataDome/Kasada" claim as "only insofar as a well-configured Patchright Chromium + clean proxy does" — Scrapling adds no dedicated solver for those. The previous edition's confident ✅ marks for DataDome/Kasada via Camoufox no longer apply (Camoufox is gone).
 

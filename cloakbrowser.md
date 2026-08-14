@@ -376,9 +376,13 @@ New since the previous analysis. CloakBrowser ships example integrations (`examp
 
 ---
 
-## Test Results
+## Test results — the author's own, mostly on the paid binary
 
-All tests verified by the author against live detection services. Results below are for the **latest Pro/current build** unless noted. **Last tested by the author: Aug 2026 (Chromium 150).**
+> **Tier B throughout.** These are the maintainer's published results, not independent
+> reproductions, and the strongest of them require a Pro licence. The binary is closed,
+> so nothing in this table can be verified from source — only that it is claimed.
+
+Results are for the **latest Pro/current build** unless noted. **Last tested by the author: Aug 2026 (Chromium 150).**
 
 | Detection Service | Stock Playwright | CloakBrowser | Notes |
 |---|---|---|---|
