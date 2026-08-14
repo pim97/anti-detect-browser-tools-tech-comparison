@@ -4,15 +4,30 @@
 > **Repository:** [github.com/CloakHQ/CloakBrowser](https://github.com/CloakHQ/CloakBrowser)
 > **Approach:** C++ source-level fingerprint patches + CDP input behavior mimicking
 > **Language:** Python, Node.js (TypeScript), .NET (C#)
-> **Effectiveness:** Very High (66 C++ patches on the latest binary, 0.9 reCAPTCHA v3 score)
-> **Maintenance:** Very active — wrapper v0.4.8 (2026-07-05), near-daily commits (as of 2026-07)
+> **What is verified:** the patch counts and platform matrix, read from the project's own README (**Tier A** that they are *claimed*; the binary itself is closed, so what the patches do cannot be verified here)
+> **Anti-bot service claims:** Turnstile, FingerprintJS, **reCAPTCHA v3 score 0.9**, "tested against 30+ detection sites" — all **Tier B**, all gated to the **Pro** binary. The free binary is not claimed to reach these numbers.
+> **Maintenance:** Very active — wrapper **0.5.7** (2026-08-11); Pro binary `chromium-v150.0.7871.114.6-pro` (2026-08-11). 30.0k stars, 19 contributors, 194 open issues. MIT wrapper, **proprietary binary**.
+> **Verified:** 2026-08-14 against `CloakHQ/CloakBrowser` @ `2488311`.
+
+> ### Patch counts — current as of 2026-08-14
+>
+> | Platform | Free | Pro |
+> |---|---|---|
+> | Linux x86_64 / arm64 | Chromium 146 (**58** patches) | Chromium 150 (**71** patches) |
+> | Windows x86_64 | Chromium 146 (**58** patches) | Chromium 150 (**71** patches) |
+> | macOS arm64 / x86_64 | Chromium 145 (**26** patches) | Chromium 150 (**71** patches) |
+>
+> Earlier revisions of this report cited "66" (Chromium 148) and, in one stale
+> sentence, "33". Both are superseded. **Patch count is a measure of surface area
+> touched, not of quality** — it is not comparable across projects that split changes
+> differently.
 
 ---
 
 ## Table of Contents
 
 - [What is CloakBrowser?](#what-is-cloakbrowser)
-- [Current State (2026-07)](#current-state-2026-07)
+- [Current State (2026-08)](#current-state-2026-08)
 - [How It Works](#how-it-works)
 - [Free vs Pro (Delayed Free-Release Model)](#free-vs-pro-delayed-free-release-model)
 - [Human Behavior System](#human-behavior-system)
@@ -34,29 +49,29 @@ CloakBrowser is a **patched Chromium binary** with source-level C++ modification
 
 **Second differentiator:** It targets **Chromium** (not Firefox), which means native Playwright API support, TLS fingerprints that match real Chrome, and compatibility with Chrome's ~65% market share.
 
-**What changed since the last analysis:** the tool has moved fast. The patch count has grown (33 → **66** on the newest binary), Chromium has advanced (145 → **146 free / 148 Pro**), a **paid Pro tier** now gates the newest binary, a **.NET/C# client** was added alongside Python and Node.js, and binary downloads are now protected by a **pinned Ed25519 signature** rather than the old self-referential checksums. See [Current State](#current-state-2026-07).
+**What changed since the last analysis:** the tool has moved fast. The patch count has grown (33 → 66 → **71** on the newest binary), Chromium has advanced (145 → **146 free / 150 Pro**), a **paid Pro tier** now gates the newest binary, a **.NET/C# client** was added alongside Python and Node.js, and binary downloads are now protected by a **pinned Ed25519 signature** rather than the old self-referential checksums. See [Current State](#current-state-2026-08).
 
 ---
 
-## Current State (2026-07)
+## Current State (2026-08)
 
-Verified against the repo source and release history (repo cloned at commit dated 2026-07-05):
+Verified against the repo source and release history (repo cloned at `2488311`, 2026-08-11):
 
 | Fact | Value | Evidence |
 |------|-------|----------|
-| Wrapper version | **0.4.8** (2026-07-05) | `cloakbrowser/_version.py`, `pyproject.toml`, PyPI |
+| Wrapper version | **0.5.7** (2026-08-11) | `cloakbrowser/_version.py`, `pyproject.toml`, PyPI |
 | Free binary (default) | **Chromium 146.0.7680.177.5** (Linux/Windows x64), 146.0.7680.177.3 (Linux arm64), 145.0.7632.109.2 (macOS) | `cloakbrowser/config.py` → `PLATFORM_CHROMIUM_VERSIONS` |
-| Pro binary (latest) | **Chromium 148.0.7778.215.5** (Windows + Linux; macOS on 148.0.7778.215.3) | `CHANGELOG.md` [0.4.8], README |
-| C++ patch count | **66** on Chromium 148 (Pro); **58** on 146 (free); **26** on macOS 145 | README lines 39/277/846–850 |
+| Pro binary (latest) | **Chromium 150.0.7871.114.6** | GitHub release `chromium-v150.0.7871.114.6-pro` (2026-08-11), README |
+| C++ patch count | **71** on Chromium 150 (Pro); **58** on 146 (free); **26** on macOS 145 | README lines 39/277/846–850 |
 | CDP input mimicking | Included in the patch set (input behavior mimicking) | README "How It Works" |
 | Languages | Python (≥3.9), Node.js/TypeScript, **.NET 8 / C# (NuGet, community-maintained, since 0.4.3)** | `dotnet/`, `js/`, CHANGELOG |
 | License (wrapper) | **MIT** (free forever) | `LICENSE`, `pyproject.toml` |
 | License (binary) | Proprietary; **delayed free-release model** (v146 free, v148+ Pro) | `BINARY-LICENSE.md`, README |
 | Platforms | Linux x64/arm64, macOS arm64/x64, Windows x64 | `config.py` → `SUPPORTED_PLATFORMS` |
-| Maintenance | Very active — 10+ tags in the last ~2 weeks, last commit 2026-07-05 | `git log`, GitHub tags |
-| Last tested (by author) | Jul 2026 (Chromium 148) | README "Test Results" |
+| Maintenance | Very active — last push 2026-08-11; 19 contributors, 194 open issues | GitHub API |
+| Last tested (by author) | Aug 2026 (Chromium 150) | README "Test Results" |
 
-> **Note on the "33 patches" claim from the previous analysis:** it is now **outdated**. The patch count is versioned to the binary — the newest Pro build (Chromium 148) has **66**, the free build (146) has **58**, and the older macOS build (145) has **26**. There is no longer a single "33" number.
+> **Note on the "33 patches" claim from the previous analysis:** it is now **outdated**. The patch count is versioned to the binary — the newest Pro build (Chromium 150) has **71**, the free build (146) has **58**, and the older macOS build (145) has **26**. There is no longer a single "33" number.
 
 ---
 
@@ -88,7 +103,7 @@ Verified against the repo source and release history (repo cloned at commit date
 │  ┌──────────────────────────────────────────────┐                │
 │  │  PATCHED CHROMIUM BINARY (~200MB download)   │                │
 │  │  Free: Chromium 146 (58 patches)             │                │
-│  │  Pro:  Chromium 148 (66 patches)             │                │
+│  │  Pro:  Chromium 150 (71 patches)             │                │
 │  │  ┌────────────────────────────────────────┐  │                │
 │  │  │  Source-Level C++ Patches               │  │                │
 │  │  │  - Canvas fingerprint randomization     │  │                │
@@ -180,10 +195,10 @@ Patch counts by binary (README lines 846–850):
 
 | Platform | Free binary | Pro binary |
 |----------|-------------|------------|
-| Linux x86_64 | Chromium 146 (**58 patches**) | Chromium 148 (**66 patches**) |
-| Linux arm64 | Chromium 146 (58) | Chromium 148 (66) |
-| macOS arm64 / x86_64 | Chromium 145 (**26 patches**) | Chromium 148 (66) |
-| Windows x86_64 | Chromium 146 (58) | Chromium 148 (66) |
+| Linux x86_64 | Chromium 146 (**58 patches**) | Chromium 150 (**71 patches**) |
+| Linux arm64 | Chromium 146 (58) | Chromium 150 (71) |
+| macOS arm64 / x86_64 | Chromium 145 (**26 patches**) | Chromium 150 (71) |
+| Windows x86_64 | Chromium 146 (58) | Chromium 150 (71) |
 
 **Why C++ patches are hard to detect:**
 - `navigator.webdriver` returns `false` from native code
@@ -237,7 +252,7 @@ New since the previous analysis. The **wrapper (Python + JS + .NET) is MIT, free
 | Tier | Binary | Where | Notes |
 |------|--------|-------|-------|
 | **Free** | Chromium **146** (58 patches) | GitHub Releases | Auto-downloads, no key. "Goes stale within weeks as detection evolves." |
-| **Pro** | Chromium **148.0.7778.215.5** (66 patches) | cloakbrowser.dev | Newest patches/Chromium first. Set `license_key` / `CLOAKBROWSER_LICENSE_KEY` / `~/.cloakbrowser/license.key` |
+| **Pro** | Chromium **150.0.7871.114.6** (71 patches) | cloakbrowser.dev | Newest patches/Chromium first. Set `license_key` / `CLOAKBROWSER_LICENSE_KEY` / `~/.cloakbrowser/license.key` |
 
 - License keys are opaque strings (the wrapper enforces no particular format); validation is cached locally for 24h. The `info` diagnostics command surfaces a `plan` field (default `solo`) (`cloakbrowser/license.py`).
 - The Pro test claims (0.9 reCAPTCHA v3, FingerprintJS pass) are explicitly labeled **"Pro/current build"** in the README — the free v146 binary is not guaranteed to hit those. As of 0.4.7 the public Docker `cloaktest` suite was switched to free-tier-stable checks (Sannysoft, Incolumitas, Rebrowser, deviceandbrowserinfo, BrowserScan, CreepJS lies/noise=false); FingerprintJS and reCAPTCHA v3 are no longer hard-pass checks for the free image.
@@ -315,7 +330,7 @@ Select with `humanize=True, human_preset="careful"`.
 
 ## GeoIP + WebRTC Integration
 
-CloakBrowser can automatically detect timezone and locale from the proxy exit IP — and, since **0.4.8**, from the machine's own public IP even **without a proxy**:
+CloakBrowser can automatically detect timezone and locale from the proxy exit IP — and, since 0.4.8, from the machine's own public IP even **without a proxy**:
 
 ```python
 from cloakbrowser import launch
@@ -363,7 +378,7 @@ New since the previous analysis. CloakBrowser ships example integrations (`examp
 
 ## Test Results
 
-All tests verified by the author against live detection services. Results below are for the **latest Pro/current build** unless noted. **Last tested: Jul 2026 (Chromium 148).**
+All tests verified by the author against live detection services. Results below are for the **latest Pro/current build** unless noted. **Last tested by the author: Aug 2026 (Chromium 150).**
 
 | Detection Service | Stock Playwright | CloakBrowser | Notes |
 |---|---|---|---|
@@ -399,7 +414,7 @@ All tests verified by the author against live detection services. Results below 
 > **Full audit:** [CloakBrowser Security Audit](https://github.com/pim97/cloakbrowser-analyze)
 > **Audit date:** March 2026 | **Binary:** Chromium 145.0.7632.159.7 (Linux x64)
 
-> **Caveat (2026-07):** the public audit was done on the **Chromium 145** binary. The current free binary is **146** and the Pro binary is **148**, neither of which the audit covers. The audit's behavioral conclusions do not automatically transfer to the newer binaries.
+> **Caveat (2026-08):** the public audit was done on the **Chromium 145** binary. The current free binary is **146** and the Pro binary is **150**, neither of which the audit covers. The audit's behavioral conclusions do not automatically transfer to the newer binaries.
 
 ### Trust Model
 
@@ -477,7 +492,7 @@ export CLOAKBROWSER_BINARY_PATH=/path/to/your/chromium
 
 | Pro | Details |
 |-----|---------|
-| **C++ Chromium patches** | 66 source-level modifications on the latest binary — not JS injection, not config flags |
+| **C++ Chromium patches** | 71 source-level modifications on the latest Pro binary (Chromium 150) — not JS injection, not config flags |
 | **Chromium engine** | TLS fingerprint matches real Chrome, ~65% market share |
 | **Drop-in Playwright/Puppeteer** | Same API — swap the import, keep your code |
 | **`humanize=True`** | One flag for Bézier mouse, typing simulation, scroll patterns |
@@ -667,6 +682,11 @@ docker run -d --name cloak -p 127.0.0.1:9222:9222 cloakhq/cloakbrowser cloakserv
 ---
 
 ## Comparison
+
+> **Star ratings below are the author's editorial judgment, not measurement.**
+> No rubric defines the scale and no benchmark backs any cell. They are retained
+> only as a rough relative ordering — see [METHODOLOGY.md](METHODOLOGY.md#rating-policy).
+
 
 | Feature | CloakBrowser | Camoufox | Patchright | SeleniumBase | Botasaurus |
 |---------|:----------:|:--------:|:----------:|:------------:|:----------:|

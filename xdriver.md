@@ -4,8 +4,19 @@
 > **Category:** Playwright Driver Patcher (rebrowser-patches derivative)
 > **Language:** Python (CLI) + bundled JavaScript (patched `playwright-core`)
 > **Type:** File-replacement patching of the local Playwright driver
-> **Version:** v1.0.1 (released 2025-09-10) — *as of 2026-07*
-> **Maintenance:** Effectively dormant. Single author, no commits since 2025-09, 5 stars / 4 forks, no PyPI package.
+> **Version:** v1.0.1 (released 2025-09-10) — **unchanged as of 2026-08-14**
+> **What is verified:** the bundled "patched" driver identifies itself as `turnstilebrowser-playwright-core` **1.49.0**; XDriver's own Python is ~295 lines doing file backup/replace and version validation, with no browser-patching logic of its own (**Tier A**)
+> **Anti-bot service claims:** the README claims **Cloudflare WAF, Turnstile, DataDome, Kasada** and "undetectable even against vendors like Kasada" (**Tier B**) — but these are September-2025 claims about a bundle pinned to `playwright-core` 1.49.0. In an adversarial field, **claims this old are stale by construction.**
+> **Maintenance:** **Effectively abandoned.** No commits in ~11 months (last: 2025-09-10). 5 stars, 4 forks, 2 contributors, no PyPI package. Apache-2.0.
+> **Verified:** 2026-08-14 against `arjun-sha/XDriver` @ `b610852`.
+
+> ### ⚠️ Not recommended for new work
+>
+> XDriver is a repackaging of a [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches)-lineage
+> fork, frozen since September 2025 against a Playwright version that is now many
+> releases behind. [Patchright](./patchright.md) is the maintained expression of the
+> same idea and tracks Playwright releases automatically. This page is kept for
+> reference and because the tool still circulates in recommendations.
 
 ---
 
@@ -15,17 +26,19 @@ XDriver is a stealth patching tool that swaps out the JavaScript files inside a 
 
 **What it actually ships (verified from source):** the bundled "patched" driver is **not original work**. `x_driver/bundles/package/package.json` identifies it as `turnstilebroweser-playwright-core` v1.49.0 (the package `name` is misspelled verbatim in the source) — a `playwright-core` fork carrying the `turnstilebrowser-patches` set (a [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches) lineage). Every stealth modification in the bundle is gated behind `TURNSTILEBROWSER_PATCHES_*` environment variables. XDriver's own Python code (`~200 lines`) only does file backup/replace + version validation; it contains no browser-patching logic of its own.
 
-## Verdict
+## Assessment
 
-| Aspect | Rating | Notes |
-|--------|--------|-------|
-| **Overall Quality** | ⭐⭐⭐ | Thin CLI wrapper around a third-party patched `playwright-core` |
-| **Anti-Detection** | ⭐⭐⭐ | Real Runtime.enable-leak fix (rebrowser-lineage), but no fingerprinting/behavioral layer |
-| **Ease of Use** | ⭐⭐⭐⭐⭐ | One-command activation, no code changes |
-| **Maintenance Risk** | ⭐ | Dormant (~10 months no commits), version-locked, bundle/host version mismatch |
-| **Documentation** | ⭐⭐ | README overstates capabilities ("C-level", WebRTC); examples are empty stubs |
+> **Editorial judgment, not measurement.** Star ratings were removed from this report
+> in the 2026-08-14 revision — no rubric defined them and no evidence backed any cell.
+> What follows is reasoning from the verified architecture; disagree with the reasoning.
 
-**TL;DR:** A convenient one-command wrapper that drops a `turnstilebrowser`/rebrowser-patched Playwright driver into your install. The core Runtime.enable leak fix is real and effective, but the README's "C-level," "WebRTC leak protection," and broad anti-bot claims are not backed by the source. Fine for quick testing; the dormancy, missing PyPI package, and a bundle-vs-required-version mismatch make it a poor choice for production.
+| | |
+|---|---|
+| **What is real** | The `Runtime.enable` leak fix. It is genuine and effective — because it is [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches) lineage, not XDriver's work. XDriver's own ~295 lines of Python do file backup/replace and version validation, nothing more. |
+| **Convenient at** | One-command activation with no code changes. |
+| **Disqualifying** | Dormancy. No commits since 2025-09-10 (~11 months), no PyPI package, 5 stars, 2 contributors, and a bundle pinned to `playwright-core` 1.49.0. In an adversarial field, an unmaintained stealth patch is a decaying asset. |
+| **Claims that outrun the source** | The README's "C-level" and "WebRTC leak protection" claims are not backed by anything in the repository; the shipped examples are empty stubs. Its anti-bot coverage list is the broadest in this report and comes from the least-maintained project in it. |
+| **Recommendation** | **Do not adopt for new work.** Use [Patchright](./patchright.md) — same core idea, actively maintained, tracks Playwright releases automatically. |
 
 ---
 

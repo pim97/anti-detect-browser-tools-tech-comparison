@@ -5,8 +5,10 @@
 > **Language:** Python (core + driver); Node/TypeScript (Botasaurus JS Driver, on rebrowser-playwright-core)
 > **Type:** CDP-native stealth driver + all-in-one scraping framework with human simulation
 > **Approach:** Direct Chrome DevTools Protocol control + Bézier-curve human input + Cloudflare challenge automation
-> **Effectiveness:** Moderate-High vs basic/mid-tier detection; not "undefeatable"
-> **Maintenance:** Actively maintained (core repo last commit 2026-06-29, as of 2026-07)
+> **What is verified:** **zero** Selenium imports in `botasaurus_driver`; 58 generated CDP binding files under `botasaurus_driver/cdp/`; Bézier cursor paths in `botasaurus_humancursor/.../human_curve_generator.py` (**Tier A**). Any "Selenium wrapper" description of Botasaurus is historical.
+> **Anti-bot service claims:** the README claims **Cloudflare WAF, Cloudflare Turnstile, DataDome** with ✅ against linked demo targets, and markets "undefeatable" scrapers (**Tier B** — vendor-selected demo targets, not a benchmark)
+> **Maintenance:** Core `botasaurus` **4.0.97** (2026-01-06, unchanged); `botasaurus-driver` **4.0.101** on PyPI (2026-08-10) — note the GitHub `setup.py` still reads 4.0.92, so **PyPI is ahead of the repo**. 5.7k stars, 9 contributors, last push 2026-07-26. MIT.
+> **Verified:** 2026-08-14 against `omkarcloud/botasaurus` @ `6c9260d` and `botasaurus-driver` @ `db1d291`.
 
 ---
 
@@ -16,37 +18,40 @@ Botasaurus is a Python-based web scraping framework that markets itself as "The 
 
 **Important correction vs. earlier analysis:** Botasaurus is *no longer a Selenium wrapper*. The current core driver (`botasaurus_driver`) talks to Chrome **directly over the DevTools Protocol WebSocket** (`websocket-client`, a `Connection` class, and generated CDP bindings under `botasaurus_driver/cdp/`). Neither the core `botasaurus` package nor `botasaurus_driver` imports Selenium — the word "selenium" survives only as a PyPI keyword and a single doc comment (`core/browser.py:280`, "convenience function known from selenium"). Treat any "Selenium wrapper" description of Botasaurus as historical. It is closer in architecture to `nodriver`/`zendriver` (raw-CDP drivers) than to Selenium.
 
-## Verdict
+## Assessment
 
-| Aspect | Rating | Notes |
-|--------|--------|-------|
-| **Overall Quality** | ⭐⭐⭐⭐ | Well-engineered, good for mid-tier protection |
-| **Ease of Use** | ⭐⭐⭐⭐⭐ | Excellent decorator-based API |
-| **Anti-Detection** | ⭐⭐⭐ | Good basics + built-in Cloudflare-challenge automation; not "undefeatable" |
-| **Human Simulation** | ⭐⭐⭐⭐⭐ | Best-in-class Bézier curve mouse movements |
-| **Documentation** | ⭐⭐⭐⭐ | Comprehensive with examples |
+> **Editorial judgment, not measurement.** Star ratings were removed from this report
+> in the 2026-08-14 revision — no rubric defined them and no evidence backed any cell.
+> What follows is reasoning from the verified architecture; disagree with the reasoning.
 
-**TL;DR:** Solid all-in-one framework for evading basic-to-medium bot detection with excellent human-like behavior simulation and a genuinely useful built-in Cloudflare Turnstile/challenge solver. Won't defeat enterprise-grade systems (Akamai/PerimeterX/Kasada) alone, and does nothing about TLS/canvas/WebGL fingerprinting.
+| | |
+|---|---|
+| **Strongest at** | Human input simulation. The Bézier trajectory generator (verified in `human_curve_generator.py`) with Gaussian distortion and easing is among the more thorough implementations in this space, and CDP-dispatched events mean `event.isTrusted` is genuinely true. |
+| **Also good** | Ergonomics — the decorator-based API is the shortest path from zero to a working scraper of anything here. Documentation is thorough. |
+| **Weakest at** | Fingerprint surface. It does nothing about TLS/JA3, canvas, WebGL, or audio fingerprinting. Its evasion is behavioural and protocol-level only. |
+| **Watch out for** | The "undefeatable scrapers" marketing, and a maintenance split — the core monorepo is active but `botasaurus-driver`'s public repo lags its own PyPI releases by months. |
+| **Reasonable for** | Mid-tier targets where behaviour matters more than fingerprint depth, and for getting something working quickly. |
+| **Reach for something else if** | Your target fingerprints the rendering stack — Camoufox, Clearcote, or CloakBrowser address a layer Botasaurus does not touch. |
 
 ---
 
-## Version & Maintenance Status (as of 2026-07)
+## Version & Maintenance Status (verified 2026-08-14)
 
 Botasaurus does **not** publish GitHub Releases — there are no tags/releases on the repo. Versioning happens by an auto-increment script (`increment_version.py`) that bumps the patch number in `setup.py` and auto-publishes to PyPI/npm (commit messages like `chore: autopublish 2026-06-29...`). So "current version" means "latest published package," not a release note.
 
 | Package | Registry | Version | Published | License |
 |---------|----------|---------|-----------|---------|
 | `botasaurus` (core) | PyPI | **4.0.97** | 2026-01-06 | MIT |
-| `botasaurus-driver` (stealth CDP driver) | PyPI | **4.0.92** | 2025-09-30 | MIT |
+| `botasaurus-driver` (stealth CDP driver) | PyPI | **4.0.101** | 2026-08-10 | MIT |
 | `botasaurus-humancursor` (Bézier input) | PyPI | 4.0.83 | 2025-04-09 | MIT |
 | `botasaurus-server` (scraper UI/server) | PyPI | 4.0.61 | 2025-07-29 | MIT |
 | `botasaurus-api` (REST client) | PyPI | 4.0.10 | 2025-08-05 | MIT |
 | `botasaurus-requests` (hrequests fork, TLS-fingerprint HTTP) | PyPI | 4.0.38 | 2024-09-30 | MIT |
 | `botasaurus` (Botasaurus **JS Driver**, Node/TS) | npm | **4.0.134** | 2026-06-29 | Apache-2.0 |
 
-**Activity:** The monorepo (`omkarcloud/botasaurus`) is actively maintained — last commit **2026-06-29**. The separate stealth-driver repo (`omkarcloud/botasaurus-driver`) is maintained more sporadically: its last public commit is 2025-06-11 (PyPI is a bit ahead at 4.0.92, Sep 2025), with commits like "Fixing Chrome v137, Extension Break" showing they patch it to keep pace with new Chrome versions. The `setup.py` in the monorepo still reads `version='4.0.97'`.
+**Activity:** The monorepo (`omkarcloud/botasaurus`) is actively maintained — last push **2026-07-26**. The separate stealth-driver repo (`omkarcloud/botasaurus-driver`) is maintained more sporadically: its last public commit is 2025-06-11 (PyPI is well ahead at 4.0.101, Aug 2026), with commits like "Fixing Chrome v137, Extension Break" showing they patch it to keep pace with new Chrome versions. The `setup.py` in the monorepo still reads `version='4.0.97'`.
 
-**Status: actively maintained** (not abandoned). ~5.5k GitHub stars.
+**Status: actively maintained** (not abandoned). ~5.7k GitHub stars, 9 contributors, 57 open issues.
 
 ---
 
@@ -229,6 +234,10 @@ Botasaurus JS Driver  (npm "botasaurus" 4.0.x, Apache-2.0, Node/TypeScript, on r
 
 ## Anti-Detection Effectiveness
 
+> **Star ratings below are the author's editorial judgment, not measurement.**
+> No rubric defines the scale and no benchmark backs any cell. They are retained
+> only as a rough relative ordering — see [METHODOLOGY.md](METHODOLOGY.md#rating-policy).
+
 | Technique | What It Evades | Effectiveness |
 |-----------|---------------|---------------|
 | CDP Mouse Events (`Input.dispatchMouseEvent`) | `event.isTrusted` checks, coordinate analysis | ⭐⭐⭐⭐⭐ |
@@ -321,7 +330,7 @@ python -m pip install botasaurus   # pulls botasaurus-driver, humancursor, api, 
 | **Parallelization** | Easy concurrent browser management |
 | **Caching** | Built-in result caching (with pluggable SQLite/Postgres storage) |
 | **Profile Management** | Full profiles + lightweight cookie-only "tiny" profiles |
-| **Active Development** | Core monorepo updated 2026-06 (as of 2026-07) |
+| **Active Development** | Core monorepo last pushed 2026-07-26 |
 | **MIT License** | Open source (core + Python packages; the npm JS Driver is Apache-2.0) |
 
 ### Limitations

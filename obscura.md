@@ -2,10 +2,21 @@
 
 > **Tool Type:** Custom Headless Browser Engine (built from scratch in Rust)
 > **Repository:** [github.com/h4ckf0r0day/obscura](https://github.com/h4ckf0r0day/obscura)
-> **Approach:** V8 runtime + html5ever DOM tree + JavaScript shim + optional TLS impersonation
+> **Approach:** V8 runtime + html5ever DOM tree + JavaScript shim + native Rust layout/paint engine (v0.2.0) + optional TLS impersonation
 > **Language:** Rust (CLI / engine / embeddable library), Puppeteer / Playwright clients (any language) via CDP, plus a built-in MCP server
-> **Effectiveness:** Moderate (basic detection bypass + now-coherent fingerprint surface; still weak against layout/render-aware anti-bots)
-> **Maintenance:** Actively developed — **v0.1.9 as of 2026-07** (10 releases since 2026-04-13; last push 2026-07-03; ~17.7k stars). Apache-2.0 across the board.
+> **Anti-bot service claims:** **none published** by the project (evidence **Tier D**). It makes no claims about Cloudflare, DataDome, Kasada, or any commercial WAF, and none were tested here.
+> **Maintenance:** Actively developed — **v0.2.0 (2026-08-08)**; last push 2026-08-14; ~21.4k stars; 47 contributors. Apache-2.0 across the board.
+> **Verified:** 2026-08-14 against `h4ckf0r0day/obscura` @ `f458a7f`.
+
+> ### ⚠️ This page was substantially wrong before 2026-08-14
+>
+> Previous revisions stated that Obscura "contains no layout engine, no CSS cascade,
+> no compositor" and that `getBoundingClientRect` returned synthesized rects. **That
+> was accurate for v0.1.x and is obsolete as of v0.2.0** (2026-08-08), which added a
+> native Rust rendering engine (`crates/obscura-render`, ~66.8k LOC) covering block and
+> inline layout, flexbox, grid, tables, floats, positioning, transforms, text shaping,
+> images, canvas, gradients and shadows — plus screenshots and PDF export over CDP.
+> The sections below have been corrected; see [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -32,9 +43,44 @@ Obscura is an **open-source headless browser engine written in Rust**, built spe
 
 **Key differentiator:** Unlike every other tool analyzed in this repository, Obscura is not a patched, forked, or wrapped version of Chrome or Firefox. It is a **from-scratch engine** that reimplements just enough of the browser surface to run JavaScript against an HTML document.
 
-**Important caveat:** Obscura is not a full browser. It contains no layout engine, no CSS cascade, no compositor, no GPU rasterization, and no real Canvas / WebGL / audio implementations. External CSS files are fetched but stored as a string and never applied as a cascade. This is what makes it lightweight (≈30 MB resident, ≈85 ms page load per the project's own benchmarks) and what limits its effectiveness against anti-bot systems that probe real layout, rendering, or fingerprinting APIs.
+**The v0.2.0 shift (2026-08-08).** Obscura is no longer "a JS runtime bolted to an HTML tree." It now has a real layout and paint pipeline written in Rust. Verified in source (Tier A):
 
-**What changed since the last analysis (v0.1.0 → v0.1.9):** the JS shim grew from ~3,000 to ~7,900 lines and closed several of the tells the previous review flagged. The fingerprint surface is now **platform-coherent** (Windows / macOS / Linux profiles whose UA, `navigator.platform`, UA-CH, GPU renderer, and timezone agree), `getBoundingClientRect` returns deterministic non-zero rects, input events go through `document.elementFromPoint` hit-testing, and `event.isTrusted` is `false` for page-created events. The default persona is now **Windows / Chrome 145**, not Linux. The license inconsistency (Apache vs MIT) is resolved — everything is Apache-2.0.
+| Module | Lines | Role |
+|--------|------:|------|
+| `crates/obscura-render/src/dom.rs` | 20,283 | box tree, layout |
+| `crates/obscura-render/src/paint.rs` | 16,902 | rasterization |
+| `crates/obscura-render/src/style.rs` | 10,924 | computed style, cascade |
+| `crates/obscura-render/src/css.rs` | 10,350 | CSS parsing |
+| `crates/obscura-render/src/inline.rs` | 4,983 | inline/text layout |
+| **Total** | **66,826** | |
+
+`getComputedStyle` is now served by `op_computed_style`, documented in
+`crates/obscura-js/src/ops.rs:5075` as "one renderer-computed CSS snapshot" drawn from
+"the retained prepared layout" — not the old synthesized defaults table. Element
+geometry comes from `viewport_client_rects_with_scroll`. `Page.captureScreenshot` and
+`Page.printToPDF`, previously hard-coded errors, are implemented.
+
+**Important caveat — rendering is a build-time feature, not an unconditional one.**
+In `crates/obscura-js/Cargo.toml` the feature set is `default = []`, with the comment
+"Off by default so the scraping build stays lean." What you get depends on how you
+obtained the binary:
+
+| How you got it | Rendering |
+|----------------|-----------|
+| Release archive, no suffix (the default download) | **Yes** |
+| Release archive `-stealth` | **Yes** (+ TLS impersonation) |
+| Release archive `-no-render` / `-no-render-stealth` | No |
+| `cargo build` from source without flags | **No** — needs `--features render` |
+
+So a v0.2.0 *download* clears layout-probing checks; a naive v0.2.0 *source build*
+does not. Any analysis of Obscura — including this one — has to say which build it
+means. Where this page discusses layout behaviour, it means a render-enabled build.
+
+What it still is not: a Chromium-equivalent. There is no GPU rasterization path, and
+WebGL and audio remain shimmed rather than real. It remains dramatically lighter than a
+real browser (≈30 MB resident, ≈85 ms page load — the project's own benchmarks,
+**Tier B**, not reproduced here), and that lightness is still bought by doing less than
+Blink or Gecko.
 
 ---
 
@@ -114,8 +160,8 @@ When `obscura fetch <url>` runs, the navigation path in `obscura-browser` execut
 
 Two consequences of this pipeline are worth flagging:
 
-- **External CSS is never applied as a cascade.** It is fetched but not resolved into computed style. `getComputedStyle` (see below) now returns *synthesized* values (inline styles, dimensions from the bounding rect, and a defaults table), not a real cascade. JavaScript that depends on styles set only via external stylesheets will not see them.
-- **Layout is synthesized, not computed.** There is no layout engine, but `getBoundingClientRect` now returns deterministic per-node rects (a 12-column grid derived from the node id) instead of all-zeros, specifically so Playwright's actionability polling and virtualization libraries work (see the `bootstrap.js` comments referencing issues #45 and #324).
+- **External CSS is resolved (render builds, v0.2.0+).** `obscura-render` parses and cascades stylesheets — `style.rs` carries specificity handling and cascade tests, and the release notes list external stylesheets, web fonts, and responsive images as supported. In a **`-no-render` build the old limitation still applies**: CSS is fetched but never resolved into computed style, so JS depending on external stylesheets sees nothing.
+- **Layout is computed, not synthesized (render builds).** `getBoundingClientRect` is backed by real box geometry via `viewport_client_rects_with_scroll`, replacing the v0.1.x deterministic 12-column grid derived from node id. In non-render builds the synthesized grid remains — it exists so Playwright actionability polling and virtualization libraries don't stall (see `bootstrap.js` comments referencing issues #45 and #324).
 
 ### V8 Snapshotting
 
@@ -271,21 +317,29 @@ This is a **fix** relative to the previous analysis. Page-created events (`new E
 }
 ```
 
-Also a **fix**: dispatched mouse coordinates are now resolved through `document.elementFromPoint(x, y)` first, and `getBoundingClientRect` returns stable per-node rects, so `elementFromPoint` can actually recurse into the tree. Coordinate-driven clicks (not just selector-driven `page.click('selector')`) now hit the intended element. The previous "coordinates are ignored, target is always `__obscura_click_target`" limitation no longer holds. It remains a synthesized geometry, not a real layout, so pixel-perfect hit-testing against real element bounds is still approximate.
+Also a **fix**: dispatched mouse coordinates are resolved through `document.elementFromPoint(x, y)` first, so `elementFromPoint` recurses into the tree properly. Coordinate-driven clicks (not just selector-driven `page.click('selector')`) hit the intended element. The v0.1.x "coordinates are ignored, target is always `__obscura_click_target`" limitation no longer holds. In a render build, hit-testing now runs against real measured boxes rather than the synthesized grid.
 
-### `getComputedStyle` (now synthesized, not a bare stub)
+### `getComputedStyle` — renderer-backed in v0.2.0
 
-```javascript
-// bootstrap.js:3804 onward
-globalThis.getComputedStyle = (el) => {
-  // 1. inline style value first
-  // 2. width/height/top/left/... synthesized from getBoundingClientRect
-  // 3. a defaults table (display:block, position:static, font-size:16px, ...)
-  ...
-};
+In a **render build**, `getComputedStyle` is served by a native op:
+
+```rust
+// crates/obscura-js/src/ops.rs:5075
+/// One renderer-computed CSS snapshot for `getComputedStyle()`. Returning all
+/// supported properties together keeps a single JS style object to one native
+/// call and one use of the retained prepared layout.
+#[cfg(feature = "render")]
+#[op2]
+fn op_computed_style(state: &OpState, #[string] nid_str: String) -> String {
 ```
 
-`getComputedStyle` now returns inline values, dimensions pulled from the (non-zero) bounding rect, and a table of sensible defaults — added specifically so React virtualization libraries (react-window, tanstack-virtual, react-virtuoso) render content instead of zero items. It still does **not** apply the external CSS cascade, and some defaults (e.g. `font-family: 'Times'`) are giveaways to a detector that inspects computed style closely.
+Values come from the actual cascade and layout, so the v0.1.x tells are gone: no
+defaults table, no rect-derived dimensions, no `font-family: 'Times'` giveaway.
+
+In a **non-render build** the old JS-synthesized implementation is still what runs —
+inline style, then dimensions from the bounding rect, then a defaults table — with all
+the detectability that implies. This is the single biggest behavioural difference
+between the two builds and the main reason to check which one you are shipping.
 
 ---
 
@@ -361,7 +415,7 @@ The `obscura-net` interceptor and `obscura-browser`'s `InterceptedRequest` / `In
 | Browser | version, getWindowForTarget | — |
 | LP | getMarkdown (DOM-to-Markdown, custom domain) | — |
 
-`Page.printToPDF` and `Page.captureScreenshot` are explicitly unimplemented and return an explanatory error (there is no compositor or raster output — split the screenshot leg of a pipeline onto a real browser). The frame-ID convention (`frame_id == target_id`) for Playwright compatibility is still in place, and there are per-command CDP deadlines (`OBSCURA_CDP_COMMAND_TIMEOUT_MS`) so one wedged page cannot stall other sessions. `obscura-cdp/src/domains/*.rs` contains ~244 method-handler arms across the domains.
+`Page.printToPDF` and `Page.captureScreenshot` are **implemented as of v0.2.0** in render builds — viewport, clipped, scrolled and full-page capture with PNG/JPEG/WebP output, plus paginated PDF export with paper sizes, margins, scale and page ranges. Screencasting is supported with acknowledgement backpressure. In a non-render build these still return an explanatory error (`"Page.{method} is not supported by Obscura: no layout or paint engine"`), and `fromSurface=false` is unsupported in every build since there is no separate browser-window compositor surface. The frame-ID convention (`frame_id == target_id`) for Playwright compatibility is still in place, and there are per-command CDP deadlines (`OBSCURA_CDP_COMMAND_TIMEOUT_MS`) so one wedged page cannot stall other sessions. `obscura-cdp/src/domains/*.rs` contains ~244 method-handler arms across the domains.
 
 ---
 
@@ -436,11 +490,11 @@ For multi-URL workloads, `obscura scrape` runs `obscura-worker` child processes 
 
 | Limitation | Description |
 |---|---|
-| No layout engine | External CSS is fetched but never applied as a cascade |
-| No real rendering | No painting, no compositor, no GPU; `captureScreenshot` / `printToPDF` are unimplemented |
-| Synthesized geometry | `getBoundingClientRect` returns a deterministic grid rect, not a real measured box |
-| `getComputedStyle` is approximate | Inline styles + rect-derived dimensions + a defaults table; no cascade, some tell-y defaults |
+| **Rendering is build-gated** | `default = []` in Cargo — a source build without `--features render` has none of the v0.2.0 layout work. Release archives (no suffix / `-stealth`) do include it; `-no-render*` archives do not. Know which binary you have. |
+| Non-render builds keep every v0.1.x layout limitation | No cascade, synthesized `getBoundingClientRect` grid, defaults-table `getComputedStyle`, `captureScreenshot`/`printToPDF` return errors |
+| No GPU rasterization | Painting is CPU-side; there is no compositor surface (`fromSurface=false` is unsupported in all builds) |
 | Canvas / WebGL are string stubs | `toDataURL` returns a fixed non-image; no real GL pipeline (`readPixels` = noise) |
+| Young rendering engine | ~66.8k LOC shipped in a single release (449 commits). Broad feature list, but not remotely as battle-tested as Blink or Gecko — expect layout divergence on complex real-world pages |
 | No real Service Workers / Web Workers DSP | Service worker and audio DSP are stubbed |
 | Finite fingerprint pools | 12–13 GPUs per platform, 8 screens, 2 sample rates — aggregatable across many requests |
 | Plugin list tell | Includes `"WebKit built-in PDF"`, not present in real Chrome |
@@ -561,12 +615,12 @@ OBSCURA_CDP_COMMAND_TIMEOUT_MS, OBSCURA_FETCH_TIMEOUT_MS   # deadlines
 
 | Dimension | Obscura | Patchright | Camoufox | CloakBrowser | Scrapling (HTTP tier) |
 |---|---|---|---|---|---|
-| Underlying engine | V8 + html5ever (no layout) | Real Chromium | Real Firefox | Real Chromium | curl_cffi |
-| Renders pages | No | Yes | Yes | Yes | No |
-| Real Canvas / WebGL | No (string stubs) | Yes | Yes (C++ noise) | Yes (C++ noise) | N/A |
+| Underlying engine | V8 + html5ever + own Rust layout/paint engine | Real Chromium | Real Firefox | Real Chromium | curl_cffi |
+| Renders pages | Yes (render builds); No (`-no-render`) | Yes | Yes | Yes | No |
+| Real Canvas / WebGL | Canvas painted; WebGL still stubbed | Yes | Yes (C++ noise) | Yes (C++ noise) | N/A |
 | Fingerprint coherence | Per-platform profile (UA/GPU/tz agree) | Native | Native + BrowserForge | Native | N/A |
 | TLS impersonation | Optional, single profile (`wreq`) | None | None | None | Yes, multiple profiles |
-| Layout / `getComputedStyle` | Synthesized (no cascade) | Native | Native | Native | N/A |
+| Layout / `getComputedStyle` | Renderer-computed (render builds); synthesized otherwise | Native | Native | Native | N/A |
 | Memory footprint | ~30 MB | ~200 MB | ~200 MB | ~200 MB | ~10 MB |
 | Stealth approach | JS-level shim + optional TLS | CDP protocol patches | C++ source patches | C++ source patches | TLS only |
 | MCP server | Built-in (32 tools) | No | No | No | Yes (separate) |
@@ -580,21 +634,32 @@ Obscura sits between an HTTP-only client like `curl_cffi` (very fast, no JS) and
 
 | Service | Verdict | Reasoning |
 |---|:---:|---|
-| Static HTML behind UA filter | ✅ | UA, headers, and UA-CH look like Chrome and agree with each other |
-| Cloudflare WAF (free tier) | ⚠️ | Stealth-mode TLS + coherent persona help; interactive challenges break on missing render/canvas |
-| Cloudflare Turnstile | ❌ | Requires real canvas / WebGL / audio |
-| DataDome | ❌ | Real render pixels, audio DSP, and layout probes not satisfiable |
-| Akamai Bot Manager | ❌ | Sensor data uses real input timing + layout |
-| PerimeterX / HUMAN | ❌ | Behavioral and layout-aware |
-| Kasada | ❌ | Heavy on canvas / WebGL |
-| Imperva | ❌ | Layout and rendering checks |
-| reCAPTCHA v3 | ❌ | Score depends on real browser signals |
-| Sannysoft basic checks | ✅ | Passes `webdriver`, plugins, languages, UA-CH consistency |
-| Sannysoft layout-aware checks | ⚠️ | `getBoundingClientRect` now returns non-zero synthesized rects, but they are not real measurements |
+> **These are architectural expectations, not test results.** Nothing below was
+> benchmarked — not by this report, and not publicly by the project, which makes **no
+> anti-bot service claims at all** (evidence **Tier D**). What follows is reasoning
+> from what the engine demonstrably does and does not implement. Treat it as a
+> hypothesis to test against your own targets, never as a pass/fail record.
 
-Legend: ✅ Reliably bypasses · ⚠️ Partial / conditional · ❌ Not effective.
+| Check type | Expectation | Reasoning from the architecture |
+|---|:---:|---|
+| Static HTML behind UA filter | likely fine | UA, headers, and UA-CH look like Chrome and agree with each other |
+| Layout-probing checks (`getBoundingClientRect`, `getComputedStyle`) | **materially improved in v0.2.0 render builds** | Real measured geometry and renderer-computed style replace the v0.1.x synthesized grid and defaults table. Non-render builds are unchanged and still fail these. |
+| Canvas-pixel checks | still weak | `toDataURL` returns a fixed non-image; painting exists but the canvas fingerprint surface remains stubbed |
+| WebGL / audio-DSP checks | still weak | No real GL pipeline (`readPixels` = noise); audio DSP stubbed |
+| Behavioural / sensor telemetry | unaddressed | No mouse-motion model, no human input timing — nothing in the engine targets this layer |
+| TLS-fingerprint checks | addressed in stealth builds | `wreq` presents a Chrome JA3/JA4 profile; single profile, so it is aggregatable across many requests |
 
-Note: the v0.1.9 release notes claim "creepjs reports 0% detection." That is the maintainer's result and is plausible for CreepJS's consistency-oriented checks now that the persona is coherent — but CreepJS is a consistency auditor, not a commercial anti-bot, and this analysis did not reproduce the run. Treat it as an internal-consistency pass, not evidence of bypassing DataDome/Kasada-class systems.
+The honest summary: **v0.2.0 closes the layout-and-style gap that dominated the
+previous assessment, and leaves the canvas/WebGL/audio and behavioural gaps open.**
+Anti-bot systems that lean on real pixel output or input telemetry are unlikely to be
+satisfied by an engine that does not implement them, regardless of how good the layout
+engine has become.
+
+Note: the v0.1.9 release notes claimed "creepjs reports 0% detection." That is the
+maintainer's result (**Tier B**), plausible for CreepJS's consistency-oriented checks
+given a coherent persona, and not reproduced here. CreepJS is a consistency auditor,
+not a commercial anti-bot — an internal-consistency pass is not evidence about
+DataDome- or Kasada-class systems.
 
 ---
 
@@ -630,7 +695,7 @@ Note: the v0.1.9 release notes claim "creepjs reports 0% detection." That is the
 
 ## Summary
 
-Obscura is a **from-scratch headless browser engine** that uses V8 for JavaScript execution and html5ever for HTML parsing, with a large JavaScript shim providing `navigator`, `document`, `window`, and the rest of the browser globals. It is a careful piece of Rust engineering that delivers genuine performance gains over headless Chrome by skipping layout, rendering, and the surrounding browser infrastructure — and, as of v0.1.9, it now ships an embeddable Rust library, a 32-tool MCP server, and request/response interception.
+Obscura is a **from-scratch browser engine** that uses V8 for JavaScript execution and html5ever for HTML parsing, with a large JavaScript shim providing `navigator`, `document`, `window`, and the rest of the browser globals — and, since v0.2.0, a native Rust layout and paint engine underneath it. It is a careful piece of Rust engineering that delivers genuine performance gains over headless Chrome by implementing a narrower browser than Blink rather than by skipping rendering entirely. It also ships an embeddable Rust library, a 32-tool MCP server, and request/response interception.
 
 The v0.1.x line has meaningfully raised the stealth floor since the first analysis: the persona is now Windows/Chrome-by-default and internally coherent (UA ↔ platform ↔ UA-CH ↔ GPU renderer ↔ timezone), `event.isTrusted` and `getBoundingClientRect` behave correctly, input events hit-test, and TLS impersonation ships in release binaries. But the architectural ceiling is unchanged: there is no real layout, no real canvas/WebGL/audio output, and finite fingerprint pools. It clears consistency-oriented auditors and basic-to-moderate defenses; it does not clear the render/behavior-aware checks that DataDome/Kasada/Akamai-class systems run.
 
@@ -640,4 +705,4 @@ The v0.1.x line has meaningfully raised the stealth floor since the first analys
 
 **Best Use Case:** Lightweight, high-concurrency scraping of server-rendered HTML or lightly-protected sites, and AI-agent browsing via MCP
 
-*Verified against the source at `github.com/h4ckf0r0day/obscura` @ v0.1.9, as of 2026-07.*
+*Verified against the source at `github.com/h4ckf0r0day/obscura` @ `f458a7f` (v0.2.0), 2026-08-14. Read in an isolated container — see [METHODOLOGY.md](METHODOLOGY.md#source-handling).*

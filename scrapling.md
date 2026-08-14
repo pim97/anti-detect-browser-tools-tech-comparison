@@ -3,8 +3,10 @@
 > **Tool Type:** All-in-One Web Scraping Framework (Fetching + Parsing + Crawling + Stealth)
 > **Repository:** [github.com/D4Vinci/Scrapling](https://github.com/D4Vinci/Scrapling)
 > **Approach:** Three-tier fetching (HTTP/Dynamic/Stealth) + adaptive element tracking + spider framework
-> **Effectiveness:** High for HTTP-tier TLS impersonation and StealthyFetcher (Chromium + Patchright under the hood); anti-bot success is inherited from Patchright, not benchmarked in-house
-> **Maintenance:** Actively developed — **v0.4.10 (released 2026-07-04)**, last commit 2026-07-06, ~92% test coverage (as of 2026-07)
+> **What is verified:** `pyproject.toml` pins `curl_cffi>=0.16.0` (HTTP-tier TLS impersonation) and `patchright>=1.61.2` — **the browser-tier evasion is Patchright's**, inherited wholesale rather than implemented here (**Tier A**)
+> **Anti-bot service claims:** Cloudflare Turnstile handled out of the box (**Tier B**). Notably candid: the README **defers Akamai, DataDome, Kasada and Incapsula to a third-party paid API** rather than claiming them — an unusually honest scoping among the tools here.
+> **Maintenance:** Actively developed — **v0.4.14** (2026-08-10); 0.4.11–0.4.13 added feed spiders, AutoThrottle, and a smarter MCP server. 73.9k stars, 30 contributors, only 3 open issues. BSD-3-Clause.
+> **Verified:** 2026-08-14 against `D4Vinci/Scrapling` @ `5d213a2`.
 
 ---
 
@@ -32,13 +34,14 @@ Scrapling is an **all-in-one Python web scraping framework** that bundles fetchi
 
 **What makes it different from the other tools analyzed here:** The tools in this repo ([Camoufox](./camoufox.md), [Patchright](./patchright.md), [SeleniumBase](./seleniumbase.md), etc.) are **browser automation stealth tools**. Scrapling is a **scraping framework** that *uses* one of them (Patchright) under the hood for its stealth tier, and layers fetching / parsing / crawling on top. It's a layer above, not a competitor.
 
-**Project facts (verified against source, as of 2026-07):**
+**Project facts (verified against source, 2026-08-14):**
 
 | Attribute | Value | Evidence |
 |-----------|-------|----------|
-| Current version | **0.4.10** | `pyproject.toml` `version = "0.4.10"`, `scrapling/__init__.py` `__version__ = "0.4.10"`; PyPI upload 2026-07-04 |
-| Release cadence | ~monthly point releases | PyPI: 0.4.10 (Jul 4), 0.4.9 (Jun 14), 0.4.8 (May 28), 0.4.7 (May 14), 0.4.6 (Apr 18) |
-| Last commit | 2026-07-06 (`docs: remove a sponsor`) | `git log -1` on cloned repo |
+| Current version | **0.4.14** | `pyproject.toml` `version = "0.4.14"`, `scrapling/__init__.py` `__version__ = "0.4.14"`; PyPI upload 2026-08-10 |
+| Release cadence | fortnightly-to-monthly point releases | GitHub: 0.4.14 (Aug 10), 0.4.13 (Aug 9), 0.4.12 (Jul 26), 0.4.11 (Jul 12), 0.4.10 (Jul 4) |
+| Last commit | 2026-08-11 (`5d213a2`) | `git log -1` on the sandboxed clone |
+| Community | 73.9k stars, 30 contributors, 3 open issues | GitHub API |
 | Language | **Python only** (CPython) | `Programming Language :: Python :: 3 :: Only` classifier |
 | Python versions | **3.10 – 3.13** | `requires-python = ">=3.10"` |
 | License | **BSD 3-Clause** | `LICENSE`; `License :: OSI Approved :: BSD License` |
@@ -172,7 +175,7 @@ response = StealthyFetcher.fetch(
 )
 ```
 
-**What StealthyFetcher does under the hood (as of 0.4.10):**
+**What StealthyFetcher does under the hood (as of 0.4.14):**
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -333,7 +336,7 @@ all_cards = card.find_similar()
 
 ### Text-Extraction Speed (5000 nested elements, 100+ runs)
 
-Numbers straight from the project's `benchmarks.py` / README (as of 0.4.10):
+Numbers straight from the project's `benchmarks.py` / README (**Tier B** — the maintainer's own benchmark, not reproduced here):
 
 | # | Library | Time (ms) | vs Scrapling |
 |---|---------|:---------:|:------------:|
@@ -464,7 +467,7 @@ It runs over stdio by default or `streamable-http` with `--http`. Smart CSS pre-
 | **Mature-ish spider framework** | Concurrency, pause/resume, caching, proxy rotation, robots.txt |
 | **Scrapy interop** | `@scrapling_response` drops Scrapling parsing into existing Scrapy spiders |
 | **MCP / AI integration** | 10-tool MCP server + agent-skill bundle; on the MCP registry |
-| **Actively maintained** | Frequent releases (0.4.10 on 2026-07-04), commits within days, ~92% coverage |
+| **Actively maintained** | Frequent releases (0.4.14 on 2026-08-10), commits within days, ~92% coverage |
 | **Permissive license** | BSD 3-Clause |
 
 ### Disadvantages
@@ -523,6 +526,11 @@ Effectiveness in StealthyFetcher mode is **inherited from Patchright + Chromium*
 | Multi-language | Python only | Python | Python, Node, .NET | Python |
 
 ### vs. Scraping Frameworks
+
+> **Star ratings below are the author's editorial judgment, not measurement.**
+> No rubric defines the scale and no benchmark backs any cell. They are retained
+> only as a rough relative ordering — see [METHODOLOGY.md](METHODOLOGY.md#rating-policy).
+
 
 | Feature | Scrapling | Scrapy | BeautifulSoup4 | Playwright (raw) |
 |---------|:---------:|:------:|:--------------:|:----------------:|
@@ -660,4 +668,4 @@ Scrapling is a **framework, not a stealth engine**. Its browser anti-detection i
 
 ---
 
-*Analysis conducted for educational purposes against Scrapling v0.4.10 source (cloned 2026-07-06). Use responsibly.*
+*Analysis conducted for educational purposes against Scrapling v0.4.14 source (`5d213a2`, read 2026-08-14 in an isolated container). Use responsibly.*

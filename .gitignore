@@ -1,17 +1,28 @@
-# Ignore all tool source folders (we only want the analysis READMEs)
+# Upstream tool source trees are NEVER committed, and never cloned to a workstation.
+# They are unaudited third-party code and live only inside the Docker sandbox created
+# by scripts/sandbox.sh. See METHODOLOGY.md#source-handling.
+sources/
 botasaurus/
 patchright/
 XDriver/
 BotBrowser/
 SeleniumBase/
 camoufox/
+Scrapling/
+obscura/
+CloakBrowser/
+clearcote-browser/
+clearcote-profiles/
+browserforge/
+CDP-Patches/
+rebrowser-patches/
+patchright-python/
+patchright-nodejs/
+patchright-dotnet/
+botasaurus-driver/
+cloakbrowser-analyze/
+obscura-benchmark/
 New folder/
-
-# Keep root-level analysis markdown files
-!README.md
-!patchright.md
-!XDriver-Analysis.md
-!botasaurus-analysis.md
 
 # OS files
 .DS_Store
@@ -21,6 +32,12 @@ desktop.ini
 # IDE
 .vscode/
 .idea/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
 
 # Misc
 *.log

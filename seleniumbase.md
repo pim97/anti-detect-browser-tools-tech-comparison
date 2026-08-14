@@ -5,8 +5,10 @@
 > **Language:** Python (100%)
 > **Type:** Selenium wrapper with UC Mode + CDP Mode (undetected Chromium automation)
 > **Approach:** ChromeDriver binary patching + disconnect/reconnect + CDP-native driver (based on NoDriver) + optional PyAutoGUI CAPTCHA solving
-> **Effectiveness:** Excellent (Chromium anti-bot bypass) — most complete Python solution
-> **Maintenance:** Very actively maintained — current version **4.50.5** (as of 2026-07), released 2026-07-03; ~daily commits, MIT-licensed
+> **What is verified:** `seleniumbase/undetected/` ships `patcher.py`, `cdp.py` and a full `cdp_driver/` package; 187 CDP-related Python files across the tree (**Tier A**)
+> **Anti-bot service claims:** narrower and more checkable than most — the README demonstrates **one Cloudflare challenge page** via a runnable example script (`examples/cdp_mode/raw_gitlab.py`) rather than a coverage grid (**Tier B**)
+> **Maintenance:** Very actively maintained — **4.51.12** (2026-08-10, "CDP Mode: Patch 128"); near-daily releases. 12.9k stars, 33 contributors, last push 2026-08-14. MIT.
+> **Verified:** 2026-08-14 against `seleniumbase/SeleniumBase` @ `7cd42ef`.
 
 ---
 
@@ -16,19 +18,24 @@ SeleniumBase is a comprehensive Python framework built on Selenium 4.x that comb
 
 As of the 4.50.x line, the project's own positioning has shifted: the README now brands SeleniumBase as **"Stealthy Chromium Automation with Python"** and states that **CDP Mode**, not UC Mode, is the recommended path "for maximum stealth." UC Mode is still present and is the on-ramp that launches and patches the browser, but the stealthy driving increasingly happens through CDP Mode and the newer **Stealthy Playwright Mode**.
 
-## Verdict
+## Assessment
 
-| Aspect | Rating | Notes |
-|--------|--------|-------|
-| **Overall Quality** | ⭐⭐⭐⭐⭐ | Most comprehensive Python solution |
-| **Anti-Detection** | ⭐⭐⭐⭐⭐ | Excellent UC + CDP modes |
-| **CAPTCHA Solving** | ⭐⭐⭐⭐⭐ | Built-in click-solving for Turnstile / reCAPTCHA / DataDome slider / Friendly Captcha / Incapsula hCaptcha |
-| **Ease of Use** | ⭐⭐⭐ | Steep learning curve due to feature breadth |
-| **Documentation** | ⭐⭐⭐⭐⭐ | 150+ example scripts included |
+> **Editorial judgment, not measurement.** Star ratings were removed from this report
+> in the 2026-08-14 revision — no rubric defined them and no evidence backed any cell.
+> What follows is reasoning from the verified architecture; disagree with the reasoning.
 
-**TL;DR:** The most complete Python solution for browser automation with anti-bot bypass. UC Mode + CDP Mode + Stealthy Playwright Mode + built-in click-based CAPTCHA handling makes it unique. Trade-off is complexity and slower performance. Chromium-only for stealth.
+| | |
+|---|---|
+| **Strongest at** | Breadth. It is the only tool here that combines a stealth driver, a test framework, and built-in click-based CAPTCHA handling (Turnstile, reCAPTCHA, DataDome slider, Friendly Captcha, Incapsula hCaptcha) in one package. |
+| **Also good** | Release discipline — near-daily releases, 33 contributors, only 13 open issues. The healthiest maintenance profile of any tool in this report. |
+| **Weakest at** | Learning curve and footprint. The breadth that makes it capable also makes it heavy, and stealth is Chromium-only. |
+| **Notably honest** | Its claims are narrower than its peers': the README ships a runnable example against one Cloudflare challenge page rather than asserting a coverage grid. That is more checkable than most, and worth more. |
+| **Reasonable for** | Teams that need automation *and* testing in one stack, or anyone who needs CAPTCHA handling without bolting on a third-party solver. |
+| **Reach for something else if** | You want a minimal dependency footprint (Patchright) or Firefox (Camoufox). |
 
-> **Note on this analysis:** All claims below were verified against the SeleniumBase source cloned at v4.50.5 (commit `4de63c8`, 2026-07-03). File paths are given so you can check them yourself.
+> **Note on this analysis:** claims below were verified against the SeleniumBase source
+> at commit `7cd42ef` (2026-08-14, v4.51.12 line). Some code excerpts were first read at
+> v4.50.5 (`4de63c8`); file paths are given so you can check them yourself.
 
 ---
 
@@ -402,7 +409,7 @@ UC Mode / CDP Mode stealth targets Chromium-family browsers (Chrome, Chromium, B
 | **Built-in CAPTCHA click-solving** | Turnstile, reCAPTCHA, DataDome slider, Friendly Captcha, Incapsula hCaptcha |
 | **Complete Testing Framework** | pytest / unittest / behave (BDD) integration, Recorder, Dashboard |
 | **150+ example scripts** | Working code for real protected + test sites |
-| **Very active development** | Current v4.50.5 (2026-07); near-daily commits |
+| **Very active development** | Current v4.51.12 (2026-08-10); near-daily releases |
 | **Production Ready** | CI/CD, Docker, S3 logging, proxy (incl. socks5h) support |
 | **MIT licensed** | Fully open source |
 
@@ -420,6 +427,10 @@ UC Mode / CDP Mode stealth targets Chromium-family browsers (Chrome, Chromium, B
 ---
 
 ## Comparison with Alternatives
+
+> **Star ratings below are the author's editorial judgment, not measurement.**
+> No rubric defines the scale and no benchmark backs any cell. They are retained
+> only as a rough relative ordering — see [METHODOLOGY.md](METHODOLOGY.md#rating-policy).
 
 | Feature | SeleniumBase | Patchright | Botasaurus | CloakBrowser |
 |---------|:------------:|:----------:|:----------:|:------------:|

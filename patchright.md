@@ -3,8 +3,10 @@
 > **Tool Type:** Browser Automation Framework — a patched, undetected drop-in replacement for Playwright
 > **Repository:** [github.com/Kaliiiiiiiiii-Vinyzu/patchright](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright) (driver) · [patchright-python](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python) · [patchright-nodejs](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-nodejs) · [patchright-dotnet](https://github.com/DevEnterpriseSoftware/patchright-dotnet) (community)
 > **Approach:** Compile-time source patching of the Playwright driver via AST manipulation (ts-morph) — removes CDP-level automation tells rather than injecting JavaScript on top
-> **Effectiveness:** High against most major anti-bot vendors *with the right setup*; the project itself notes remaining, low-risk theoretical leaks
-> **Maintenance:** Actively maintained (as of 2026-07). Auto-tracks every Playwright release. Current version **1.61.x** (driver/Node.js **1.61.1**, June 2026; Python **1.61.2**, July 2026), tracking Playwright 1.61.1. License: **Apache 2.0**.
+> **What is verified:** `patchright_driver_patch.ts` is a 265-line `ts-morph` transform over the Playwright driver source (**Tier A**). The `Runtime.enable` avoidance is implemented by executing JS in isolated execution contexts and disabling the Console API entirely — documented in the project's own README (**Tier B**)
+> **Anti-bot service claims:** the README lists **Cloudflare, Kasada, Akamai, DataDome** with ✅ (**Tier B** — no methodology, targets, or dates published; not reproduced here)
+> **Maintenance:** Actively maintained. Auto-tracks Playwright releases. Driver/Node **1.61.1** (2026-06-23), Python **1.61.2** (2026-07-05), tracking Playwright 1.61.1. 4.1k stars, 40 contributors, last push 2026-08-05. Apache-2.0.
+> **Verified:** 2026-08-14 against `Kaliiiiiiiiii-Vinyzu/patchright` @ `88cf0a0`.
 
 ---
 
@@ -370,7 +372,7 @@ Patchright is a **CDP-tell-removal layer** for Playwright. It rewrites the Playw
 
 What it is **not**: a fingerprint spoofer, a TLS impersonator, or a magic "undetectable" button. It ships no canvas/WebGL/audio spoofing and no fingerprint rotation, its route-based init injection carries an acknowledged (if low-risk) timing leak, and Console output is sacrificed by design. On serious targets you pair it with residential proxies and often with CDP-Patches (input) and/or Camoufox (fingerprints).
 
-The project is **healthy and current as of 2026-07**: version 1.61.x tracking Playwright 1.61.1, last driver commit and release June 2026, Node.js and .NET packages both updated within days of that, and automated per-release testing against the Playwright suite.
+The project is **healthy and current as of 2026-08-14**: version 1.61.x tracking Playwright 1.61.1, driver release June 2026 with the repo pushed 2026-08-05, Python and .NET packages updated through August, 40 contributors, only 7 open issues, and automated per-release testing against the Playwright suite. Note that the *published version* has been static since July while development continued — an unchanged version number here reflects Playwright not having shipped a new release to track, not a stalled project.
 
 **Effectiveness Rating:** High for protocol-level stealth (with proxies + companion tooling); not a standalone fingerprint solution.
 

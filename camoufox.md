@@ -3,15 +3,17 @@
 > **Tool Type:** Custom Firefox Build (Anti-Detect Browser)
 > **Repository:** [github.com/daijro/camoufox](https://github.com/daijro/camoufox)
 > **Approach:** C++ level fingerprint injection + Juggler protocol isolation
-> **Effectiveness:** Very High (statistically-accurate fingerprint rotation + real-fingerprint presets)
-> **Maintenance:** Actively developed — latest release `v152.0.2-alpha` (2026-07-06); latest stable `v150.0.2-beta.25` (2026-05-11). Python wrapper `camoufox` 0.4.11 on PyPI (repo `pyproject.toml` at 0.5.2 dev). *(status as of 2026-07)*
+> **What is verified:** 34 C++ patch files in `patches/`, including `fingerprint-injection`, `navigator-spoofing`, `screen-spoofing`, `locale-spoofing`, `webrtc-ip-spoofing`, `anti-font-fingerprinting`, `audio-fingerprint-manager` (**Tier A**)
+> **Anti-bot service claims:** **none** — the project makes no claims about Cloudflare, DataDome, Kasada or similar, and its README instead **documents a limitation**: some WAFs probe SpiderMonkey engine behaviour, which a Firefox fork cannot disguise (**Tier D** for coverage; the limitation is **Tier B**)
+> **Maintenance:** Actively developed — browser `v152.0.4-beta.28` (2026-07-19); Python wrapper `camoufox` **0.5.4** on PyPI (2026-07-16; repo `pythonlib` at 0.5.5 dev). 11.1k stars, 30 contributors, last push 2026-08-12. MPL-2.0.
+> **Verified:** 2026-08-14 against `daijro/camoufox` @ `7add1ef`.
 
 ---
 
 ## Table of Contents
 
 - [What is Camoufox?](#what-is-camoufox)
-- [Version & Status (2026-07)](#version--status-2026-07)
+- [Version & Status (2026-08)](#version--status-2026-08)
 - [How It Works](#how-it-works)
 - [Why This Approach is Superior](#why-this-approach-is-superior)
 - [Fingerprint Capabilities](#fingerprint-capabilities)
@@ -29,28 +31,28 @@ Camoufox is a **custom-built Firefox browser** designed specifically for web scr
 
 **Key differentiator:** All fingerprint spoofing happens in the browser's native C++ code, making it impossible for JavaScript to detect the modifications through property descriptor checks, prototype inspection, or timing analysis.
 
-The project is authored by **daijro** (also the author of [BrowserForge](https://github.com/daijro/browserforge)). As of 2026-07 it has ~9.9k GitHub stars. The C++ browser fork tracks upstream Firefox — the current base is **Firefox 152.0.4** (`upstream.sh`). A thin Python library (`camoufox`) wraps Playwright's Firefox driver to launch the binary and feed it a fingerprint config.
+The project is authored by **daijro** (also the author of [BrowserForge](https://github.com/daijro/browserforge)). As of 2026-08-14 it has ~11.1k GitHub stars and 30 contributors. The C++ browser fork tracks upstream Firefox — the current base is **Firefox 152.0.4** (`upstream.sh`). A thin Python library (`camoufox`) wraps Playwright's Firefox driver to launch the binary and feed it a fingerprint config.
 
 ---
 
-## Version & Status (2026-07)
+## Version & Status (2026-08)
 
 | Item | Value | Evidence |
 |------|-------|----------|
-| Latest release | `v152.0.2-alpha` (pre-release), 2026-07-06 | GitHub Releases API |
-| Latest non-pre-release | `v150.0.2-beta.25`, 2026-05-11 | GitHub Releases API |
+| Latest release | `v152.0.4-beta.28`, 2026-07-19 | GitHub Releases API |
+| Latest non-pre-release | `v152.0.4-beta.28`, 2026-07-19 | GitHub Releases API |
 | Upstream Firefox base | **152.0.4** | `upstream.sh` → `version=152.0.4` |
-| Python package (PyPI) | **0.4.11** (latest published) | `pip index` / PyPI |
-| Python package (repo dev) | **0.5.2** | `pythonlib/pyproject.toml` → `version = "0.5.2"` |
+| Python package (PyPI) | **0.5.4** (2026-07-16) | `pip index` / PyPI |
+| Python package (repo dev) | **0.5.5** | `pythonlib/pyproject.toml` → `version = "0.5.5"` |
 | Browser license | **MPL-2.0** (Firefox fork) | root `LICENSE` |
 | Python wrapper license | **MIT** | `pythonlib/pyproject.toml` → `license = "MIT"` |
 | Primary language | **C++** (browser), Python (wrapper) | GitHub repo language stats |
-| Last commit | 2026-07-05 (`Version 152.0.2 Upgrade #658`) | `git log` |
+| Last commit | 2026-08-12 (`7add1ef`) | `git log` |
 | Camoufox source patches | **32** stealth/debloat patches + **2** Playwright/Juggler patches | `patches/*.patch` (32), `patches/playwright/*.patch` (2) |
 
 > Note the two-license split: the browser is a Firefox fork and is therefore **MPL-2.0**, while the `camoufox` Python launcher library is **MIT**. Earlier analyses that called the whole project "MIT" or "MPL" were only half right.
 
-> The recent `v152.0.2-alpha` release **drops support for 32-bit systems and macOS x86_64** (Apple Silicon / x86_64-Linux / x86_64-Windows / arm64 going forward).
+> The `v152.0.x` line **drops support for 32-bit systems and macOS x86_64** (Apple Silicon / x86_64-Linux / x86_64-Windows / arm64 going forward).
 
 ---
 
@@ -254,7 +256,7 @@ WebRTC spoofing is a real protocol-level implementation (implemented in `webrtc-
 
 The prior page was accurate on the core architecture, but a lot has shipped:
 
-- **Firefox base moved to 152** (from the 130s era). Releases now track modern Firefox; the current line is `v152.0.2-alpha` (2026-07-06) and stable `v150.0.2-beta.25` (2026-05-11).
+- **Firefox base moved to 152** (from the 130s era). Releases now track modern Firefox; the current line is `v152.0.4-beta.28` (2026-07-19).
 - **Real fingerprint presets** (`fingerprint_preset=True`): 312 real Firefox fingerprints (180 Win / 67 macOS / 65 Linux, v149–v152) as an alternative to synthetic BrowserForge output. `pythonlib/camoufox/fingerprint-presets-v150.json`.
 - **Per-context fingerprint identities**: `new_context()` now mints a fresh real-preset identity (navigator, screen, WebGL, fonts) per context, with **unique per-context seeds for audio, canvas, and font-spacing noise**, plus per-context proxy, geolocation, and WebRTC IP — the values are applied via `addInitScript` that **self-destructs before page scripts can observe it** (`pythonlib/camoufox/async_api.py`, `sync_api.py`).
 - **Auto geo/timezone/WebRTC-IP from proxy exit IP**: when a per-context proxy is set, Camoufox derives WebRTC IP and timezone from the proxy's exit IP automatically.
@@ -263,7 +265,7 @@ The prior page was accurate on the core architecture, but a lot has shipped:
 - **Human-like cursor is native C++**: `additions/camoucfg/MouseTrajectories.hpp`, ported to C++ from riflosnake/HumanCursor; enabled with `humanize=True` (or a float max-duration in seconds; ~1.5s typical across-window move).
 - **Font control**: `fonts=[...]`, `custom_fonts_only=True`.
 - **Rich launch flags**: `block_images`, `block_webgl`, `screen`, `window`, `ff_version`, `virtual_display`, `enable_cache`, `exclude_addons`, `addons` (load unpacked Firefox addons with no debug server).
-- **Platform support tightened**: `v152.0.2-alpha` drops 32-bit and macOS x86_64.
+- **Platform support tightened**: the `v152.0.x` line drops 32-bit and macOS x86_64.
 
 ---
 
@@ -292,7 +294,7 @@ The prior page was accurate on the core architecture, but a lot has shipped:
 | **SpiderMonkey detection** | Some WAFs treat Firefox engine more suspiciously |
 | **Build complexity** | Building the browser from source needs a Linux toolchain (most users just download the prebuilt binary) |
 | **Platform trims** | Latest alpha drops 32-bit and macOS x86_64 |
-| **PyPI lag** | Newest launcher code (repo 0.5.2) may be ahead of the last PyPI publish (0.4.11) |
+| **PyPI lag** | Newest launcher code (repo `pythonlib` 0.5.5 dev) may be ahead of the last PyPI publish (0.5.4) |
 
 ---
 
@@ -429,4 +431,4 @@ Camoufox remains the **gold standard for Firefox-based anti-detection**. By modi
 
 ---
 
-*Analysis conducted for educational purposes. Facts verified against the cloned source tree and GitHub/PyPI release metadata as of 2026-07. Use responsibly.*
+*Analysis conducted for educational purposes. Facts verified against the cloned source tree and GitHub/PyPI release metadata as of 2026-08-14. Use responsibly.*

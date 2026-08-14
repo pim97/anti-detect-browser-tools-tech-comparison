@@ -3,8 +3,10 @@
 > **Tool Type:** Custom Chromium Build (Anti-Detect Browser)
 > **Repository:** [github.com/clearcotelabs/clearcote-browser](https://github.com/clearcotelabs/clearcote-browser)
 > **Approach:** Engine-level (C++) fingerprint controls compiled into an ungoogled-chromium fork, plus real-machine fingerprint import
-> **Effectiveness:** Strong, *verifiable* fingerprint coherence (passes open-source auditors); **not** benchmarked against commercial anti-bot services
-> **Maintenance:** Active — experimental pre-release. Browser `v0.1.0-pre.17` (Chromium 149.0.7827.114); SDK `clearcote` 0.11.1 on npm + PyPI (as of 2026-07)
+> **What is verified:** **32** human-readable patches in `patches/series`, applied over pinned Chromium `149.0.7827.114` (`UPSTREAM_REVISION`) — including `010-user-agent-and-webdriver`, `110-runtime-enable`, `100-webrtc-leak` (**Tier A**)
+> **Anti-bot service claims:** **none** — publishes open-auditor results (CreepJS) and a self-referential coherence gate, not commercial-WAF pass rates (**Tier D** for coverage; the auditor results are **Tier B**). The project's stated position is "don't trust us, verify us."
+> **Maintenance:** Active but **experimental pre-release**, and **single-maintainer (1 contributor)** — the weakest bus factor of any tool here. Browser `v0.1.0-pre.22` (2026-07-15; Chromium base still 149); SDK `clearcote` **0.26.1** on npm + PyPI (2026-08-13). 75 stars. BSD-3-Clause.
+> **Verified:** 2026-08-14 against `clearcotelabs/clearcote-browser` @ `dea4387`.
 
 ---
 
@@ -158,7 +160,7 @@ Each build is audited with in-repo scripts (`scripts/creepjs_audit.py`) against 
 | Con | Details |
 |-----|---------|
 | **No macOS build yet** | Windows x64 + Linux x64 today; macOS + ARM64 are on the roadmap. |
-| **Experimental pre-release** | Young project (`v0.1.0-pre.17`); APIs and binaries may change; not battle-tested at scale. |
+| **Experimental pre-release** | Young project (`v0.1.0-pre.22`); APIs and binaries may change; not battle-tested at scale. |
 | **No commercial-WAF benchmarks** | Evidence is open-auditor results, not published commercial-WAF pass rates. It is not marketed as a service-specific bypass. |
 | **Not yet bit-for-bit reproducible** | Cross-builds aren't byte-deterministic today (embedded paths/timestamps/linker nondeterminism); patches + config are fully auditable, but attested reproducibility is a roadmap item. |
 | **No CAPTCHA solving / proxies / GUI** | SDK/CLI only; no built-in solver, proxy pool, or profile-manager GUI (a profile manager is on the roadmap). |

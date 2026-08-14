@@ -1,322 +1,328 @@
-# Anti-Bot Bypass Tools - Technical Deep Dives
+# Anti-Detect Browser Tools — Technical Comparison
 
-> **Honest, no-BS technical analysis of web scraping and anti-bot bypass tools.**
->
-> Learn what actually works, how it works under the hood, and which tool fits your use case.
+> Source-verified comparison of nine open-source browser-automation and anti-detection
+> tools. Every non-obvious claim carries an **evidence tier**, so you can tell what was
+> read out of the source from what a vendor asserted on their own README.
 
-[![GitHub topics](https://img.shields.io/badge/topics-web--scraping%20%7C%20anti--detection%20%7C%20cloudflare--bypass-blue)](#)
+[![Last verified](https://img.shields.io/badge/last%20verified-2026--08--14-brightgreen)](STATUS.md)
+[![Methodology](https://img.shields.io/badge/methodology-documented-blue)](METHODOLOGY.md)
+[![Tools tracked](https://img.shields.io/badge/tools-9-informational)](#the-nine-tools)
 
-### Sponsored by [Scrappey](https://scrappey.com/)
-
-> **[Scrappey.com](https://scrappey.com/)** — Anti-bot bypass API that handles Cloudflare, DataDome, and more. Skip the browser automation complexity and let Scrappey handle the hard parts.
-
-<!--
-GitHub Repository Topics (add these in repo settings):
-web-scraping, anti-detection, bot-bypass, cloudflare-bypass, captcha-bypass,
-playwright, selenium, puppeteer, browser-automation, fingerprint-spoofing,
-anti-bot, stealth-browser, datadome-bypass, kasada-bypass, akamai-bypass,
-camoufox, patchright, seleniumbase, botasaurus, undetected-chromedriver,
-cloakbrowser, scrapling, obscura, web-automation, scraping-tools, antibot-bypass, turnstile-bypass,
-browser-fingerprinting, cdp-stealth, juggler, firefox-automation
--->
+**Last verified: 2026-08-14.** Versions and project health are machine-generated —
+see **[STATUS.md](STATUS.md)**, regenerate with `python scripts/verify.py --write`.
+Method, limits, and how to challenge a claim: **[METHODOLOGY.md](METHODOLOGY.md)**.
 
 ---
 
-## Why This Exists
+## Disclosure
 
-Every anti-detection tool claims to be "undetectable" or bypass "all bot protection." **Most of that is marketing.**
+**This repository is sponsored by [Scrappey](https://scrappey.com/), a commercial
+web-data API — a paid alternative to running the tooling reviewed here.** The sponsor
+has an obvious interest in how self-hosted tools are portrayed, so:
 
-This repository provides:
-- **Source code analysis** - We read the actual code, not just the docs
-- **Technical breakdowns** - How each evasion technique works at the protocol level
-- **Honest assessments** - Real limitations, not just success stories
-- **Comparison guides** - Pick the right tool for your specific use case
+- **Scrappey is not rated.** It appears in no matrix, no coverage table, and no
+  recommendation. A sponsor cannot win a comparison it is excluded from.
+- **Every vendor gets identical skepticism**, sponsor included. No hosted service's
+  claims are reproduced here either.
+- If you think a judgment is shaded by the sponsorship, [open an issue](../../issues)
+  quoting it. That is a bug like any other.
 
----
-
-## Tool Analyses
-
-| Tool | Type | Language | Best For | Analysis |
-|------|------|----------|----------|----------|
-| [**Camoufox**](./camoufox.md) | Custom Firefox build | Python | C++ level stealth, fingerprint rotation | [Read →](./camoufox.md) |
-| [**Patchright**](./patchright.md) | Playwright binary patch | Python, Node.js, .NET | Maximum stealth with Playwright API | [Read →](./patchright.md) |
-| [**SeleniumBase**](./seleniumbase.md) | Selenium + UC/CDP Mode + Stealthy Playwright | Python | CAPTCHA solving, testing framework | [Read →](./seleniumbase.md) |
-| [**Botasaurus**](./botasaurus.md) | Native-CDP stealth driver + framework | Python | Human mouse + Cloudflare challenge automation | [Read →](./botasaurus.md) |
-| [**XDriver**](./xdriver.md) | Playwright CDP patch | Python | Quick stealth without code changes | [Read →](./xdriver.md) |
-| [**CloakBrowser**](./cloakbrowser.md) | Custom Chromium build | Python, Node.js, .NET | C++ stealth + human behavior + Chromium API | [Read →](./cloakbrowser.md) |
-| [**Scrapling**](./scrapling.md) | All-in-one scraping framework | Python | TLS stealth + adaptive parsing + spider framework | [Read →](./scrapling.md) |
-| [**Obscura**](./obscura.md) | Custom Rust headless engine | Rust (CLI/lib), Puppeteer/Playwright, MCP | Lightweight V8 scraper with CDP + MCP server | [Read →](./obscura.md) |
-| [**Clearcote**](./clearcote.md) | Custom Chromium build (open source) | Python, Node.js | Auditable engine-level stealth + real-fingerprint import (Win + Linux) | [Read →](./clearcote.md) |
-
-### Current Versions
-
-> _Re-verified against upstream source, July 2026. Each tool's page cites the exact files/commits._
-
-| Tool | Latest version | Released |
-|------|----------------|----------|
-| Camoufox | browser `v152.0.2-alpha` (Firefox 152 base) · py `0.4.11` | 2026-07 |
-| Patchright | `1.61.x` (tracks Playwright 1.61.1) | 2026-07 |
-| SeleniumBase | `4.50.5` | 2026-07 |
-| Botasaurus | core `4.0.97` · `botasaurus-driver` `4.0.92` | 2026-01 / 2025-09 |
-| XDriver | `v1.0.1` (dormant; not on PyPI) | 2025-09 |
-| CloakBrowser | wrapper `0.4.8` · Chromium 146 (free) / 148 (Pro) | 2026-07 |
-| Scrapling | `0.4.10` | 2026-07 |
-| Obscura | `v0.1.9` | 2026-06 |
-| Clearcote | browser `v0.1.0-pre.17` (Chromium 149) · SDK `0.11.1` | 2026-07 |
+Full policy: [METHODOLOGY.md § Conflict of interest](METHODOLOGY.md#conflict-of-interest).
 
 ---
 
-## Quick Comparison
+## Why this exists
 
-### Stealth Capabilities
+Every tool in this space claims to be undetectable. Most of that is marketing, and
+most comparisons repeat it — including, until this revision, this one.
 
-| Feature | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling | Obscura | Clearcote |
-|---------|:--------:|:----------:|:------------:|:----------:|:-------:|:------------:|:---------:|:-------: | :--: |
-| `navigator.webdriver` bypass | ✅ C++ | ✅ | ✅ | ✅ | ✅ | ✅ C++ | ✅ (via Patchright/Camoufox) | ✅ JS shim | ✅ C++ |
-| `Runtime.enable` bypass | ✅ Juggler | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ (via Patchright) | N/A (custom engine) | ✅ |
-| Fingerprint rotation | ⭐⭐⭐⭐⭐ | ❌ | ⭐⭐ | ⭐⭐ | ❌ | ⭐⭐⭐⭐ | ⚠️ headers only | ⭐⭐⭐ (coherent profiles) | ⭐⭐⭐ (per-seed / import) |
-| Human mouse simulation | ⭐⭐⭐⭐ | ❌ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ❌ | ⭐⭐⭐⭐⭐ | ❌ | ❌ (no motion model) | ⭐⭐⭐⭐ |
-| CDP fingerprint evasion | N/A | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (via Patchright) | ⭐⭐⭐ (custom CDP server) | ⭐⭐⭐⭐ |
-| Cross-platform parity | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ (coherent Win/mac/Linux) | ⭐⭐ (Windows + Linux) |
-| CAPTCHA solving | ❌ | ❌ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ❌ | ❌ | ⚠️ Cloudflare only | ❌ | ❌ |
-| Cloudflare bypass | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (auto-solve) | ⭐⭐ (free tier only) | ❓ unbenchmarked |
-| Ease of use | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ (single binary) | ⭐⭐⭐⭐ |
-| TLS fingerprint impersonation | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ curl_cffi (HTTP tier) | ⚠️ Optional (`--features stealth`, single profile) | ❌ (real Chromium TLS) |
-| Built-in parser | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (784x faster than BS4) | ⚠️ html5ever + selectors | ❌ |
-| Spider/crawler framework | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Scrapy-like | ❌ (CLI scrape only) | ❌ |
-| Real layout / rendering | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (browser tier) | ❌ (no layout engine) | ✅ |
-| Memory footprint | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~200 MB | ~10 MB (HTTP) | ~30 MB | ~200 MB |
-| Cost | Free | Free | Free | Free | Free | Freemium* | Free | Free | Free |
+What this report does differently:
 
-> **\*** CloakBrowser wrapper is MIT open-source; the older Chromium binary (v146) is free, but the newest (Pro, v148) is paid. See [security audit notes](./cloakbrowser.md#security-audit).
+- **Reads the source.** Claims tagged **Tier A** were verified in the actual code at a
+  known commit, in an isolated container.
+- **Separates verified from claimed.** A vendor's benchmark is evidence of what the
+  vendor saw. It is labelled as such, never as measurement.
+- **Says what it doesn't know.** No head-to-head anti-bot benchmark was run here, so
+  no "beats X" claim in this repo is better than second-hand. Sections that used to
+  imply otherwise have been rewritten.
+- **Regenerates its own facts.** Versions drift within weeks; a script refreshes them.
 
-### Anti-Bot Service Coverage
+### Evidence tiers
 
-| Service | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling | Obscura | Clearcote |
-|---------|:--------:|:----------:|:------------:|:----------:|:-------:|:------------:|:---------:|:-------: | :--: |
-| Cloudflare WAF | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (Stealth) / ⚠️ (HTTP) | ⚠️ (free tier) | ❓ |
-| Cloudflare Turnstile | ⚠️ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (auto-solve) | ❌ | ❓ |
-| DataDome | ✅ | ✅ | ✅ | ⚠️ | ✅ | ✅ | ⚠️ (via Patchright) | ❌ | ❓ |
-| Kasada | ⚠️ | ✅ | ✅ | ❌ | ✅ | ✅ | ⚠️ (via Patchright) | ❌ | ❓ |
-| PerimeterX | ✅ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ | ❌ | ❓ |
-| Akamai | ⚠️ | ⚠️ | ⚠️ | ❌ | ⚠️ | ⚠️ | ⚠️ | ❌ | ❓ |
-| Imperva | ✅ | ⚠️ | ✅ | ❌ | ✅ | ✅ | ⚠️ | ❌ | ❓ |
-
-✅ = Reliably bypasses | ⚠️ = Partial/conditional | ❌ = Not effective
-
-> **Clearcote (❓):** not benchmarked against commercial anti-bot services — it's a privacy / fingerprint-coherence browser validated against open-source auditors (CreepJS, BrowserScan), with no published commercial-WAF pass rates. Graded honestly as unknown rather than assumed.
-
-> **Note:** Camoufox uses Firefox (~3% market share). Some WAFs may flag Firefox users more aggressively.
+| Tier | Meaning |
+|:----:|---------|
+| **A** | **Verified in source** — read at a known commit, file cited |
+| **B** | **Vendor-reported** — the maintainer claims it; not reproduced here |
+| **C** | **Community-reported** — issues, forums, anecdote |
+| **D** | **Not established** — no evidence found either way (*not* a mark against the tool) |
 
 ---
 
-## Decision Guide
+## The nine tools
 
-### When to Use What
+| Tool | What it actually is | Language | License | Analysis |
+|------|--------------------|----------|---------|----------|
+| **Camoufox** | Firefox fork with fingerprint spoofing compiled into C++ | Python | MPL-2.0 | [Read →](./camoufox.md) |
+| **Patchright** | Playwright driver with automation tells patched out at build time | Python, Node, .NET | Apache-2.0 | [Read →](./patchright.md) |
+| **SeleniumBase** | Test framework + patched ChromeDriver (UC Mode) + CDP-native driver | Python | MIT | [Read →](./seleniumbase.md) |
+| **Botasaurus** | Raw-CDP driver + scraping framework with human-input simulation | Python | MIT | [Read →](./botasaurus.md) |
+| **XDriver** | File-swap patcher shipping a prebuilt `playwright-core` fork | Python | Apache-2.0 | [Read →](./xdriver.md) |
+| **CloakBrowser** | Chromium fork with C++ patches; open wrapper, proprietary binary | Python, Node, .NET | MIT wrapper / proprietary binary | [Read →](./cloakbrowser.md) |
+| **Scrapling** | Scraping framework: HTTP/browser tiers, parser, spider | Python | BSD-3-Clause | [Read →](./scrapling.md) |
+| **Obscura** | Browser engine written from scratch in Rust | Rust, CDP clients | Apache-2.0 | [Read →](./obscura.md) |
+| **Clearcote** | ungoogled-chromium fork; open patches, real-fingerprint import | Python, Node | BSD-3-Clause | [Read →](./clearcote.md) |
 
-| Your Situation | Recommended Tool | Why |
-|----------------|------------------|-----|
-| **Undetectable fingerprint spoofing** | [Camoufox](./camoufox.md) | C++ level = truly native, JS can't detect |
-| **Need fingerprint rotation** | [Camoufox](./camoufox.md) | BrowserForge statistical accuracy |
-| **Enterprise-level anti-bot** (Akamai, DataDome) | [Patchright](./patchright.md) + [Camoufox](./camoufox.md) | Combine protocol stealth with fingerprint rotation |
-| **Need CAPTCHA solving** | [SeleniumBase](./seleniumbase.md) | Built-in click/slide solving: Turnstile, reCAPTCHA, DataDome slider, hCaptcha |
-| **Maximum Chromium stealth + free** | [Patchright](./patchright.md) | Protocol-level CDP bypass |
-| **C++ Chromium stealth + Playwright API** | [CloakBrowser](./cloakbrowser.md) | 66 source-level patches (latest binary), 0.9 reCAPTCHA v3 score |
-| **Human-like behavior (one flag)** | [CloakBrowser](./cloakbrowser.md) | `humanize=True` — Bézier mouse, typing, scroll |
-| **Human-like mouse movements** | [Botasaurus](./botasaurus.md) | Best Bézier curve implementation |
-| **Existing Playwright code** | [Patchright](./patchright.md) or [CloakBrowser](./cloakbrowser.md) | Drop-in, no code changes (Patchright is the actively-maintained choice; XDriver is a dormant rebrowser repackage) |
-| **Open-source + auditable engine-level stealth** | [Clearcote](./clearcote.md) | Readable patches, reproducible + signed builds — verify, don't trust |
-| **Present a real machine's fingerprint** | [Clearcote](./clearcote.md) or [Camoufox](./camoufox.md) | Clearcote imports a captured/real profile and verifies it loaded; Camoufox `fingerprint_preset=True` ships 312 real in-the-wild Firefox fingerprints |
-| **Quick prototype** | [Botasaurus](./botasaurus.md) | Simplest API |
-| **Node.js / TypeScript** | [Patchright](./patchright.md) or [CloakBrowser](./cloakbrowser.md) | Multi-language support (CloakBrowser also ships a .NET/C# client) |
-| **Testing framework needed** | [SeleniumBase](./seleniumbase.md) | pytest/unittest integration |
-| **All-in-one scraping framework** | [Scrapling](./scrapling.md) | Fetching + parsing + crawling + stealth in one package |
-| **HTTP-only stealth (no browser)** | [Scrapling](./scrapling.md) | TLS impersonation via curl_cffi — fastest option |
-| **Adaptive scraping (sites change often)** | [Scrapling](./scrapling.md) | Auto-relocates selectors when DOM changes |
-| **AI-integrated scraping** | [Scrapling](./scrapling.md) or [Obscura](./obscura.md) | Both ship a built-in MCP server for Claude/Cursor workflows |
-| **Lightweight high-concurrency scraping** | [Obscura](./obscura.md) | ~30 MB / ~85 ms page load, single Rust binary |
-| **Server-rendered HTML at scale** | [Obscura](./obscura.md) | V8 + html5ever, no Chrome dependency |
+Current versions, release dates, stars, contributor counts, and last-push dates are in
+**[STATUS.md](STATUS.md)** — generated, so they cannot silently rot.
+
+> **Changed since the July 2026 revision:** seven of nine tools shipped releases.
+> Most consequential: **Obscura v0.2.0 added a real layout and rendering engine**,
+> invalidating this report's previous "no layout engine" analysis, and **CloakBrowser's
+> Pro binary moved to Chromium 150 with 71 patches** (previously documented as 148/66,
+> and as "33" in one stale sentence). See [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-## How Bot Detection Actually Works
+## Architecture — what each tool actually does
 
-Understanding detection helps you choose the right tool:
+**Tier A.** Read from source in the sandbox; these are mechanical facts, not ratings.
+Where a tool delegates to another, that is stated rather than credited to it.
+
+| | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling | Obscura | Clearcote |
+|---|---|---|---|---|---|---|---|---|---|
+| **Browser engine** | Firefox 152 fork | stock Chromium | stock Chromium | stock Chromium | stock Chromium | Chromium fork | delegates | own Rust engine | Chromium fork (ungoogled) |
+| **Where the stealth lives** | C++ source patches (**34** patch files) | AST rewrite of the Playwright driver (`ts-morph`, 265-line patch script) | patched ChromeDriver + CDP-native driver | raw CDP from Python | prebuilt patched `playwright-core` bundle | C++ source patches (**71** on Pro/Chromium 150) | delegates to Patchright / Camoufox | JS shims in its own runtime | C++ patches (**32**) on Chromium 149 |
+| **`navigator.webdriver`** | C++ | driver patch | driver patch | CDP | bundled patch | C++ | inherited | runtime shim | C++ (`010-user-agent-and-webdriver`) |
+| **`Runtime.enable` tell** | N/A — uses Juggler, not CDP | avoided via isolated execution contexts; Console API disabled | CDP Mode | not addressed | rebrowser-derived patch | C++ patch | inherited | own CDP server | patch `110-runtime-enable` |
+| **TLS/JA3 impersonation** | no — real Firefox TLS | no — real Chrome TLS | no | no | no | no | **yes** — `curl_cffi` (HTTP tier only) | **optional** — `wreq` behind `--features stealth` | no — real Chrome TLS |
+| **Real layout & rendering** | yes (Gecko) | yes (Blink) | yes (Blink) | yes (Blink) | yes (Blink) | yes (Blink) | yes (browser tier) | **yes since v0.2.0** — own engine, 66.8k LOC; on in prebuilt archives, `--features render` from source | yes (Blink) |
+| **HTML parser included** | no | no | no | no | no | no | **yes** | **yes** (`html5ever`) | no |
+| **Crawler / spider** | no | no | no | yes | no | no | **yes** | no | no |
+| **Human input simulation** | yes | no | yes | yes (Bézier) | no | yes | no | no | yes (trusted CDP) |
+| **Ships a binary you can't read** | no | no | no | no | yes (prebuilt bundle) | **yes** (Pro/free binaries) | no | no | no |
+
+**Reading notes.**
+
+- *"Delegates"* is not a weakness — Scrapling wiring Patchright and Camoufox into a
+  framework is a legitimate design. It does mean Scrapling's browser-tier evasion is
+  Patchright's evasion, and inherits its strengths and failures. Verified: Scrapling's
+  `pyproject.toml` pins `patchright>=1.61.2` and `curl_cffi>=0.16.0`.
+- *Patch counts are not quality.* 71 patches is not "2.2× better" than 32. Different
+  projects split changes differently. The number tells you the surface area touched.
+- *No TLS impersonation is normal.* Real-browser tools have real browser TLS, which is
+  correct by construction. It matters only for the HTTP-only tiers.
+
+---
+
+## Anti-bot service coverage — what is claimed, and by whom
+
+**This is the section most likely to mislead you elsewhere, including in the previous
+version of this document.**
+
+The earlier revision presented a 7-services × 9-tools grid of ✅ / ⚠️ / ❌ — 63 verdicts
+implying measurement. **No benchmark was ever run to produce them.** That grid has been
+removed rather than refreshed.
+
+What can be stated honestly is *who claims what*:
+
+| Tool | Services the project itself claims | Evidence | Notes |
+|------|-----------------------------------|:--------:|-------|
+| **Patchright** | Cloudflare, Kasada, Akamai, DataDome | **B** | Listed with ✅ in its own README; no methodology published |
+| **XDriver** | Cloudflare WAF, Turnstile, DataDome, Kasada | **B** | Claims are from Sept 2025 and the bundle is pinned to `playwright-core` 1.49.0 — **stale by construction**; no commits since 2025-09-10 |
+| **Botasaurus** | Cloudflare WAF, Turnstile, DataDome | **B** | Links live demo targets; markets itself as building "undefeatable" scrapers |
+| **CloakBrowser** | Turnstile, FingerprintJS, reCAPTCHA v3 score 0.9, "30+ detection sites" | **B** | **Pro binary only.** The free binary is not claimed to reach these numbers |
+| **SeleniumBase** | A Cloudflare challenge page | **B** | Narrower and more checkable than most: ships a runnable example script rather than a grid |
+| **Scrapling** | Cloudflare Turnstile | **B** | Notably candid — its README *defers* Akamai, DataDome, Kasada and Incapsula to a third-party paid API rather than claiming them |
+| **Camoufox** | *none* | **D** | Makes no service claims at all; its README instead **documents a limitation** (some WAFs probe SpiderMonkey engine behaviour, which a Firefox fork cannot hide) |
+| **Obscura** | *none* | **D** | No anti-bot service claims in the README |
+| **Clearcote** | *none* | **D** | Explicitly positions as a privacy/coherence browser; publishes open-auditor results (CreepJS), not WAF pass rates |
+
+**How to read this table.** It is a map of marketing, not of capability. Three things
+follow from it that a ✅/❌ grid would have hidden:
+
+1. **A blank row is not a weak tool.** Camoufox and Clearcote make no service claims
+   and are among the most technically serious projects here. Silence often means the
+   maintainer declines to claim what they cannot measure.
+2. **The loudest claims come from the least maintained project.** XDriver asserts the
+   broadest coverage and has not been touched since September 2025.
+3. **Vendor ✅s are not comparable across projects.** Each used its own targets, dates,
+   IPs, and pass criteria — none published. Two ✅s in the same column may mean very
+   different things.
+
+If you need real coverage numbers for *your* targets, you have to test against them,
+with your own proxies. Nobody's table substitutes for that.
+
+---
+
+## Project health
+
+Full generated table in **[STATUS.md](STATUS.md)**. The parts that should change a
+build decision:
+
+| Signal | What to watch for | Current outliers (2026-08-14) |
+|--------|-------------------|-------------------------------|
+| **License** | Copyleft or proprietary components affect what you can ship | CloakBrowser: MIT wrapper, **proprietary binary**. Camoufox: MPL-2.0 |
+| **Bus factor** | One-maintainer projects can stop overnight | **Clearcote: 1 contributor.** XDriver: 2 |
+| **Actually maintained** | Anti-detection rots fast; a stale repo is a liability | **XDriver: no commits in ~11 months** — treat as abandoned |
+| **Issue backlog** | Unresponsive maintainers surface here | CloakBrowser: 194 open. Camoufox: 121 |
+
+Stars are in STATUS.md for completeness, but popularity is not stealth — Scrapling has
+~74k stars and openly defers the hardest protections to a paid third party.
+
+---
+
+## Decision guide
+
+**Editorial, not measured.** This is the report author's judgment given the
+architecture above. Reasoning is stated so you can disagree with the reasoning.
+
+| If you need… | Consider | Because |
+|--------------|----------|---------|
+| Fingerprint spoofing JS cannot detect | [Camoufox](./camoufox.md), [Clearcote](./clearcote.md), [CloakBrowser](./cloakbrowser.md) | Spoofing lives in C++; there is no JS wrapper to catch |
+| Statistical fingerprint rotation | [Camoufox](./camoufox.md) | BrowserForge-generated fingerprints with real-world distributions |
+| To present a *specific real machine* | [Clearcote](./clearcote.md) | Imports a captured profile and ships a verifier to confirm it loaded |
+| A drop-in for existing Playwright code | [Patchright](./patchright.md) | Same API, patched driver. Prefer it over XDriver, which is the dormant repackage |
+| CAPTCHA solving in-framework | [SeleniumBase](./seleniumbase.md) | Built-in click/slide solving; the only one here that seriously attempts it |
+| Human-like mouse behaviour | [Botasaurus](./botasaurus.md), [CloakBrowser](./cloakbrowser.md) | Bézier-curve cursor paths; CloakBrowser exposes it as one flag |
+| An all-in-one scraping stack | [Scrapling](./scrapling.md) | Fetching, parsing, crawling, stealth in one package |
+| HTTP-only speed with TLS impersonation | [Scrapling](./scrapling.md) | `curl_cffi` tier — no browser, ~10 MB per worker |
+| High concurrency on ordinary pages | [Obscura](./obscura.md) | ~30 MB per instance; now renders properly since v0.2.0 |
+| To audit and rebuild the browser yourself | [Clearcote](./clearcote.md) | 32 readable patches, signed builds, reproducibility as a stated goal |
+| Node.js or .NET | [Patchright](./patchright.md), [CloakBrowser](./cloakbrowser.md), [Clearcote](./clearcote.md) | Multi-language SDKs |
+| To avoid proprietary binaries | anything **except** CloakBrowser | Only CloakBrowser's engine is closed |
+
+**Not recommended:** [XDriver](./xdriver.md) for new work. It is a repackaged
+`rebrowser-patches` fork pinned to `playwright-core` 1.49.0, unmaintained since
+September 2025. Use Patchright, which is the maintained expression of the same idea.
+
+---
+
+## How bot detection actually works
+
+Understanding the layers explains why no single tool covers all of them.
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                         DETECTION LAYERS                              │
-├──────────────────────────────────────────────────────────────────────┤
-│  Layer 1: Protocol Detection                                          │
-│  ├─ Runtime.enable timing         [Patchright, XDriver, CloakBrowser]│
-│  ├─ Execution context leaks       [Patchright]                       │
-│  ├─ Binding exposure              [XDriver]                          │
-│  ├─ CDP input behavior mimicking  [CloakBrowser - 5 C++ patches]     │
-│  └─ Juggler isolation (Firefox)   [Camoufox - unique]                │
-├──────────────────────────────────────────────────────────────────────┤
-│  Layer 2: Browser Fingerprinting                                      │
-│  ├─ navigator.webdriver           [All tools]                        │
-│  ├─ Canvas/WebGL fingerprints     [Camoufox C++, CloakBrowser C++]   │
-│  ├─ Screen/Window properties      [Camoufox C++, CloakBrowser C++]   │
-│  ├─ Audio context spoofing        [Camoufox C++, CloakBrowser C++]   │
-│  └─ Font enumeration              [Camoufox, CloakBrowser]           │
-├──────────────────────────────────────────────────────────────────────┤
-│  Layer 3: Behavioral Analysis                                         │
-│  ├─ Mouse movement patterns       [Botasaurus, Camoufox, CloakBrowser]│
-│  ├─ Click timing distribution     [Botasaurus, SeleniumBase, CloakBrowser]│
-│  └─ Scroll/navigation patterns    [Botasaurus, CloakBrowser]         │
-├──────────────────────────────────────────────────────────────────────┤
-│  Layer 4: Network Analysis                                            │
-│  ├─ TLS fingerprinting (JA3/JA4)  [Scrapling Fetcher - curl_cffi,    │
-│  │                                  Obscura --features stealth (wreq)]│
-│  ├─ WebRTC/UDP leakage            [Camoufox, XDriver, Scrapling]     │
-│  ├─ IP reputation scoring         [Use proxies]                      │
-│  └─ DNS leakage                   [Use SOCKS5H proxies]              │
-├──────────────────────────────────────────────────────────────────────┤
-│  Layer 5: Layout & Rendering Probes                                   │
-│  ├─ getBoundingClientRect checks  [Real browsers only — Obscura returns 0s]│
-│  ├─ getComputedStyle queries      [Real browsers only — Obscura stubs]│
-│  └─ Real canvas/WebGL output      [Camoufox, CloakBrowser, all real-browser tools]│
-└──────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Layer 1 · Protocol / automation tells                                   │
+│  ├─ Runtime.enable timing          Patchright, CloakBrowser, Clearcote   │
+│  ├─ Execution-context leaks        Patchright                            │
+│  ├─ CDP input characteristics      CloakBrowser, Clearcote               │
+│  └─ Juggler instead of CDP         Camoufox (Firefox — sidesteps it)     │
+├──────────────────────────────────────────────────────────────────────────┤
+│  Layer 2 · Browser fingerprinting                                        │
+│  ├─ navigator.webdriver            all tools                             │
+│  ├─ Canvas / WebGL                 Camoufox, CloakBrowser, Clearcote     │
+│  ├─ Screen / window geometry       Camoufox, CloakBrowser, Clearcote     │
+│  ├─ AudioContext                   Camoufox, CloakBrowser, Clearcote     │
+│  └─ Font enumeration               Camoufox, CloakBrowser, Clearcote     │
+├──────────────────────────────────────────────────────────────────────────┤
+│  Layer 3 · Behaviour                                                     │
+│  ├─ Mouse movement                 Botasaurus, CloakBrowser, Camoufox    │
+│  ├─ Click / keystroke timing       Botasaurus, SeleniumBase, CloakBrowser│
+│  └─ Navigation patterns            your code's problem, not the tool's   │
+├──────────────────────────────────────────────────────────────────────────┤
+│  Layer 4 · Network                                                       │
+│  ├─ TLS fingerprint (JA3/JA4)      Scrapling (curl_cffi), Obscura (wreq) │
+│  ├─ WebRTC / UDP leakage           Camoufox, Clearcote                   │
+│  ├─ IP reputation                  no tool fixes this — use proxies      │
+│  └─ DNS leakage                    use SOCKS5H proxies                   │
+├──────────────────────────────────────────────────────────────────────────┤
+│  Layer 5 · Layout & rendering probes                                     │
+│  ├─ getBoundingClientRect          real browsers; Obscura v0.2.0 render  │
+│  ├─ getComputedStyle               real browsers; Obscura v0.2.0 render  │
+│  └─ Actual canvas/WebGL output     real-browser tools; Clearcote can     │
+│                                    forward to real GPU hardware          │
+│  Note: Obscura only clears this layer in a render-enabled build.         │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## The Hard Truth
+## What actually determines whether you get through
 
-**No tool is truly undetectable.** Here's what the marketing won't tell you:
+The previous revision published a table of success-rate percentages by protection tier
+(«90%+», «20-40%»…). **Those numbers had no study behind them** — no targets, no sample
+size, no dates — so they have been removed rather than adjusted. Precision you cannot
+source is worse than an honest qualitative answer.
 
-| Reality | Implication |
-|---------|-------------|
-| Detection is an arms race | What works today may fail tomorrow |
-| Enterprise ≠ Free tier | Cloudflare Free vs Enterprise are different beasts |
-| IP reputation matters most | Best stealth fails with datacenter IPs |
-| Behavioral patterns accumulate | Same scraping pattern = eventual detection |
-| TLS fingerprinting exists | Browser TLS signatures are nearly impossible to spoof |
+What is defensible, and consistent across practitioner accounts:
 
-### Realistic Success Rates
+| Factor | Why it dominates |
+|--------|------------------|
+| **IP reputation** | Routinely decides the outcome before a single fingerprint is read. Excellent stealth on a flagged datacenter IP loses to mediocre stealth on clean residential. |
+| **Request patterns** | Volume, timing regularity, and path order identify automation that no fingerprint patch touches. |
+| **Tier of the same product** | "Cloudflare" is not one system. Free, Pro, Business, and Enterprise configurations differ enormously — claims rarely say which was tested. |
+| **Account and session age** | On logged-in targets, history often outweighs the browser entirely. |
+| **Time** | Detection is adversarial. Any result decays; a passing test proves *that target, that day*. |
+| **The tool** | Real, and necessary — but usually not the binding constraint once the above are wrong. |
 
-| Protection Level | Tools Alone | + Residential Proxies |
-|-----------------|:-----------:|:---------------------:|
-| Basic (CF Free, simple checks) | 90%+ | 99%+ |
-| Medium (CF Pro, PerimeterX) | 60-80% | 90%+ |
-| Enterprise (Akamai, DataDome) | 20-40% | 70-85% |
-| Custom ML-based | <20% | 50-70% |
+The honest summary: tooling gets you to the starting line. Infrastructure and
+behaviour determine whether you finish.
 
 ---
 
-## Detection Test Sites
+## Detection test sites
 
-Test your setup against these:
+Useful for checking your own setup. All are consistency auditors or demos — passing
+them is **not** evidence of defeating a commercial WAF.
 
-| Test | What It Checks | URL |
+| Test | What it checks | URL |
 |------|----------------|-----|
-| Sannysoft | Automation detection | [bot.sannysoft.com](https://bot.sannysoft.com/) |
-| BrowserScan | Comprehensive fingerprint | [browserscan.net](https://www.browserscan.net/bot-detection) |
-| Fingerprint.com | Bot detection | [fingerprint.com](https://fingerprint.com/products/bot-detection/) |
-| CreepJS | Browser fingerprint | [abrahamjuliot.github.io/creepjs](https://abrahamjuliot.github.io/creepjs/) |
-| Pixelscan | Leak detection | [pixelscan.net](https://pixelscan.net/) |
+| Sannysoft | Basic automation tells | [bot.sannysoft.com](https://bot.sannysoft.com/) |
+| BrowserScan | Broad fingerprint surface | [browserscan.net](https://www.browserscan.net/bot-detection) |
+| CreepJS | Fingerprint coherence and lies | [abrahamjuliot.github.io/creepjs](https://abrahamjuliot.github.io/creepjs/) |
+| Fingerprint.com | Commercial bot-detection demo | [fingerprint.com](https://fingerprint.com/products/bot-detection/) |
+| Pixelscan | Leak and consistency detection | [pixelscan.net](https://pixelscan.net/) |
 
 ---
 
-## Tool Combination Strategies
+## Reproduce this report
 
-For maximum effectiveness, consider combining tools:
-
-### Strategy 1: Undetectable Fingerprint Rotation
-```
-Camoufox (C++ spoofing + BrowserForge) + Residential Proxies
-= Statistically accurate fingerprints + clean IPs
-= Best for: High-volume scraping with identity rotation
+```bash
+python scripts/verify.py --write     # refresh STATUS.md from PyPI / npm / GitHub
 ```
 
-### Strategy 2: Behavioral + Protocol Stealth
-```
-Botasaurus (human mouse) + Patchright (CDP stealth)
-= Human-like behavior + protocol-level evasion
+Source verification runs in an isolated container, never on a workstation — the trees
+are unaudited third-party code:
+
+```bash
+./scripts/sandbox.sh up              # clone into a Docker volume, then cut the network
+./scripts/sandbox.sh sh              # offline shell for reading the source
+./scripts/sandbox.sh nuke            # destroy container and volume
 ```
 
-### Strategy 3: CAPTCHA + Stealth
-```
-SeleniumBase UC Mode + Residential Proxies
-= Automatic CAPTCHA solving + clean IP reputation
-```
-
-### Strategy 4: Quick Testing
-```
-XDriver (one-command activation) + Sannysoft test
-= Fast iteration on stealth configuration
-```
-
-### Strategy 5: Firefox-based Maximum Stealth
-```
-Camoufox (Juggler isolation) + geoip auto-detection
-= No automation artifacts visible + locale consistency
-= Best for: Sites that don't discriminate against Firefox
-```
-
-### Strategy 6: Chromium C++ Stealth + Human Behavior
-```
-CloakBrowser (33 C++ patches + humanize=True) + Residential Proxies
-= Source-level fingerprint spoofing + behavioral evasion + clean IPs
-= 0.9 reCAPTCHA v3 score + Cloudflare Turnstile pass
-= Best for: Chromium-required sites with behavioral detection
-```
-
-### Strategy 7: All-in-One Pipeline with Tiered Stealth
-```
-Scrapling (Fetcher for bulk HTTP + StealthyFetcher for protected pages)
-= TLS-impersonated HTTP for 90% of pages + browser stealth for the rest
-= Adaptive selectors survive site redesigns + spider handles crawling
-= Best for: Large-scale scraping with mixed protection levels
-```
-
-### Strategy 8: Lightweight V8 Scraper + Real Browser Fallback
-```
-Obscura (--features stealth) for unprotected JS-rendered pages
-+ Patchright/Camoufox for the protected ones
-= 30 MB resident workers handle the bulk + heavy browsers reserved for hard targets
-= Best for: High-concurrency scraping where most pages are easy and only some need real Chrome
-```
+Nothing from those repos is installed, built, or executed to produce this report.
+Details: [METHODOLOGY.md § Source handling](METHODOLOGY.md#source-handling).
 
 ---
 
 ## Contributing
 
-Found a tool worth analyzing? Open an issue with:
-1. Tool name and repository URL
-2. What anti-detection approach it uses
-3. What protection systems it claims to bypass
+Corrections are welcome, especially ones that move a claim up a tier. Open an issue
+with the claim quoted and either a file + commit that contradicts it, vendor
+documentation that supersedes it, or a reproducible test with methodology attached
+(target, IP type, trial count, dates).
+
+New tools: include the repository URL, the anti-detection approach, and what it claims
+to handle.
 
 ---
 
 ## Disclaimer
 
-This repository is for **educational and legitimate purposes**:
-- Security research and testing
-- Academic study
-- Authorized penetration testing
-- Personal data retrieval from your own accounts
-
-Always respect `robots.txt`, rate limits, and terms of service.
+For security research, academic study, authorised testing, and retrieving your own
+data. Respect `robots.txt`, rate limits, and terms of service. Laws on automated access
+vary by jurisdiction — this document is not legal advice.
 
 ---
 
-## GitHub Topics
-
-Add these topics to your GitHub repository for better SEO:
-
-```
-web-scraping, anti-detection, bot-bypass, cloudflare-bypass, captcha-bypass,
-playwright, selenium, puppeteer, browser-automation, fingerprint-spoofing,
-anti-bot, stealth-browser, datadome-bypass, kasada-bypass, akamai-bypass,
-camoufox, patchright, seleniumbase, botasaurus, undetected-chromedriver,
-cloakbrowser, scrapling, obscura, web-automation, scraping-tools, antibot-bypass, turnstile-bypass,
-browser-fingerprinting, cdp-stealth, perimeter-x, imperva-bypass
-```
-
----
+<!--
+Repository topics: web-scraping, anti-detection, bot-detection, browser-automation,
+fingerprint-spoofing, stealth-browser, playwright, selenium, puppeteer, cdp,
+browser-fingerprinting, camoufox, patchright, seleniumbase, botasaurus, cloakbrowser,
+scrapling, obscura, clearcote, firefox-automation, chromium, rust, web-automation
+-->
 
 <p align="center">
-  <i>Stop believing marketing claims. Read the source code.</i>
+  <i>Read the source. Check the date. Distrust the grid.</i>
 </p>
