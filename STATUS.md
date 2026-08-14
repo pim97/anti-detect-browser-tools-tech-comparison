@@ -18,6 +18,7 @@ python scripts/verify.py --write
 | **CloakBrowser** | `chromium-v150.0.7871.114.6-pro` (2026-08-11) | `cloakbrowser` `0.5.7` (2026-08-11) | `cloakbrowser` `0.5.7` (2026-08-11) |
 | **Scrapling** | `v0.4.14` (2026-08-10) | `scrapling` `0.4.14` (2026-08-10) | — |
 | **Obscura** | `v0.2.0` (2026-08-08) | — | — |
+| **invisible_playwright** | `v0.7.0` (2026-08-11) | `invisible-playwright` `0.7.0` (2026-08-11)<br>`invisible-core` `19.14.0` (2026-08-11) | — |
 | **Clearcote** | `v0.1.0-pre.22` (2026-07-15) *(pre)* | `clearcote` `0.26.1` (2026-08-13) | `clearcote` `0.26.1` (2026-08-13) |
 
 ## Project health
@@ -26,15 +27,16 @@ Stars measure popularity, not stealth. The columns that matter for a build decis
 
 | Tool | Primary repo | License | Last push | Stars | Forks | Contributors | Open issues |
 |------|--------------|---------|-----------|------:|------:|-------------:|------------:|
-| **Camoufox** | [`daijro/camoufox`](https://github.com/daijro/camoufox) | MPL-2.0 | 2026-08-12 | 11,088 | 949 | 30 | 122 |
+| **Camoufox** | [`daijro/camoufox`](https://github.com/daijro/camoufox) | MPL-2.0 | 2026-08-12 | 11,090 | 949 | 30 | 122 |
 | **Patchright** | [`Kaliiiiiiiiii-Vinyzu/patchright`](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright) | Apache-2.0 | 2026-08-05 | 4,086 | 197 | 40 | 7 |
 | **SeleniumBase** | [`seleniumbase/SeleniumBase`](https://github.com/seleniumbase/SeleniumBase) | MIT | 2026-08-14 | 12,925 | 1,574 | 33 | 13 |
 | **Botasaurus** | [`omkarcloud/botasaurus`](https://github.com/omkarcloud/botasaurus) | MIT | 2026-07-26 | 5,664 | 494 | 9 | 57 |
 | **XDriver** | [`arjun-sha/XDriver`](https://github.com/arjun-sha/XDriver) | Apache-2.0 | 2025-09-10 | 5 | 4 | 2 | 0 |
-| **CloakBrowser** | [`CloakHQ/CloakBrowser`](https://github.com/CloakHQ/CloakBrowser) | MIT | 2026-08-11 | 30,027 | 2,478 | 19 | 194 |
-| **Scrapling** | [`D4Vinci/Scrapling`](https://github.com/D4Vinci/Scrapling) | BSD-3-Clause | 2026-08-11 | 73,892 | 7,391 | 30 | 3 |
-| **Obscura** | [`h4ckf0r0day/obscura`](https://github.com/h4ckf0r0day/obscura) | Apache-2.0 | 2026-08-14 | 21,369 | 1,536 | 47 | 73 |
-| **Clearcote** | [`clearcotelabs/clearcote-browser`](https://github.com/clearcotelabs/clearcote-browser) | BSD-3-Clause | 2026-08-13 | 75 | 6 | 1 | 4 |
+| **CloakBrowser** | [`CloakHQ/CloakBrowser`](https://github.com/CloakHQ/CloakBrowser) | MIT | 2026-08-11 | 30,031 | 2,478 | 19 | 194 |
+| **Scrapling** | [`D4Vinci/Scrapling`](https://github.com/D4Vinci/Scrapling) | BSD-3-Clause | 2026-08-11 | 73,900 | 7,393 | 30 | 3 |
+| **Obscura** | [`h4ckf0r0day/obscura`](https://github.com/h4ckf0r0day/obscura) | Apache-2.0 | 2026-08-14 | 21,374 | 1,536 | 47 | 73 |
+| **invisible_playwright** | [`feder-cr/invisible_playwright`](https://github.com/feder-cr/invisible_playwright) | MIT | 2026-08-14 | 1,887 | 215 | 2 | 3 |
+| **Clearcote** | [`clearcotelabs/clearcote-browser`](https://github.com/clearcotelabs/clearcote-browser) | BSD-3-Clause | 2026-08-14 | 75 | 6 | 1 | 4 |
 
 ## Repos cloned for source verification
 
@@ -48,4 +50,5 @@ Claims marked **Tier A** in the report were read from this code. The trees are u
 - **CloakBrowser** — [`CloakHQ/CloakBrowser`](https://github.com/CloakHQ/CloakBrowser)
 - **Scrapling** — [`D4Vinci/Scrapling`](https://github.com/D4Vinci/Scrapling)
 - **Obscura** — [`h4ckf0r0day/obscura`](https://github.com/h4ckf0r0day/obscura) · [`h4ckf0r0day/obscura-benchmark`](https://github.com/h4ckf0r0day/obscura-benchmark)
+- **invisible_playwright** — [`feder-cr/invisible_playwright`](https://github.com/feder-cr/invisible_playwright) · [`feder-cr/invisible_core`](https://github.com/feder-cr/invisible_core) · [`feder-cr/firefox_antidetect_patch`](https://github.com/feder-cr/firefox_antidetect_patch)
 - **Clearcote** — [`clearcotelabs/clearcote-browser`](https://github.com/clearcotelabs/clearcote-browser) · [`clearcotelabs/clearcote-profiles`](https://github.com/clearcotelabs/clearcote-profiles)

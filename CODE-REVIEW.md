@@ -159,7 +159,32 @@ component that actually implements the stealth. Much of that line count is gener
 bindings (`cdp/network.py` alone is 4,617 lines), which need no tests — but the
 hand-written driver logic has none either.
 
-### 6. Registry artifacts do not always correspond to published source
+### 6. invisible_playwright's browser phones home, and its own package never says so
+
+> [!WARNING]
+> The patched Firefox issues an HTTPS GET to GitHub on **every launch**, enabled by
+> default. It is disclosed — in a different repository from the one users install.
+
+`BrowserGlue.sys.mjs:392-408` on branch `stealth/151` fires a fire-and-forget `fetch()`
+to a GitHub release asset at `final-ui-startup`, gated on
+`invisible_firefox.usage_ping.enabled`, which `firefox.js:3618` defaults to `true`. The
+asset's download counter drives a badge.
+
+The request itself is benign: `credentials: "omit"`, `cache: "no-store"`, no payload, no
+identifier, standard Firefox UA, errors swallowed. It uses Firefox's own network stack,
+so it follows the `network.proxy.*` prefs the tool sets — and `prefs.py` sets
+`failover_direct = False` and `socks_remote_dns = True`, so a dead proxy produces no
+direct-connection fallback and no DNS leak.
+
+The defect is placement. Searching the entire `invisible_playwright` repository for
+`usage_ping`, `launch counter`, `launch.txt` or `usage-counter` returns **0 matches**.
+The disclosure lives in the engine repository, which a `pip install invisible-playwright`
+user has no reason to open. For a tool whose purpose is not being observed, startup
+traffic should be opt-in, and the disclosure belongs in the installed package.
+
+**Mitigation:** `extra_prefs={"invisible_firefox.usage_ping.enabled": False}` at launch.
+
+### 7. Registry artifacts do not always correspond to published source
 
 > [!WARNING]
 > Reviewing the `botasaurus-driver` GitHub tree does not tell you what
@@ -197,6 +222,8 @@ excluded. Raw counts are not quality scores; the per-kLOC columns exist because 
 | `Scrapling` | 15,768 | 59 | 12,389 | `engines/toolbelt/ad_domains.py` (3,538, data) |
 | `obscura` | 142,368 | 34 | 11,137 | `crates/obscura-render/src/dom.rs` (20,284) |
 | `clearcote-browser` | 23,136 | 65 | 8,401 | `sdk/python/clearcote/_humanize.py` (991) |
+| `invisible_playwright` | 6,744 | 48 | — | — |
+| `invisible_core` | 10,536 | 40 | — | — |
 
 </details>
 
@@ -232,6 +259,8 @@ code is less consistent.
 | Repo | bare `except:` | broad `except` | per kLOC | `print(` | per kLOC | sleep calls | TODO/FIXME |
 |------|---------------:|---------------:|---------:|---------:|---------:|------------:|-----------:|
 | `camoufox` | 1 | 27 | 0.5 | 210 | 4.2 | 4 | 8 |
+| `invisible_playwright` | 2 | 36 | 5.3 | 394 | 58.4 | 33 | 0 |
+| `invisible_core` | 0 | 37 | 3.5 | 156 | 14.8 | 3 | 0 |
 | `patchright` | 0 | 0 | 0.0 | 0 | 0.0 | 0 | 2 |
 | `SeleniumBase` | 0 | **506** | **5.1** | **1,122** | **11.3** | **548** | 0 |
 | `botasaurus` | **17** | 5 | 0.2 | 191 | 6.2 | 5 | 15 |

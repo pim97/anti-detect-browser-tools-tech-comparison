@@ -1,5 +1,72 @@
 # Changelog
 
+## 2026-08-14e — Added invisible_playwright (tenth tool)
+
+Added from [issue #1](https://github.com/pim97/anti-detect-browser-tools-tech-comparison/issues/1).
+Full analysis: **[invisible-playwright.md](invisible-playwright.md)**.
+
+### Are the patches public? Yes — with three caveats
+
+The submission claimed "Firefox patched in the C++ source and rebuilt". Verified:
+
+- `feder-cr/firefox_antidetect_patch` is a **genuine GitHub fork** of
+  `mozilla-firefox/firefox` (API reports `fork: true`, parent confirmed).
+- The diffable tag pair `stealth-base/v150.0.1` → `stealth-head/v150.0.1` resolves to
+  **20 commits, 104 files, +14,279 / −59 lines**.
+- **The default branch shows none of it.** `main` is 5 commits ahead of upstream,
+  changing 2 files, both README/CI. The installed packages contain zero `.cc`/`.cpp`
+  files and no `patches/` directory.
+- **GitHub cannot render the shipping diff** — `last-mozilla-central...stealth/151`
+  returns HTTP 422, "this diff is taking too long to generate".
+- **The readable patch series is not public.** The branch's own
+  `STEALTH_BRANCH_README.md` documents a numbered series (`0001-…` … `0015-…`)
+  maintained in `feder-cr/firefox-stealth` — that repository returns **404**. You can
+  regenerate an equivalent series yourself with `git format-patch` after cloning.
+
+### The patches are substantive, not pref-flipping
+
+Read at code level: 20+ `zoom.stealth.*` static prefs consumed by C++ getters (same
+architecture as Camoufox's `MaskConfig`); canvas noise that skips sub-64×64 canvases to
+avoid disturbing reCAPTCHA probes and **skips zero-valued channels specifically to
+survive CreepJS's `clearRect` trap**, tuned "to stay below FP Pro's `tampering_ml`
+threshold"; a complete **SOCKS5 UDP ASSOCIATE implementation** (+423 lines, plus +2,037
+in nICEr) so WebRTC media can traverse a SOCKS proxy rather than leaking the host
+address. Detector-aware engineering, comparable in ambition to Camoufox.
+
+### Security finding: the browser phones home on every launch
+
+`BrowserGlue.sys.mjs:392-408` fires a fire-and-forget `fetch()` to a GitHub release
+asset at `final-ui-startup`, gated on `invisible_firefox.usage_ping.enabled`, which
+`firefox.js:3618` defaults to **true**.
+
+The request is benign — `credentials: "omit"`, `cache: "no-store"`, no payload, no
+identifier — and it follows the configured proxy, with `failover_direct = False` and
+`socks_remote_dns = True` set by the tool, so a dead proxy yields no direct fallback and
+no DNS leak.
+
+**The defect is placement.** Searching the entire `invisible_playwright` repository for
+`usage_ping`, `launch counter`, `launch.txt` or `usage-counter` returns **0 matches**.
+The disclosure lives in a different repository. Disable with
+`extra_prefs={"invisible_firefox.usage_ping.enabled": False}`.
+
+No other tool in this comparison makes an unsolicited network request at startup, so the
+architecture matrix gains a **"Startup network traffic"** row.
+
+### Nothing malicious found
+
+No `eval`/`exec`, no `pickle.load`, no `shell=True`, no `verify=False` in either
+installed package. The downloader performs real SHA-256 verification and **re-verifies
+already-cached engines**, which is better practice than most tools here. The dependency
+is pinned with an exact `==` specifier, with the rationale documented.
+
+### Updated
+
+README (tables, lineage diagram, capability index, health), STATUS.md,
+CODE-REVIEW.md (metrics rows + finding 6), METHODOLOGY.md, `scripts/verify.py`,
+and `docs/index.html` (tenth column, telemetry row, new filter, critical finding).
+
+---
+
 ## 2026-08-14d — Interactive evidence matrix; GitHub-native docs
 
 ### Added

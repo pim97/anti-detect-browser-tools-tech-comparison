@@ -1,11 +1,11 @@
 # Anti-Detect Browser Tools — Technical Comparison
 
-Source-verified comparison of nine open-source browser-automation and anti-detection
+Source-verified comparison of ten open-source browser-automation and anti-detection
 tools. Each claim carries an evidence tier stating how it was established.
 
 [![Last verified](https://img.shields.io/badge/last%20verified-2026--08--14-brightgreen)](STATUS.md)
 [![Methodology](https://img.shields.io/badge/methodology-documented-blue)](METHODOLOGY.md)
-[![Tools tracked](https://img.shields.io/badge/tools-9-informational)](#tools-covered)
+[![Tools tracked](https://img.shields.io/badge/tools-10-informational)](#tools-covered)
 [![Code review](https://img.shields.io/badge/code%20review-included-blueviolet)](CODE-REVIEW.md)
 [![Interactive](https://img.shields.io/badge/interactive-evidence%20matrix-0d6a66)](docs/index.html)
 
@@ -75,6 +75,7 @@ Two constraints follow from the method (see [METHODOLOGY.md](METHODOLOGY.md#what
 | **Scrapling** | Scraping framework: HTTP and browser tiers, parser, spider | Python | BSD-3-Clause | [scrapling.md](./scrapling.md) |
 | **Obscura** | Browser engine implemented from scratch in Rust | Rust; CDP clients | Apache-2.0 | [obscura.md](./obscura.md) |
 | **Clearcote** | ungoogled-chromium fork; published patches, fingerprint import | Python, Node | BSD-3-Clause | [clearcote.md](./clearcote.md) |
+| **invisible_playwright** | Firefox fork patched in C++, driven by an unmodified Playwright client | Python | MIT (wrapper), MPL-2.0 (engine fork) | [invisible-playwright.md](./invisible-playwright.md) |
 
 Versions, release dates, star counts, contributor counts, and last-push dates:
 [STATUS.md](STATUS.md).
@@ -102,25 +103,25 @@ Corrections to claims that were unsupported rather than merely stale are itemise
 
 ### Stealth implementation
 
-| | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling | Obscura | Clearcote |
-|---|---|---|---|---|---|---|---|---|---|
-| **Browser engine** | Firefox 152.0.4 fork | stock Chromium | stock Chromium | stock Chromium | stock Chromium | Chromium 150 fork (Pro) / 146 (free) | delegates | own Rust engine | Chromium 149 fork (ungoogled) |
-| **Modification method** | C++ source patches: 34 in `patches/`, 2 in `patches/playwright/` | AST rewrite of the Playwright driver (`patchright_driver_patch.ts`, 265 lines, `ts-morph`) | ChromeDriver binary rewrite (`undetected/patcher.py`) + CDP driver (`undetected/cdp_driver/`) | raw CDP over WebSocket; 58 generated binding files in `botasaurus_driver/cdp/` | file replacement with a prebuilt bundle (`turnstilebrowser-playwright-core` 1.49.0) | C++ source patches: 71 (Pro), 58 (free), 26 (macOS free) — **Tier B**, counts from vendor README | dependency on Patchright + `curl_cffi` | JS shims + native ops in its own runtime | C++ source patches: 32, listed in `patches/series` |
-| **`navigator.webdriver`** | C++ patch | driver patch | driver patch | CDP | prebuilt bundle | C++ patch (**Tier B**) | inherited from Patchright | runtime shim | C++ patch `010-user-agent-and-webdriver` |
-| **`Runtime.enable` tell** | not applicable — automation runs over Juggler, not CDP; the only source references are a test and a build-checker | avoided by executing JS in isolated contexts, with the Console API disabled (mechanism documented in the project README) | **Tier D** — no handling located in source; CDP Mode attaches no WebDriver | **none** — the sole reference is a commented-out line, `connection.py:219` | rebrowser-lineage patch in the bundle, gated behind `TURNSTILEBROWSER_PATCHES_*` env vars | **Tier D** — not addressed in the wrapper README's patch list; binary is closed and cannot be inspected | inherited from Patchright | own CDP server implementation | C++ patch `110-runtime-enable` |
-| **TLS/JA3 impersonation** | none — real Firefox TLS | none — real Chrome TLS | none | none | none | none — real Chrome TLS | **yes**, HTTP tier only: `curl_cffi>=0.16.0` | **optional**, build-gated: `wreq` behind `--features stealth` | none — real Chrome TLS |
-| **Input simulation** | `humanize`, `humanize:minTime`, `humanize:maxTime` config properties (`settings/properties.json:69-71`) | none; the project pairs with the separate CDP-Patches library | OS-level clicks via PyAutoGUI (`browser_launcher.py:1071-1082`) and timing jitter; **no motion model** | Bézier trajectories with Gaussian distortion and easing (`human_curve_generator.py`) | none — the only matches are incidental strings in bundled Playwright assets | `humanize` option; extensive implementation (**Tier B** — closed binary) | none first-party; passes options through to Patchright | none — `bezier` matches are CSS `cubic-bezier` easing and canvas `bezierCurveTo` | C++ patches `130-humanized-input`, `200-agent-and-humanized-input` |
-| **Engine source published** | yes — patches + build script; binary is rebuildable | n/a — patches stock Chromium | n/a — patches stock ChromeDriver | n/a — drives stock Chromium | no — prebuilt bundle; upstream rebrowser-patches is public, this bundle is not built from published sources | **no** — no patches directory or build script in the repository; binary is proprietary | n/a — delegates | yes — the repository is the engine | yes — patches + build docs; signed, checksummed releases |
+| | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling | Obscura | Clearcote | invisible_playwright |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **Browser engine** | Firefox 152.0.4 fork | stock Chromium | stock Chromium | stock Chromium | stock Chromium | Chromium 150 fork (Pro) / 146 (free) | delegates | own Rust engine | Chromium 149 fork (ungoogled) | Firefox 151 fork |
+| **Modification method** | C++ source patches: 34 in `patches/`, 2 in `patches/playwright/` | AST rewrite of the Playwright driver (`patchright_driver_patch.ts`, 265 lines, `ts-morph`) | ChromeDriver binary rewrite (`undetected/patcher.py`) + CDP driver (`undetected/cdp_driver/`) | raw CDP over WebSocket; 58 generated binding files in `botasaurus_driver/cdp/` | file replacement with a prebuilt bundle (`turnstilebrowser-playwright-core` 1.49.0) | C++ source patches: 71 (Pro), 58 (free), 26 (macOS free) — **Tier B**, counts from vendor README | dependency on Patchright + `curl_cffi` | JS shims + native ops in its own runtime | C++ source patches: 32, listed in `patches/series` | C++ source patches: 104 files on a public Firefox fork; no patch series |
+| **`navigator.webdriver`** | C++ patch | driver patch | driver patch | CDP | prebuilt bundle | C++ patch (**Tier B**) | inherited from Patchright | runtime shim | C++ patch `010-user-agent-and-webdriver` | C++ patch |
+| **`Runtime.enable` tell** | not applicable — automation runs over Juggler, not CDP; the only source references are a test and a build-checker | avoided by executing JS in isolated contexts, with the Console API disabled (mechanism documented in the project README) | **Tier D** — no handling located in source; CDP Mode attaches no WebDriver | **none** — the sole reference is a commented-out line, `connection.py:219` | rebrowser-lineage patch in the bundle, gated behind `TURNSTILEBROWSER_PATCHES_*` env vars | **Tier D** — not addressed in the wrapper README's patch list; binary is closed and cannot be inspected | inherited from Patchright | own CDP server implementation | C++ patch `110-runtime-enable` | not applicable — Juggler, not CDP |
+| **TLS/JA3 impersonation** | none — real Firefox TLS | none — real Chrome TLS | none | none | none | none — real Chrome TLS | **yes**, HTTP tier only: `curl_cffi>=0.16.0` | **optional**, build-gated: `wreq` behind `--features stealth` | none — real Chrome TLS | none — real Firefox TLS |
+| **Input simulation** | `humanize`, `humanize:minTime`, `humanize:maxTime` config properties (`settings/properties.json:69-71`) | none; the project pairs with the separate CDP-Patches library | OS-level clicks via PyAutoGUI (`browser_launcher.py:1071-1082`) and timing jitter; **no motion model** | Bézier trajectories with Gaussian distortion and easing (`human_curve_generator.py`) | none — the only matches are incidental strings in bundled Playwright assets | `humanize` option; extensive implementation (**Tier B** — closed binary) | none first-party; passes options through to Patchright | none — `bezier` matches are CSS `cubic-bezier` easing and canvas `bezierCurveTo` | C++ patches `130-humanized-input`, `200-agent-and-humanized-input` | pointer follows a path (vendor-stated, **Tier B**) |
+| **Engine source published** | yes — patches + build script; binary is rebuildable | n/a — patches stock Chromium | n/a — patches stock ChromeDriver | n/a — drives stock Chromium | no — prebuilt bundle; upstream rebrowser-patches is public, this bundle is not built from published sources | **no** — no patches directory or build script in the repository; binary is proprietary | n/a — delegates | yes — the repository is the engine | yes — patches + build docs; signed, checksummed releases | **yes** — full public Firefox fork, but no patch series |
 
 ### Non-stealth capabilities
 
-| | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling | Obscura | Clearcote |
-|---|---|---|---|---|---|---|---|---|---|
-| **Layout and rendering** | Gecko | Blink | Blink | Blink | Blink | Blink | Blink (browser tier) | own engine, 66,826 lines — **render-enabled builds only** | Blink |
-| **HTML parser included** | no | no | no | no | no | no | yes | yes (`html5ever`) | no |
-| **Crawler framework** | no | no | no | yes | no | no | yes | no | no |
-| **CAPTCHA handling** | no | no | click-based solving for several vendors | Cloudflare challenge automation | no | no | `solve_cloudflare` for Turnstile/Interstitial | no | no |
-| **Test framework integration** | no | no | pytest, unittest | no | no | no | no | no | no |
+| | Camoufox | Patchright | SeleniumBase | Botasaurus | XDriver | CloakBrowser | Scrapling | Obscura | Clearcote | invisible_playwright |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **Layout and rendering** | Gecko | Blink | Blink | Blink | Blink | Blink | Blink (browser tier) | own engine, 66,826 lines — **render-enabled builds only** | Blink | Gecko |
+| **HTML parser included** | no | no | no | no | no | no | yes | yes (`html5ever`) | no | no |
+| **Crawler framework** | no | no | no | yes | no | no | yes | no | no | no |
+| **CAPTCHA handling** | no | no | click-based solving for several vendors | Cloudflare challenge automation | no | no | `solve_cloudflare` for Turnstile/Interstitial | no | no | no |
+| **Test framework integration** | no | no | pytest, unittest | no | no | no | no | no | no | no |
 
 ### Notes on reading these tables
 
@@ -158,6 +159,7 @@ What follows is the provenance of each project's own claims.
 | **Camoufox** | none | D | Makes no service claims. Its README documents a limitation: some WAFs probe SpiderMonkey engine behaviour, which a Firefox fork does not conceal (Tier B) |
 | **Obscura** | none | D | No service claims in the README |
 | **Clearcote** | none | D | Publishes open-auditor results (CreepJS) and a self-referential coherence gate; no WAF pass rates |
+| **invisible_playwright** | none | D | Makes no WAF claims. Publishes detector-suite results (CreepJS, BotD, FingerprintJS, fpscanner, Sannysoft, BrowserLeaks, reCAPTCHA) with a public harness — **Tier B** for those results |
 
 ### Constraints on interpreting this table
 
@@ -186,6 +188,9 @@ graph LR
     direction LR
     Firefox["Firefox 152"] --> Camoufox
     BrowserForge["BrowserForge<br/><i>fingerprint data</i>"] --> Camoufox
+    Firefox151["Firefox 151"] --> FAP["firefox_antidetect_patch<br/><i>public fork, 104 files</i>"]
+    FAP --> InvisiblePW["invisible_playwright"]
+    StockPW["stock Playwright client"] --> InvisiblePW
   end
 
   subgraph CR["Chromium fork lineage"]
@@ -226,6 +231,8 @@ What this shows:
   (`turnstilebrowser-playwright-core` 1.49.0; `rebrowser-playwright-core` ^1.49.1).
 - **Camoufox, Obscura, Clearcote and CloakBrowser are genuinely independent** of the
   Playwright-patch family, though three of the four are Chromium-derived.
+- **invisible_playwright is a second, independent Firefox lineage** — its own C++ fork,
+  driven by an *unmodified* Playwright client rather than a bespoke launcher.
 
 ---
 
@@ -265,6 +272,7 @@ Stable, decision-relevant properties as of 2026-08-14:
 | **Maintenance concentration** | Clearcote has 1 contributor; XDriver has 2. The other seven have 9 to 47. |
 | **Inactive project** | XDriver, last push 2025-09-10 — approximately 11 months before the verification date. The other eight were pushed within the three weeks preceding it. |
 | **Registry ahead of source** | `botasaurus-driver` publishes 4.0.101 to PyPI while the repository's `setup.py` reads 4.0.92. The installed artifact does not correspond to a tagged commit. |
+| **Startup network traffic** | **invisible_playwright only.** Its browser GETs a GitHub asset on every launch, on by default, disclosed in the engine repo but **not** in the installed package. Disable with `extra_prefs={"invisible_firefox.usage_ping.enabled": False}` |
 | **Prerelease status** | Clearcote's browser is `v0.1.0-pre.22`; Camoufox's current line is `v152.0.4-beta.28`. Both projects label their builds as non-final. |
 
 Star counts appear in STATUS.md for completeness. They measure repository popularity and
@@ -280,7 +288,7 @@ one tool qualifies, they are listed in table order.
 
 | Requirement | Tools implementing it | Mechanism |
 |-------------|----------------------|-----------|
-| Fingerprint spoofing not observable as JS property-descriptor modification | Camoufox, CloakBrowser, Clearcote | Values substituted in C++ before JS can inspect them |
+| Fingerprint spoofing not observable as JS property-descriptor modification | Camoufox, CloakBrowser, Clearcote, invisible_playwright | Values substituted in C++ before JS can inspect them |
 | Statistically distributed fingerprint rotation | Camoufox | BrowserForge-generated profiles |
 | Import and present a specific captured device fingerprint | Clearcote | `--fingerprint-profile` with a bundled verifier |
 | Unmodified Playwright API surface | Patchright, CloakBrowser, Clearcote | Drop-in driver or SDK |
@@ -295,7 +303,9 @@ one tool qualifies, they are listed in table order.
 | Rebuildable engine from published sources | Camoufox, Clearcote, Obscura | Patches + build scripts; Rust workspace |
 | Signed, checksummed release binaries | Clearcote | GPG signature + SHA-256 |
 | Resident memory below a browser's | Scrapling (HTTP tier), Obscura | No browser process; own engine — **Tier B**, vendor figures |
-| Firefox rather than Chromium engine | Camoufox | Firefox 152 fork |
+| Firefox rather than Chromium engine | Camoufox, invisible_playwright | Firefox 152 / 151 forks |
+| WebRTC UDP routed through a SOCKS proxy | invisible_playwright | Full SOCKS5 UDP ASSOCIATE layer added to Necko (+423 lines) |
+| Unmodified Playwright client (no bespoke launcher API) | invisible_playwright | Engine carries Juggler; the Python client is stock |
 
 Requirements with no tool in this set: macOS Clearcote builds, WebGL fingerprint
 spoofing in Obscura, first-party handling of Akamai/DataDome/Kasada/Imperva in any of

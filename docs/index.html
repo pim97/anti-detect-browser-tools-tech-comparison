@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Evidence Matrix</title>
-<meta name="description" content="Source-verified comparison of nine anti-detect browser automation tools, where every claim carries its evidence tier.">
+<meta name="description" content="Source-verified comparison of ten anti-detect browser automation tools, where every claim carries its evidence tier.">
 <style>
 /* ─────────────────────────────────────────────────────────────
    Tokens. Light is the base; dark redefines tokens only.
@@ -230,10 +230,15 @@ footer a{color:var(--signal)}
 
 <header class="masthead">
   <div class="eyebrow">Source-verified · 2026-08-14</div>
-  <h1>Nine anti-detect tools, and <em>how well each claim is actually known</em>.</h1>
+  <h1>Ten anti-detect tools, and <em>how well each claim is actually known</em>.</h1>
+  <p class="prose lede" style="margin-top:14px">
+    Read from source in an isolated container. No benchmarks were run, so no claim about
+    a commercial anti-bot service exceeds second-hand — and the page says so on every row
+    rather than in a footnote.
+  </p>
   <div class="meta-strip">
-    <span><b>9</b> tools</span>
-    <span><b>19</b> repositories read</span>
+    <span><b>10</b> tools</span>
+    <span><b>22</b> repositories read</span>
     <span><b>0</b> benchmarks run</span>
     <span><b>Every</b> claim tiered</span>
   </div>
@@ -357,7 +362,7 @@ footer a{color:var(--signal)}
 
 <script>
 /* ── Data. Every value verified 2026-08-14 against the commits in STATUS.md. ── */
-const TOOLS = ["Camoufox","Patchright","SeleniumBase","Botasaurus","XDriver","CloakBrowser","Scrapling","Obscura","Clearcote"];
+const TOOLS = ["Camoufox","Patchright","SeleniumBase","Botasaurus","XDriver","CloakBrowser","Scrapling","Obscura","Clearcote","invisible_playwright"];
 
 /* v = displayed text, t = evidence tier, n = qualifying note */
 const c = (v,t,n) => ({v,t,n});
@@ -365,7 +370,7 @@ const ROWS = [
   {k:"Browser engine", cells:[
     c("Firefox 152.0.4 fork","A"), c("stock Chromium","A"), c("stock Chromium","A"),
     c("stock Chromium","A"), c("stock Chromium","A"), c("Chromium 150 fork","B","Pro; 146 free"),
-    c("delegates","A","uses Patchright"), c("own Rust engine","A"), c("Chromium 149 fork","A","ungoogled")]},
+    c("delegates","A","uses Patchright"), c("own Rust engine","A"), c("Chromium 149 fork","A","ungoogled"), c("Firefox 151 fork","A")]},
   {k:"Modification method", cells:[
     c("C++ source patches","A","34 in patches/, 2 playwright/"),
     c("AST rewrite of driver","A","ts-morph, 265 lines"),
@@ -375,12 +380,12 @@ const ROWS = [
     c("C++ source patches","B","71 Pro / 58 free / 26 macOS"),
     c("dependency on Patchright","A","+ curl_cffi"),
     c("JS shims + native ops","A"),
-    c("C++ source patches","A","32, in patches/series")]},
+    c("C++ source patches","A","32, in patches/series"), c("C++ patches on a public fork","A","104 files, +14,279 lines")]},
   {k:"navigator.webdriver", cells:[
     c("C++ patch","A"), c("driver patch","A"), c("driver patch","A"), c("CDP","A"),
     c("prebuilt bundle","A"), c("C++ patch","B","closed binary"),
     c("inherited","A","from Patchright"), c("runtime shim","A"),
-    c("C++ patch","A","010-user-agent-and-webdriver")]},
+    c("C++ patch","A","010-user-agent-and-webdriver"), c("C++ patch","A")]},
   {k:"Runtime.enable tell", cells:[
     c("not applicable","A","runs over Juggler, not CDP"),
     c("isolated contexts","A","Console API disabled"),
@@ -390,12 +395,12 @@ const ROWS = [
     c("not established","D","absent from patch list; binary closed"),
     c("inherited","A","from Patchright"),
     c("own CDP server","A"),
-    c("C++ patch","A","110-runtime-enable")]},
+    c("C++ patch","A","110-runtime-enable"), c("not applicable","A","Juggler, not CDP")]},
   {k:"TLS / JA3 impersonation", cells:[
     c("none","A","real Firefox TLS"), c("none","A","real Chrome TLS"), c("none","A"),
     c("none","A"), c("none","A"), c("none","A","real Chrome TLS"),
     c("yes","A","curl_cffi, HTTP tier only"),
-    c("optional","A","wreq, build-gated"), c("none","A","real Chrome TLS")]},
+    c("optional","A","wreq, build-gated"), c("none","A","real Chrome TLS"), c("none","A","real Firefox TLS")]},
   {k:"Input simulation", cells:[
     c("humanize config","A","3 properties"), c("none","A","pairs with CDP-Patches"),
     c("no motion model","A","PyAutoGUI clicks + jitter"),
@@ -404,27 +409,27 @@ const ROWS = [
     c("humanize option","B","closed binary"),
     c("none first-party","A","passes options through"),
     c("none","A","bezier matches are CSS easing"),
-    c("C++ humanized input","A","130-, 200- patches")]},
+    c("C++ humanized input","A","130-, 200- patches"), c("pointer follows a path","B","vendor-stated, not reproduced")]},
   {k:"Real layout & rendering", cells:[
     c("Gecko","A"), c("Blink","A"), c("Blink","A"), c("Blink","A"), c("Blink","A"),
     c("Blink","A"), c("Blink","A","browser tier"),
-    c("own engine","A","66,826 lines; render builds only"), c("Blink","A")]},
+    c("own engine","A","66,826 lines; render builds only"), c("Blink","A"), c("Gecko","A")]},
   {k:"HTML parser included", cells:[
     c("no","A"), c("no","A"), c("no","A"), c("no","A"), c("no","A"), c("no","A"),
-    c("yes","A"), c("yes","A","html5ever"), c("no","A")]},
+    c("yes","A"), c("yes","A","html5ever"), c("no","A"), c("no","A")]},
   {k:"Crawler framework", cells:[
     c("no","A"), c("no","A"), c("no","A"), c("yes","A"), c("no","A"), c("no","A"),
-    c("yes","A"), c("no","A"), c("no","A")]},
+    c("yes","A"), c("no","A"), c("no","A"), c("no","A")]},
   {k:"CAPTCHA handling", cells:[
     c("no","A"), c("no","A"), c("click-solving","A","several vendors"),
     c("Cloudflare challenge","A"), c("no","A"), c("no","A"),
-    c("solve_cloudflare","A","Turnstile/Interstitial"), c("no","A"), c("no","A")]},
+    c("solve_cloudflare","A","Turnstile/Interstitial"), c("no","A"), c("no","A"), c("no","A")]},
   {k:"Engine source published", cells:[
     c("yes","A","patches + build script"), c("n/a","A","patches stock Chromium"),
     c("n/a","A","patches stock ChromeDriver"), c("n/a","A","drives stock Chromium"),
     c("no","A","prebuilt bundle"), c("no","A","proprietary binary"),
     c("n/a","A","delegates"), c("yes","A","repo is the engine"),
-    c("yes","A","patches + signed builds")]},
+    c("yes","A","patches + signed builds"), c("yes","A","full fork; patch-series repo 404s")]},
   {k:"Anti-bot service claims", cells:[
     c("none","D","documents a limitation instead"),
     c("Cloudflare, Kasada, Akamai, DataDome","B","no methodology published"),
@@ -433,16 +438,21 @@ const ROWS = [
     c("CF, Turnstile, DataDome, Kasada","B","dated Sept 2025, unretested"),
     c("Turnstile, FingerprintJS, reCAPTCHA 0.9","B","Pro binary only"),
     c("Cloudflare Turnstile","B","defers 4 others to a paid API"),
-    c("none","D"), c("none","D","publishes auditor results only")]},
+    c("none","D"), c("none","D","publishes auditor results only"), c("none","D","publishes detector-suite results instead")]},
+  {k:"Startup network traffic", cells:[
+    c("none found","A"), c("none found","A"), c("none found","A"),
+    c("none found","A"), c("none found","A"), c("none found","A"),
+    c("none found","A"), c("none found","A"), c("none found","A"),
+    c("GET to GitHub on every launch","A","default ON; disclosed only in the engine repo")]},
   {k:"License", cells:[
     c("MPL-2.0 / MIT","A","browser / wrapper"), c("Apache-2.0","A"), c("MIT","A"),
     c("MIT","A"), c("Apache-2.0","A"), c("MIT + proprietary","A","wrapper / binary"),
-    c("BSD-3-Clause","A"), c("Apache-2.0","A"), c("BSD-3-Clause","A")]},
+    c("BSD-3-Clause","A"), c("Apache-2.0","A"), c("BSD-3-Clause","A"), c("MIT / MPL-2.0","A","wrapper / engine fork")]},
 ];
 
 /* Requirement filters → indices of tools whose source implements it */
 const FILTERS = [
-  {id:"cpp",   label:"C++-level fingerprint control", tools:[0,5,8]},
+  {id:"cpp",   label:"C++-level fingerprint control", tools:[0,5,8,9]},
   {id:"runtime",label:"Runtime.enable addressed",     tools:[0,1,8]},
   {id:"tls",   label:"TLS impersonation",             tools:[6,7]},
   {id:"motion",label:"Mouse-motion model",            tools:[0,3,5,8]},
@@ -451,7 +461,8 @@ const FILTERS = [
   {id:"crawl", label:"Crawler framework",             tools:[3,6]},
   {id:"open",  label:"Rebuildable engine source",     tools:[0,7,8]},
   {id:"nodenet",label:"Node / .NET client",           tools:[1,5,8]},
-  {id:"firefox",label:"Firefox engine",               tools:[0]},
+  {id:"firefox",label:"Firefox engine",           tools:[0,9]},
+  {id:"notele", label:"No startup telemetry",      tools:[0,1,2,3,4,5,6,7,8]},
 ];
 
 const FINDINGS = [
@@ -475,6 +486,10 @@ const FINDINGS = [
    body:"38 bare <code>except:</code> clauses across the two repos — the only tools here with double-digit counts. <code>botasaurus-driver</code>, which implements the actual stealth, has zero test files across 50,169 lines.",
    why:"A bare except catches KeyboardInterrupt and SystemExit too, so it hides causes and can make a process hard to interrupt. PyPI (4.0.101) is also ahead of the published source (4.0.92) — reviewing the repo does not tell you what pip installs.",
    src:"botasaurus-driver/ · Tier A"},
+  {sev:"crit", title:"invisible_playwright's browser contacts GitHub on every launch",
+   body:"The patched Firefox fires a fire-and-forget <code>fetch()</code> to a GitHub release asset at startup, gated on a pref that defaults to <code>true</code>. The request carries no identifier, no payload and no cookies, uses <code>credentials:\"omit\"</code>, and follows the configured proxy — and the tool sets <code>failover_direct=false</code>, so a dead proxy yields no direct fallback.",
+   why:"It is disclosed in the engine repository, but searching the entire installed package for <code>usage_ping</code>, <code>launch counter</code> or <code>launch.txt</code> returns zero matches. A developer who pip-installs it and reads its docs never learns of it. For a tool whose purpose is not being observed, this should be opt-in. Disable with <code>extra_prefs={\"invisible_firefox.usage_ping.enabled\": False}</code>.",
+   src:"BrowserGlue.sys.mjs:392-408 · firefox.js:3618 · Tier A"},
   {sev:"good", title:"Patchright engineers a fragile approach correctly",
    body:"Rewriting another project's source with an AST tool is inherently brittle. Patchright uses ts-morph's throwing accessors throughout — 47 in <code>crPagePatch.ts</code> alone — so if Playwright moves a symbol the build breaks at patch time rather than emitting a silently unpatched driver.",
    why:"It also runs a CI job that diffs two Playwright versions and can open an issue when breaking changes are detected. This is the pattern XDriver lacks entirely.",
@@ -490,12 +505,12 @@ const METRICS = [
    unit:"%", data:[["Scrapling",83.5],["botasaurus-driver",81.1],["CloakBrowser",80.5],["Camoufox",59.0],["Clearcote",31.7],["Obscura (py)",27.5],["Botasaurus",13.5],["XDriver",8.3],["SeleniumBase",2.7]],
    flagBelow:10},
   {title:"Broad exception handlers per 1k lines", cap:"except Exception / except BaseException in production code. Higher means failures surface as behaviour changes rather than tracebacks.",
-   unit:"", data:[["Clearcote",5.5],["SeleniumBase",5.1],["CloakBrowser",3.4],["patchright-py",1.9],["Camoufox",0.5],["Scrapling",0.4],["Botasaurus",0.2],["bota-driver",0.1],["Obscura",0.0]],
+   unit:"", data:[["Clearcote",5.5],["invisible_pw",5.3],["SeleniumBase",5.1],["CloakBrowser",3.4],["patchright-py",1.9],["Camoufox",0.5],["Scrapling",0.4],["Botasaurus",0.2],["bota-driver",0.1],["Obscura",0.0]],
    flagAbove:5},
   {title:"Production lines of code", cap:"First-party source, excluding tests, vendored trees and generated bundles. Size is not quality — it is the cost of reading and forking.",
-   unit:"", data:[["Obscura",142368],["SeleniumBase",99701],["Camoufox",50116],["bota-driver",50169],["CloakBrowser",32574],["Botasaurus",31005],["Clearcote",23136],["Scrapling",15768],["Patchright",6833],["XDriver",295]]},
+   unit:"", data:[["Obscura",142368],["SeleniumBase",99701],["Camoufox",50116],["bota-driver",50169],["CloakBrowser",32574],["Botasaurus",31005],["Clearcote",23136],["Scrapling",15768],["invisible_core",10536],["invisible_pw",6744],["Patchright",6833],["XDriver",295]]},
   {title:"Test files", cap:"Count of test files in the repository. Presence is not coverage, but zero is unambiguous.",
-   unit:"", data:[["Camoufox",208],["SeleniumBase",117],["CloakBrowser",78],["Clearcote",65],["Scrapling",59],["Obscura",34],["Botasaurus",13],["Patchright",2],["bota-driver",0],["XDriver",0]],
+   unit:"", data:[["Camoufox",208],["SeleniumBase",117],["CloakBrowser",78],["Clearcote",65],["Scrapling",59],["invisible_pw",48],["invisible_core",40],["Obscura",34],["Botasaurus",13],["Patchright",2],["bota-driver",0],["XDriver",0]],
    flagZero:true},
 ];
 
@@ -528,11 +543,11 @@ function applyFilters(){
     el.classList.toggle("hidden-col", !set.has(+el.dataset.ti));
   });
   if(!active.size){
-    fstatus.textContent = "Showing all 9 tools. Select a requirement to narrow.";
+    fstatus.textContent = "Showing all 10 tools. Select a requirement to narrow.";
   } else if(!keep.length){
     fstatus.textContent = "No tool in this set implements every selected requirement.";
   } else {
-    fstatus.textContent = `${keep.length} of 9 match: ${keep.map(i=>TOOLS[i]).join(", ")}.`;
+    fstatus.textContent = `${keep.length} of 10 match: ${keep.map(i=>TOOLS[i]).join(", ")}.`;
   }
 }
 fbox.addEventListener("click", e=>{

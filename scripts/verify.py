@@ -101,6 +101,18 @@ TOOLS = [
         "include_prereleases": False,
     },
     {
+        "name": "invisible_playwright",
+        "primary": "feder-cr/invisible_playwright",
+        "repos": [
+            "feder-cr/invisible_playwright",
+            "feder-cr/invisible_core",
+            "feder-cr/firefox_antidetect_patch",
+        ],
+        "pypi": ["invisible-playwright", "invisible-core"],
+        "npm": [],
+        "include_prereleases": False,
+    },
+    {
         "name": "Clearcote",
         "primary": "clearcotelabs/clearcote-browser",
         "repos": ["clearcotelabs/clearcote-browser", "clearcotelabs/clearcote-profiles"],

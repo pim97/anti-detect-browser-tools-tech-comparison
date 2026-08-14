@@ -24,7 +24,7 @@ community, or not established.
 ## Scope
 
 The report covers **open-source and freely-obtainable browser-automation and
-anti-detection tooling** that a developer could adopt directly. Nine tools are
+anti-detection tooling** that a developer could adopt directly. Ten tools are
 tracked; each has a dedicated page.
 
 Explicitly **out of scope**: hosted scraping APIs and commercial proxy networks. They
@@ -62,7 +62,7 @@ Two rules keep the tiers honest:
 
 The following were not performed, and no claim in this repository should be read as implying them:
 
-- **No head-to-head anti-bot benchmark.** We did not point these nine tools at
+- **No head-to-head anti-bot benchmark.** We did not point these ten tools at
   Cloudflare, DataDome, Kasada, Akamai, PerimeterX, or Imperva and count passes.
   A credible benchmark requires a fixed target list, matched residential IPs, multiple
   trials per cell, and controls for time-of-day and IP reputation. Results produced
@@ -87,7 +87,7 @@ provenance table, not a scorecard.** See the report's coverage section.
 ## Source handling
 
 > [!IMPORTANT]
-> The nine projects are unaudited third-party code, including stealth browsers and
+> The ten projects are unaudited third-party code, including stealth browsers and
 > patched binaries. They are never cloned onto, or executed on, a workstation.
 
 `scripts/sandbox.sh` (run on a disposable remote host) does the following:
