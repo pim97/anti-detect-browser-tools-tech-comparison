@@ -1,5 +1,44 @@
 # Changelog
 
+## 2026-08-14d — Interactive evidence matrix; GitHub-native docs
+
+### Added
+
+- **[`docs/index.html`](docs/index.html)** — a self-contained interactive view of the
+  whole dataset: requirement filters, the architecture matrix with a tier chip on every
+  claim, findings ordered by consequence, metric bars, and the lineage graph. No build
+  step, no dependencies, GitHub Pages-ready.
+
+  Design constraints, which follow from what this dataset is:
+
+  - **Evidence tier is a first-class visual channel**, not a footnote. Tier is *ordinal
+    confidence*, so it uses one hue dark→light rather than four categorical colours.
+  - **Tier D is drawn hollow and dashed**, never the same as "does not implement" —
+    it is also distinguished by shape, so identity is never colour-alone.
+  - **No composite score, no ranking, no red/green ramp.** A quality ramp would
+    reintroduce exactly the judgment this report removed. Colour encodes provenance and
+    category; one reserved status colour is used only for the security finding.
+  - **Interaction is requirement-led** ("I need X" → which tools implement it), matching
+    how the decision is actually made, rather than presenting a winner.
+  - Verified: contrast ≥ 4.5:1 for every text/background pair in both themes, no
+    horizontal page overflow at 375 px, wide content scrolls in its own containers.
+
+- **Lineage diagram** (mermaid, renders natively on GitHub) in the README. Nine tools
+  reduce to five implementation families; Scrapling's browser tier *is* Patchright,
+  SeleniumBase's CDP Mode is NoDriver-derived, and XDriver and Botasaurus's JS driver
+  both descend from rebrowser-patches. Selecting two tools for redundancy can mean
+  selecting one implementation twice. Every edge verified in source.
+
+### Changed
+
+- GitHub alert callouts for the points most often misread: the sponsorship disclosure,
+  Tier D not being a negative finding, the unbenchmarked coverage table, the security
+  finding, and the source-handling rule.
+- Long metric tables in the code review collapsed behind `<details>` so the findings
+  stay the first thing on the page.
+
+---
+
 ## 2026-08-14c — Code review added
 
 Added **[CODE-REVIEW.md](CODE-REVIEW.md)**: an engineering assessment of all nine

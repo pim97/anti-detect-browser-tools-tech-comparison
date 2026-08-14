@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evidence Matrix</title>
+<meta name="description" content="Source-verified comparison of nine anti-detect browser automation tools, where every claim carries its evidence tier.">
+<style>
+/* ─────────────────────────────────────────────────────────────
+   Tokens. Light is the base; dark redefines tokens only.
+   Neutrals carry a slight teal bias so they read as chosen.
+   Tier is ORDINAL (confidence), so it uses one hue light→dark —
+   never four categorical hues. Status is reserved and separate.
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --ground:#eaeeed; --surface:#fff; --surface-2:#f4f7f6; --sunken:#e1e7e5;
+  --ink:#0f1516; --ink-2:#41504e; --ink-3:#5a6866;
+  --rule:#ccd5d3; --rule-2:#dde4e3;
+  --signal:#0d6a66; --signal-ink:#fff;
+  /* Tier is ordinal confidence -> one hue, dark to light. Each step carries its
+     own ink token so no chip colour is ever defined only inside a theme block. */
+  --tier-a:#0a4f4c; --tier-a-ink:#fff;
+  --tier-b:#1f6f6a; --tier-b-ink:#fff;
+  --tier-c:#82c0bb; --tier-c-ink:#0f1516;
+  --tier-d:transparent; --tier-d-ink:#41504e;
+  --tier-d-line:#7d8d8b;
+  --critical:#962c1f; --critical-bg:#f7e7e4;
+  --attention:#9c5709; --attention-bg:#f8eede;
+  --ok:#2b6b45;
+  --bar:#2f8a84; --bar-track:#dbe3e1;
+  --focus:#0d6a66;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0c1011; --surface:#141a1b; --surface-2:#1a2122; --sunken:#0a0e0f;
+    --ink:#e2e9e7; --ink-2:#a6b4b1; --ink-3:#7d8b89;
+    --rule:#28312f; --rule-2:#202827;
+    --signal:#4fc0b8; --signal-ink:#06201f;
+    --tier-a:#74dbd3; --tier-a-ink:#08201f;
+    --tier-b:#3d9a93; --tier-b-ink:#08201f;
+    --tier-c:#256963; --tier-c-ink:#e2e9e7;
+    --tier-d:transparent; --tier-d-ink:#a6b4b1;
+    --tier-d-line:#5c6b69;
+    --critical:#e07f6d; --critical-bg:#2c1613;
+    --attention:#dda253; --attention-bg:#2a2011;
+    --ok:#6fc292;
+    --bar:#3d9a93; --bar-track:#232b2a;
+    --focus:#4fc0b8;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0c1011; --surface:#141a1b; --surface-2:#1a2122; --sunken:#0a0e0f;
+  --ink:#e2e9e7; --ink-2:#a6b4b1; --ink-3:#7d8b89;
+  --rule:#28312f; --rule-2:#202827;
+  --signal:#4fc0b8; --signal-ink:#06201f;
+    --tier-a:#74dbd3; --tier-a-ink:#08201f;
+  --tier-b:#3d9a93; --tier-b-ink:#08201f;
+  --tier-c:#256963; --tier-c-ink:#e2e9e7;
+  --tier-d:transparent; --tier-d-ink:#a6b4b1;
+  --tier-d-line:#5c6b69;
+  --critical:#e07f6d; --critical-bg:#2c1613;
+  --attention:#dda253; --attention-bg:#2a2011;
+  --ok:#6fc292;
+  --bar:#3d9a93; --bar-track:#232b2a;
+  --focus:#4fc0b8;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--mono); font-size:14px; line-height:1.5;
+  font-variant-ligatures:none;
+}
+.prose{font-family:var(--sans); line-height:1.6; max-width:68ch; color:var(--ink-2)}
+.prose strong{color:var(--ink); font-weight:600}
+a{color:var(--signal); text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+h1,h2,h3{text-wrap:balance; margin:0; font-weight:600; letter-spacing:-.01em}
+code,.mono{font-family:var(--mono)}
+
+.wrap{max-width:1360px; margin:0 auto; padding:0 clamp(16px,3vw,36px)}
+section{padding-block:clamp(30px,4vw,52px); border-top:1px solid var(--rule-2)}
+section:first-of-type{border-top:0}
+
+.eyebrow{
+  font-size:11px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:10px;
+}
+h2{font-size:clamp(19px,2.2vw,24px); margin-bottom:8px}
+.lede{margin-top:10px}
+
+/* ── Masthead ─────────────────────────────────────────────── */
+.masthead{padding-block:clamp(30px,5vw,60px) clamp(22px,3vw,34px)}
+.masthead h1{
+  font-size:clamp(27px,5vw,52px); line-height:1.02; letter-spacing:-.035em;
+  max-width:20ch;
+}
+.masthead h1 em{font-style:normal; color:var(--signal)}
+.meta-strip{
+  display:flex; flex-wrap:wrap; gap:8px 22px; margin-top:22px;
+  font-size:12px; color:var(--ink-3); align-items:baseline;
+}
+.meta-strip b{color:var(--ink-2); font-weight:600}
+.disclosure{
+  margin-top:22px; padding:13px 16px; background:var(--surface);
+  border:1px solid var(--rule); border-left:3px solid var(--attention);
+  max-width:78ch;
+}
+.disclosure .t{
+  font-size:11px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--attention); margin-bottom:6px;
+}
+
+/* ── Tier legend ──────────────────────────────────────────── */
+.tiers{display:grid; gap:1px; background:var(--rule); border:1px solid var(--rule);
+  grid-template-columns:repeat(auto-fit,minmax(196px,1fr)); margin-top:20px}
+.tier-card{background:var(--surface); padding:14px 15px}
+.tier-card h3{font-size:13px; display:flex; align-items:center; gap:9px; margin-bottom:7px}
+.tier-card p{margin:0; font-size:12px; color:var(--ink-3); line-height:1.5}
+.chip{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:20px; height:20px; font-size:11px; font-weight:700;
+  border:1.5px solid transparent; flex:none;
+}
+.chip.a{background:var(--tier-a); color:var(--tier-a-ink)}
+.chip.b{background:var(--tier-b); color:var(--tier-b-ink)}
+.chip.c{background:var(--tier-c); color:var(--tier-c-ink)}
+.chip.d{background:var(--tier-d); border:1.5px dashed var(--tier-d-line); color:var(--tier-d-ink)}
+.callout{
+  margin-top:18px; padding:12px 15px; background:var(--surface-2);
+  border:1px dashed var(--tier-d-line); max-width:78ch; font-size:12.5px; color:var(--ink-2);
+}
+
+/* ── Filter rail ──────────────────────────────────────────── */
+.filters{display:flex; flex-wrap:wrap; gap:7px; margin:18px 0 6px}
+.f-btn{
+  font-family:var(--mono); font-size:12px; padding:6px 11px; cursor:pointer;
+  background:var(--surface); color:var(--ink-2);
+  border:1px solid var(--rule); transition:none;
+}
+.f-btn:hover{border-color:var(--signal); color:var(--ink)}
+.f-btn[aria-pressed="true"]{background:var(--signal); color:var(--signal-ink); border-color:var(--signal)}
+.f-status{font-size:12px; color:var(--ink-3); margin-top:10px; min-height:1.4em}
+
+/* ── Matrix ───────────────────────────────────────────────── */
+.scroller{overflow-x:auto; border:1px solid var(--rule); background:var(--surface); margin-top:14px}
+table{border-collapse:collapse; width:100%; font-size:12.5px}
+th,td{text-align:left; vertical-align:top; padding:9px 11px; border-bottom:1px solid var(--rule-2)}
+thead th{
+  position:sticky; top:0; z-index:2; background:var(--surface-2);
+  border-bottom:1px solid var(--rule); font-size:11px; letter-spacing:.05em;
+  white-space:nowrap; font-weight:600;
+}
+tbody th{
+  font-weight:600; color:var(--ink); white-space:nowrap; background:var(--surface);
+  position:sticky; left:0; z-index:1; border-right:1px solid var(--rule);
+  font-size:12px;
+}
+tbody tr:hover td, tbody tr:hover th{background:var(--surface-2)}
+td.dim{color:var(--ink-3)}
+.cell{display:flex; gap:7px; align-items:flex-start}
+.cell .chip{margin-top:1px}
+.cell-txt{min-width:0}
+.tool-col{min-width:172px}
+td em{font-style:normal; color:var(--ink-3); font-size:11.5px; display:block; margin-top:2px}
+.hidden-col{display:none}
+
+/* ── Findings ─────────────────────────────────────────────── */
+.findings{display:grid; gap:1px; background:var(--rule); border:1px solid var(--rule); margin-top:18px}
+.finding{background:var(--surface); padding:15px 17px; border-left:3px solid var(--rule)}
+.finding.crit{border-left-color:var(--critical)}
+.finding.warn{border-left-color:var(--attention)}
+.finding.good{border-left-color:var(--ok)}
+.finding h3{font-size:14px; margin-bottom:6px; display:flex; gap:9px; align-items:baseline; flex-wrap:wrap}
+.sev{
+  font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  padding:2px 7px; flex:none; font-weight:700;
+}
+.sev.crit{background:var(--critical-bg); color:var(--critical)}
+.sev.warn{background:var(--attention-bg); color:var(--attention)}
+.sev.good{background:var(--surface-2); color:var(--ok)}
+.finding p{margin:6px 0 0; font-size:12.5px; color:var(--ink-2); line-height:1.55; max-width:82ch}
+.finding .src{margin-top:9px; font-size:11.5px; color:var(--ink-3)}
+.finding .src b{color:var(--ink-2); font-weight:600}
+
+/* ── Metric bars ──────────────────────────────────────────── */
+.metrics{display:grid; gap:26px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); margin-top:20px}
+.metric h3{font-size:12.5px; margin-bottom:3px}
+.metric .cap{font-size:11.5px; color:var(--ink-3); margin-bottom:11px; line-height:1.45}
+.rows{display:grid; gap:5px}
+.row{display:grid; grid-template-columns:96px 1fr 52px; gap:9px; align-items:center; font-size:11.5px}
+.row .lbl{color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.track{height:11px; background:var(--bar-track); position:relative}
+.fill{height:100%; background:var(--bar); border-radius:0 2px 2px 0}
+.row .val{text-align:right; font-variant-numeric:tabular-nums; color:var(--ink-2)}
+.row.flag .fill{background:var(--critical)}
+.row.flag .val{color:var(--critical); font-weight:700}
+
+/* ── Lineage ──────────────────────────────────────────────── */
+.lineage{margin-top:18px; border:1px solid var(--rule); background:var(--surface); overflow-x:auto}
+.lineage svg{display:block; min-width:820px; width:100%; height:auto}
+.ln-box{fill:var(--surface-2); stroke:var(--rule); stroke-width:1}
+.ln-box.tool{fill:var(--surface); stroke:var(--signal); stroke-width:1.5}
+.ln-box.closed{stroke-dasharray:4 3}
+.ln-t{font-family:var(--mono); font-size:11px; fill:var(--ink)}
+.ln-t.sm{font-size:9.5px; fill:var(--ink-3)}
+.ln-e{stroke:var(--rule); stroke-width:1.5; fill:none}
+.ln-e.derive{stroke:var(--signal); stroke-dasharray:4 3}
+.ln-grp{font-family:var(--mono); font-size:10px; fill:var(--ink-3); letter-spacing:.08em; text-transform:uppercase}
+
+/* ── Footer ───────────────────────────────────────────────── */
+footer{border-top:1px solid var(--rule); padding-block:30px 44px; color:var(--ink-3); font-size:12px}
+footer a{color:var(--signal)}
+.limits{display:grid; gap:7px; margin-top:14px; max-width:80ch}
+.limits li{margin-left:15px}
+
+@media (max-width:760px){
+  tbody th{position:static}
+  .row{grid-template-columns:82px 1fr 46px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="masthead">
+  <div class="eyebrow">Source-verified · 2026-08-14</div>
+  <h1>Nine anti-detect tools, and <em>how well each claim is actually known</em>.</h1>
+  <div class="meta-strip">
+    <span><b>9</b> tools</span>
+    <span><b>19</b> repositories read</span>
+    <span><b>0</b> benchmarks run</span>
+    <span><b>Every</b> claim tiered</span>
+  </div>
+  <div class="disclosure">
+    <div class="t">Disclosure</div>
+    <div class="prose" style="font-size:13px">
+      This comparison is sponsored by <strong>Scrappey</strong>, a commercial web-data API and a
+      paid substitute for the tools below. Scrappey is therefore <strong>not rated, scored, or
+      listed</strong> in any table here — a sponsor cannot win a comparison it is excluded from.
+      Its own coverage claims would be Tier B, like every other vendor's.
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="eyebrow">How to read this</div>
+  <h2>Evidence tier, not a score</h2>
+  <p class="prose lede">
+    There are no ratings on this page. Ratings were removed from this project because a
+    five-star grid looked like measurement while being opinion. What replaced them is a
+    record of <strong>what each tool does</strong> and <strong>how that was established</strong>.
+    Every claim below carries one of four tiers.
+  </p>
+  <div class="tiers">
+    <div class="tier-card">
+      <h3><span class="chip a">A</span> Verified in source</h3>
+      <p>Read in the code at a stated commit, inside an isolated container. File paths cited.</p>
+    </div>
+    <div class="tier-card">
+      <h3><span class="chip b">B</span> Vendor-reported</h3>
+      <p>The maintainer publishes it. Located, quoted, not reproduced here.</p>
+    </div>
+    <div class="tier-card">
+      <h3><span class="chip c">C</span> Community-reported</h3>
+      <p>Issue trackers, forums, third-party posts. Directionally useful, individually unreliable.</p>
+    </div>
+    <div class="tier-card">
+      <h3><span class="chip d">D</span> Not established</h3>
+      <p>No evidence located in either direction.</p>
+    </div>
+  </div>
+  <div class="callout">
+    <strong>Tier D is not a negative finding.</strong> It means nobody has published a test —
+    not that the tool failed one. It is drawn hollow, and never the same as “does not
+    implement”, because collapsing those two is the most common way a comparison misleads.
+  </div>
+  <div class="callout" style="border-style:solid; border-color:var(--rule)">
+    <strong>Nothing here was benchmarked against a live anti-bot service.</strong> No claim about
+    Cloudflare, DataDome, Kasada, Akamai, PerimeterX or Imperva outcomes exceeds Tier B —
+    including the confident checkmark grids some of these projects publish.
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Architecture</div>
+  <h2>What each tool actually does</h2>
+  <p class="prose lede">
+    Mechanical facts read from source. Filter by the property you need — this is a lookup,
+    not a ranking, and the tools are always in the same order.
+  </p>
+  <div class="filters" id="filters" role="group" aria-label="Filter tools by requirement"></div>
+  <div class="f-status" id="fstatus" role="status"></div>
+  <div class="scroller">
+    <table id="matrix">
+      <thead><tr id="mhead"></tr></thead>
+      <tbody id="mbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">Code review</div>
+  <h2>Findings that should change a decision</h2>
+  <p class="prose lede">
+    From reading the source, not from running it. Ordered by consequence.
+  </p>
+  <div class="findings" id="findings"></div>
+</section>
+
+<section>
+  <div class="eyebrow">Code metrics</div>
+  <h2>Maintainability signals</h2>
+  <p class="prose lede">
+    Production code only — tests, vendored trees and generated bundles excluded. These are
+    <strong>proxies, not verdicts</strong>: <code>except Exception</code> is sometimes correct,
+    and <code>print</code> is output in a CLI but residue in a library. Bars are for comparison
+    within a metric, never across them.
+  </p>
+  <div class="metrics" id="metrics"></div>
+</section>
+
+<section>
+  <div class="eyebrow">Lineage</div>
+  <h2>Nine tools, fewer independent implementations</h2>
+  <p class="prose lede">
+    Several of these depend on each other. Picking two for redundancy can mean picking the
+    same code twice — if that lineage gets fingerprinted, both fail together. Every edge below
+    was verified in source.
+  </p>
+  <div class="lineage" id="lineage"></div>
+</section>
+
+<footer>
+  <div class="wrap" style="padding:0">
+    <strong style="color:var(--ink-2)">Limits of this page.</strong>
+    <ul class="limits prose" style="font-size:12px">
+      <li>No anti-bot service benchmark was run; no service claim exceeds Tier B.</li>
+      <li>Nothing was installed, built, or executed. Tier A means the code was read, not run.</li>
+      <li>Closed components (CloakBrowser's binary, XDriver's bundle) cannot be assessed from source.</li>
+      <li>Metric counts are proxies and are reported with their location in the full review.</li>
+      <li>Single reviewer, single pass, shallow clones.</li>
+    </ul>
+    <p style="margin-top:16px">
+      Full report, methodology, and per-tool analyses:
+      <a href="https://github.com/pim97/anti-detect-browser-tools-tech-comparison">github.com/pim97/anti-detect-browser-tools-tech-comparison</a>
+    </p>
+  </div>
+</footer>
+
+</div>
+
+<script>
+/* ── Data. Every value verified 2026-08-14 against the commits in STATUS.md. ── */
+const TOOLS = ["Camoufox","Patchright","SeleniumBase","Botasaurus","XDriver","CloakBrowser","Scrapling","Obscura","Clearcote"];
+
+/* v = displayed text, t = evidence tier, n = qualifying note */
+const c = (v,t,n) => ({v,t,n});
+const ROWS = [
+  {k:"Browser engine", cells:[
+    c("Firefox 152.0.4 fork","A"), c("stock Chromium","A"), c("stock Chromium","A"),
+    c("stock Chromium","A"), c("stock Chromium","A"), c("Chromium 150 fork","B","Pro; 146 free"),
+    c("delegates","A","uses Patchright"), c("own Rust engine","A"), c("Chromium 149 fork","A","ungoogled")]},
+  {k:"Modification method", cells:[
+    c("C++ source patches","A","34 in patches/, 2 playwright/"),
+    c("AST rewrite of driver","A","ts-morph, 265 lines"),
+    c("ChromeDriver rewrite + CDP driver","A"),
+    c("raw CDP over WebSocket","A","58 generated bindings"),
+    c("prebuilt bundle swap","A","playwright-core 1.49.0"),
+    c("C++ source patches","B","71 Pro / 58 free / 26 macOS"),
+    c("dependency on Patchright","A","+ curl_cffi"),
+    c("JS shims + native ops","A"),
+    c("C++ source patches","A","32, in patches/series")]},
+  {k:"navigator.webdriver", cells:[
+    c("C++ patch","A"), c("driver patch","A"), c("driver patch","A"), c("CDP","A"),
+    c("prebuilt bundle","A"), c("C++ patch","B","closed binary"),
+    c("inherited","A","from Patchright"), c("runtime shim","A"),
+    c("C++ patch","A","010-user-agent-and-webdriver")]},
+  {k:"Runtime.enable tell", cells:[
+    c("not applicable","A","runs over Juggler, not CDP"),
+    c("isolated contexts","A","Console API disabled"),
+    c("not established","D","no handling located in source"),
+    c("none","A","only a commented-out line"),
+    c("rebrowser-lineage patch","A","env-var gated"),
+    c("not established","D","absent from patch list; binary closed"),
+    c("inherited","A","from Patchright"),
+    c("own CDP server","A"),
+    c("C++ patch","A","110-runtime-enable")]},
+  {k:"TLS / JA3 impersonation", cells:[
+    c("none","A","real Firefox TLS"), c("none","A","real Chrome TLS"), c("none","A"),
+    c("none","A"), c("none","A"), c("none","A","real Chrome TLS"),
+    c("yes","A","curl_cffi, HTTP tier only"),
+    c("optional","A","wreq, build-gated"), c("none","A","real Chrome TLS")]},
+  {k:"Input simulation", cells:[
+    c("humanize config","A","3 properties"), c("none","A","pairs with CDP-Patches"),
+    c("no motion model","A","PyAutoGUI clicks + jitter"),
+    c("Bézier trajectories","A","Gaussian distortion + easing"),
+    c("none","A","matches are vendor assets"),
+    c("humanize option","B","closed binary"),
+    c("none first-party","A","passes options through"),
+    c("none","A","bezier matches are CSS easing"),
+    c("C++ humanized input","A","130-, 200- patches")]},
+  {k:"Real layout & rendering", cells:[
+    c("Gecko","A"), c("Blink","A"), c("Blink","A"), c("Blink","A"), c("Blink","A"),
+    c("Blink","A"), c("Blink","A","browser tier"),
+    c("own engine","A","66,826 lines; render builds only"), c("Blink","A")]},
+  {k:"HTML parser included", cells:[
+    c("no","A"), c("no","A"), c("no","A"), c("no","A"), c("no","A"), c("no","A"),
+    c("yes","A"), c("yes","A","html5ever"), c("no","A")]},
+  {k:"Crawler framework", cells:[
+    c("no","A"), c("no","A"), c("no","A"), c("yes","A"), c("no","A"), c("no","A"),
+    c("yes","A"), c("no","A"), c("no","A")]},
+  {k:"CAPTCHA handling", cells:[
+    c("no","A"), c("no","A"), c("click-solving","A","several vendors"),
+    c("Cloudflare challenge","A"), c("no","A"), c("no","A"),
+    c("solve_cloudflare","A","Turnstile/Interstitial"), c("no","A"), c("no","A")]},
+  {k:"Engine source published", cells:[
+    c("yes","A","patches + build script"), c("n/a","A","patches stock Chromium"),
+    c("n/a","A","patches stock ChromeDriver"), c("n/a","A","drives stock Chromium"),
+    c("no","A","prebuilt bundle"), c("no","A","proprietary binary"),
+    c("n/a","A","delegates"), c("yes","A","repo is the engine"),
+    c("yes","A","patches + signed builds")]},
+  {k:"Anti-bot service claims", cells:[
+    c("none","D","documents a limitation instead"),
+    c("Cloudflare, Kasada, Akamai, DataDome","B","no methodology published"),
+    c("one Cloudflare challenge","B","runnable example script"),
+    c("Cloudflare WAF, Turnstile, DataDome","B","vendor demo targets"),
+    c("CF, Turnstile, DataDome, Kasada","B","dated Sept 2025, unretested"),
+    c("Turnstile, FingerprintJS, reCAPTCHA 0.9","B","Pro binary only"),
+    c("Cloudflare Turnstile","B","defers 4 others to a paid API"),
+    c("none","D"), c("none","D","publishes auditor results only")]},
+  {k:"License", cells:[
+    c("MPL-2.0 / MIT","A","browser / wrapper"), c("Apache-2.0","A"), c("MIT","A"),
+    c("MIT","A"), c("Apache-2.0","A"), c("MIT + proprietary","A","wrapper / binary"),
+    c("BSD-3-Clause","A"), c("Apache-2.0","A"), c("BSD-3-Clause","A")]},
+];
+
+/* Requirement filters → indices of tools whose source implements it */
+const FILTERS = [
+  {id:"cpp",   label:"C++-level fingerprint control", tools:[0,5,8]},
+  {id:"runtime",label:"Runtime.enable addressed",     tools:[0,1,8]},
+  {id:"tls",   label:"TLS impersonation",             tools:[6,7]},
+  {id:"motion",label:"Mouse-motion model",            tools:[0,3,5,8]},
+  {id:"captcha",label:"CAPTCHA handling",             tools:[2,3,6]},
+  {id:"parser",label:"Parser included",               tools:[6,7]},
+  {id:"crawl", label:"Crawler framework",             tools:[3,6]},
+  {id:"open",  label:"Rebuildable engine source",     tools:[0,7,8]},
+  {id:"nodenet",label:"Node / .NET client",           tools:[1,5,8]},
+  {id:"firefox",label:"Firefox engine",               tools:[0]},
+];
+
+const FINDINGS = [
+  {sev:"crit", title:"CloakBrowser disables the Chromium sandbox on every launch",
+   body:"<code>--no-sandbox</code> is hardcoded into the base argument list applied to every launch. The argument merge overrides flags but cannot remove them; the only opt-out also drops the fingerprint seed, i.e. the tool's entire purpose. There is no supported configuration with fingerprint spoofing and the sandbox enabled. The project README does not mention the flag.",
+   why:"The sandbox is what contains a compromised renderer. This is also the only tool of the nine with a closed engine — so it is unauditable native code, with no OS sandbox, processing hostile input.",
+   src:"cloakbrowser/config.py:54-66 · browser.py:1395-1425 · Tier A"},
+  {sev:"warn", title:"XDriver ships a frozen bundle with no drift detection",
+   body:"295 lines of first-party Python and zero tests. The stealth is a prebuilt <code>playwright-core</code> 1.49.0 fork not built from any published source. Nothing detects that upstream has moved on — current Playwright is 1.61.x.",
+   why:"A silently stale stealth patch is worse than a loudly broken one, because you deploy it believing it works. Its README also claims the broadest anti-bot coverage of any tool here, dated September 2025.",
+   src:"x_driver/ · last commit 2025-09-10 · Tier A"},
+  {sev:"warn", title:"SeleniumBase is large and effectively untyped",
+   body:"99,701 production lines. <code>base_case.py</code> is 17,670 lines and 579 methods in one class. 2.7% of 3,902 functions carry any type annotation; 506 broad <code>except</code> handlers; 548 sleep calls.",
+   why:"Effective and actively maintained, but forking or patching it is expensive and a type checker cannot help you. Its 42 <code>shell=True</code> calls are all in CLI tooling, not the browser-driving path — the raw count invites the wrong conclusion.",
+   src:"seleniumbase/fixtures/base_case.py · Tier A"},
+  {sev:"warn", title:"Obscura relies on panic-on-failure in a long-running server",
+   body:"2,326 <code>.unwrap()</code> calls in production Rust, densest in the CDP handlers that service a long-lived process. <code>catch_unwind</code> appears in only four files.",
+   why:"In a one-shot CLI a panic is an exit code. In <code>obscura serve</code>, an unwrap on malformed input from one page can take down work that does not belong to it.",
+   src:"crates/obscura-cdp/src/domains/ · Tier A"},
+  {sev:"warn", title:"Botasaurus swallows errors; its driver has no tests",
+   body:"38 bare <code>except:</code> clauses across the two repos — the only tools here with double-digit counts. <code>botasaurus-driver</code>, which implements the actual stealth, has zero test files across 50,169 lines.",
+   why:"A bare except catches KeyboardInterrupt and SystemExit too, so it hides causes and can make a process hard to interrupt. PyPI (4.0.101) is also ahead of the published source (4.0.92) — reviewing the repo does not tell you what pip installs.",
+   src:"botasaurus-driver/ · Tier A"},
+  {sev:"good", title:"Patchright engineers a fragile approach correctly",
+   body:"Rewriting another project's source with an AST tool is inherently brittle. Patchright uses ts-morph's throwing accessors throughout — 47 in <code>crPagePatch.ts</code> alone — so if Playwright moves a symbol the build breaks at patch time rather than emitting a silently unpatched driver.",
+   why:"It also runs a CI job that diffs two Playwright versions and can open an issue when breaking changes are detected. This is the pattern XDriver lacks entirely.",
+   src:"driver_patches/ · .github/workflows/check_patch_impact.yml · Tier A"},
+  {sev:"good", title:"Scrapling has the cleanest Python in the set",
+   body:"83.5% of functions annotated, 59.1% documented, zero bare excepts, 7 broad excepts across 15,768 lines, 59 test files, and the only pre-commit configuration of the nine.",
+   why:"Its README is also unusually precise about scope: it routes Akamai, DataDome, Kasada and Incapsula to a third-party paid API rather than claiming them, which matches what is in the source.",
+   src:"scrapling/ · Tier A"},
+];
+
+const METRICS = [
+  {title:"Type annotation coverage", cap:"Share of non-test Python functions with any parameter or return annotation. Higher means a type checker can help you.",
+   unit:"%", data:[["Scrapling",83.5],["botasaurus-driver",81.1],["CloakBrowser",80.5],["Camoufox",59.0],["Clearcote",31.7],["Obscura (py)",27.5],["Botasaurus",13.5],["XDriver",8.3],["SeleniumBase",2.7]],
+   flagBelow:10},
+  {title:"Broad exception handlers per 1k lines", cap:"except Exception / except BaseException in production code. Higher means failures surface as behaviour changes rather than tracebacks.",
+   unit:"", data:[["Clearcote",5.5],["SeleniumBase",5.1],["CloakBrowser",3.4],["patchright-py",1.9],["Camoufox",0.5],["Scrapling",0.4],["Botasaurus",0.2],["bota-driver",0.1],["Obscura",0.0]],
+   flagAbove:5},
+  {title:"Production lines of code", cap:"First-party source, excluding tests, vendored trees and generated bundles. Size is not quality — it is the cost of reading and forking.",
+   unit:"", data:[["Obscura",142368],["SeleniumBase",99701],["Camoufox",50116],["bota-driver",50169],["CloakBrowser",32574],["Botasaurus",31005],["Clearcote",23136],["Scrapling",15768],["Patchright",6833],["XDriver",295]]},
+  {title:"Test files", cap:"Count of test files in the repository. Presence is not coverage, but zero is unambiguous.",
+   unit:"", data:[["Camoufox",208],["SeleniumBase",117],["CloakBrowser",78],["Clearcote",65],["Scrapling",59],["Obscura",34],["Botasaurus",13],["Patchright",2],["bota-driver",0],["XDriver",0]],
+   flagZero:true},
+];
+
+/* ── Render: matrix ── */
+const head = document.getElementById("mhead");
+head.innerHTML = '<th scope="col">Property</th>' +
+  TOOLS.map((t,i)=>`<th scope="col" class="tool-col" data-ti="${i}">${t}</th>`).join("");
+document.getElementById("mbody").innerHTML = ROWS.map(r=>
+  `<tr><th scope="row">${r.k}</th>` + r.cells.map((c,i)=>
+    `<td class="tool-col${c.t==="D"?" dim":""}" data-ti="${i}"><div class="cell">`+
+    `<span class="chip ${c.t.toLowerCase()}" title="Tier ${c.t}">${c.t}</span>`+
+    `<span class="cell-txt">${c.v}${c.n?`<em>${c.n}</em>`:""}</span></div></td>`).join("") + "</tr>"
+).join("");
+
+/* ── Render: filters ── */
+const active = new Set();
+const fbox = document.getElementById("filters");
+fbox.innerHTML = FILTERS.map(f=>
+  `<button class="f-btn" type="button" aria-pressed="false" data-f="${f.id}">${f.label}</button>`).join("");
+const fstatus = document.getElementById("fstatus");
+
+function applyFilters(){
+  let keep = TOOLS.map((_,i)=>i);
+  active.forEach(id=>{
+    const f = FILTERS.find(x=>x.id===id);
+    keep = keep.filter(i=>f.tools.includes(i));
+  });
+  const set = new Set(keep);
+  document.querySelectorAll("[data-ti]").forEach(el=>{
+    el.classList.toggle("hidden-col", !set.has(+el.dataset.ti));
+  });
+  if(!active.size){
+    fstatus.textContent = "Showing all 9 tools. Select a requirement to narrow.";
+  } else if(!keep.length){
+    fstatus.textContent = "No tool in this set implements every selected requirement.";
+  } else {
+    fstatus.textContent = `${keep.length} of 9 match: ${keep.map(i=>TOOLS[i]).join(", ")}.`;
+  }
+}
+fbox.addEventListener("click", e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  const id = b.dataset.f;
+  if(active.has(id)){active.delete(id); b.setAttribute("aria-pressed","false");}
+  else {active.add(id); b.setAttribute("aria-pressed","true");}
+  applyFilters();
+});
+applyFilters();
+
+/* ── Render: findings ── */
+document.getElementById("findings").innerHTML = FINDINGS.map(f=>{
+  const label = f.sev==="crit"?"Security":f.sev==="warn"?"Consider":"Notable";
+  return `<article class="finding ${f.sev}">
+    <h3><span class="sev ${f.sev}">${label}</span> ${f.title}</h3>
+    <p>${f.body}</p><p>${f.why}</p>
+    <div class="src"><b>Source:</b> ${f.src}</div>
+  </article>`;
+}).join("");
+
+/* ── Render: metric bars ── */
+document.getElementById("metrics").innerHTML = METRICS.map(m=>{
+  const max = Math.max(...m.data.map(d=>d[1])) || 1;
+  const fmt = v => m.unit==="%" ? v.toFixed(1)+"%"
+              : v>=1000 ? (v/1000).toFixed(v>=10000?0:1)+"k"
+              : (Number.isInteger(v)?v:v.toFixed(1));
+  return `<div class="metric">
+    <h3>${m.title}</h3><div class="cap">${m.cap}</div>
+    <div class="rows">${m.data.map(([n,v])=>{
+      const flag = (m.flagBelow!=null && v<m.flagBelow) ||
+                   (m.flagAbove!=null && v>=m.flagAbove) ||
+                   (m.flagZero && v===0);
+      const w = Math.max((v/max)*100, v>0?1.5:0);
+      return `<div class="row${flag?" flag":""}">
+        <span class="lbl" title="${n}">${n}</span>
+        <span class="track"><span class="fill" style="width:${w}%"></span></span>
+        <span class="val">${fmt(v)}</span></div>`;
+    }).join("")}</div></div>`;
+}).join("");
+
+/* ── Render: lineage graph (all edges verified in source) ── */
+const L = {
+  groups:[
+    {x:14,y:22,w:250,h:132,label:"Firefox lineage"},
+    {x:282,y:22,w:262,h:132,label:"Chromium fork lineage"},
+    {x:14,y:180,w:530,h:186,label:"Playwright-patch lineage"},
+    {x:562,y:22,w:246,h:158,label:"Raw-CDP lineage"},
+    {x:562,y:206,w:246,h:160,label:"Independent engine"},
+  ],
+  nodes:[
+    {id:"ff",   x:30, y:48, w:104,h:26,t:"Firefox 152"},
+    {id:"bf",   x:30, y:92, w:104,h:26,t:"BrowserForge",s:"fingerprints"},
+    {id:"cam",  x:158,y:70, w:92, h:26,t:"Camoufox",tool:1},
+    {id:"chr",  x:298,y:48, w:104,h:26,t:"Chromium"},
+    {id:"ug",   x:298,y:92, w:104,h:26,t:"ungoogled-cr"},
+    {id:"cl",   x:428,y:92, w:100,h:26,t:"Clearcote",tool:1},
+    {id:"cb",   x:428,y:48, w:100,h:26,t:"CloakBrowser",tool:1,closed:1},
+    {id:"pw",   x:30, y:210,w:104,h:26,t:"Playwright"},
+    {id:"pr",   x:170,y:196,w:96, h:26,t:"Patchright",tool:1},
+    {id:"cdpp", x:170,y:236,w:96, h:26,t:"CDP-Patches",s:"input"},
+    {id:"scr",  x:300,y:196,w:96, h:26,t:"Scrapling",tool:1},
+    {id:"reb",  x:30, y:284,w:104,h:26,t:"rebrowser-patches"},
+    {id:"tb",   x:170,y:274,w:130,h:26,t:"turnstilebrowser",s:"playwright-core 1.49"},
+    {id:"xd",   x:330,y:274,w:88, h:26,t:"XDriver",tool:1},
+    {id:"rpc",  x:170,y:322,w:130,h:26,t:"rebrowser-pw-core"},
+    {id:"bjs",  x:330,y:322,w:118,h:26,t:"Botasaurus JS"},
+    {id:"nd",   x:578,y:48, w:104,h:26,t:"NoDriver"},
+    {id:"sb",   x:578,y:96, w:120,h:26,t:"SeleniumBase",tool:1,s:"CDP Mode"},
+    {id:"bot",  x:578,y:142,w:120,h:26,t:"Botasaurus",tool:1,s:"own CDP driver"},
+    {id:"v8",   x:578,y:236,w:104,h:26,t:"V8 / deno_core"},
+    {id:"h5",   x:578,y:280,w:104,h:26,t:"html5ever"},
+    {id:"obs",  x:700,y:258,w:92, h:26,t:"Obscura",tool:1},
+  ],
+  edges:[
+    ["ff","cam"],["bf","cam"],["chr","cb"],["chr","ug"],["ug","cl"],
+    ["pw","pr"],["pr","scr"],["cdpp","pr","d"],["pw","reb"],
+    ["reb","tb"],["tb","xd"],["reb","rpc"],["rpc","bjs"],
+    ["nd","sb","d"],["v8","obs"],["h5","obs"],
+  ],
+};
+(function drawLineage(){
+  const n = Object.fromEntries(L.nodes.map(o=>[o.id,o]));
+  const path = (a,b)=>{
+    const A=n[a], B=n[b];
+    const x1=A.x+A.w, y1=A.y+A.h/2, x2=B.x, y2=B.y+B.h/2;
+    const mx=(x1+x2)/2;
+    return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+  };
+  const svg = `<svg viewBox="0 0 822 386" role="img" aria-label="Dependency lineage: nine tools reduce to five independent implementation families.">
+    ${L.groups.map(g=>`<g><rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" fill="none" stroke="var(--rule-2)" stroke-width="1"/>
+      <text class="ln-grp" x="${g.x+8}" y="${g.y-6}">${g.label}</text></g>`).join("")}
+    ${L.edges.map(([a,b,d])=>`<path class="ln-e${d?" derive":""}" d="${path(a,b)}"/>`).join("")}
+    ${L.nodes.map(o=>`<g>
+      <rect class="ln-box${o.tool?" tool":""}${o.closed?" closed":""}" x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}"/>
+      <text class="ln-t" x="${o.x+8}" y="${o.y+(o.s?12:17)}">${o.t}</text>
+      ${o.s?`<text class="ln-t sm" x="${o.x+8}" y="${o.y+22}">${o.s}</text>`:""}
+    </g>`).join("")}
+  </svg>`;
+  document.getElementById("lineage").innerHTML = svg +
+    `<div style="padding:11px 14px;border-top:1px solid var(--rule-2);font-size:11.5px;color:var(--ink-3)">
+      Teal outline = a tool in this comparison. Dashed outline = closed binary.
+      Dashed edge = derived from / pairs with. Scrapling's browser tier <em>is</em> Patchright;
+      SeleniumBase's CDP Mode is NoDriver-derived; XDriver and Botasaurus's JS driver both
+      descend from rebrowser-patches.
+    </div>`;
+})();
+</script>
+
+</body>
+</html>

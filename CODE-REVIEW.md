@@ -28,6 +28,11 @@ reproducible: `scripts/codemetrics.py`, run inside the sandbox
 
 ### 1. CloakBrowser disables the Chromium sandbox for every user, unconditionally
 
+> [!CAUTION]
+> `--no-sandbox` is applied to every CloakBrowser launch and cannot be removed while
+> keeping fingerprint spoofing enabled. Combined with a closed engine binary, this means
+> unauditable native code processes hostile web content with no OS-level sandbox.
+
 `cloakbrowser/config.py:54-66` — `--no-sandbox` is hardcoded into the base argument
 list returned by `get_default_stealth_args()`:
 
@@ -68,6 +73,10 @@ and dropped capabilities, treat the browser process as untrusted, and do not run
 host holding credentials.
 
 ### 2. Patchright's fragile-by-design approach is engineered correctly
+
+> [!TIP]
+> This is the pattern to copy if you maintain patches against someone else's source:
+> throwing accessors so drift breaks the build, plus CI that diffs upstream versions.
 
 Rewriting another project's source with an AST tool is inherently brittle. Patchright
 handles that better than any other patching tool here, and it is worth stating because
@@ -152,6 +161,11 @@ hand-written driver logic has none either.
 
 ### 6. Registry artifacts do not always correspond to published source
 
+> [!WARNING]
+> Reviewing the `botasaurus-driver` GitHub tree does not tell you what
+> `pip install botasaurus-driver` puts on disk — PyPI is nine patch versions ahead of
+> the published `setup.py`.
+
 `botasaurus-driver` publishes **4.0.101** to PyPI (2026-08-10) while the repository's
 `setup.py` reads **4.0.92**. The installed artifact does not correspond to any tagged
 commit in the public repository, so source review of the GitHub tree does not tell you
@@ -166,7 +180,9 @@ Production code only. Test files, vendored trees, generated bundles, and minifie
 excluded. Raw counts are not quality scores; the per-kLOC columns exist because a
 506-count in 100k lines and a 7-count in 16k lines are not comparable.
 
-### Size and test presence
+<details>
+<summary><b>Size and test presence</b></summary>
+
 
 | Repo | Prod LOC | Test files | Test LOC | Largest file |
 |------|---------:|-----------:|---------:|--------------|
@@ -182,7 +198,11 @@ excluded. Raw counts are not quality scores; the per-kLOC columns exist because 
 | `obscura` | 142,368 | 34 | 11,137 | `crates/obscura-render/src/dom.rs` (20,284) |
 | `clearcote-browser` | 23,136 | 65 | 8,401 | `sdk/python/clearcote/_humanize.py` (991) |
 
-### Typing and documentation (Python only)
+</details>
+
+<details>
+<summary><b>Typing and documentation (Python only)</b></summary>
+
 
 Measured by AST over non-test Python: a function counts as annotated if any parameter or
 the return carries an annotation.
@@ -203,7 +223,11 @@ the return carries an annotation.
 ¹ Inflated by generated CDP bindings, which are uniformly annotated. Hand-written driver
 code is less consistent.
 
-### Error handling and code smells
+</details>
+
+<details>
+<summary><b>Error handling and code smells</b></summary>
+
 
 | Repo | bare `except:` | broad `except` | per kLOC | `print(` | per kLOC | sleep calls | TODO/FIXME |
 |------|---------------:|---------------:|---------:|---------:|---------:|------------:|-----------:|
@@ -221,7 +245,11 @@ code is less consistent.
 ² Scrapling ships a CLI and an MCP server, where `print` is output rather than debug
 residue. Counts alone do not distinguish the two.
 
-### Security-relevant patterns (production code)
+</details>
+
+<details>
+<summary><b>Security-relevant patterns (production code)</b></summary>
+
 
 | Repo | `shell=True` | `pickle.load` | `verify=False` | `--no-sandbox` | `unsafe` | `.unwrap()` |
 |------|-------------:|--------------:|---------------:|---------------:|---------:|------------:|
@@ -239,7 +267,11 @@ residue. Counts alone do not distinguish the two.
 ⁴ One of these is the unconditional default — see [finding 1](#1-cloakbrowser-disables-the-chromium-sandbox-for-every-user-unconditionally).
 ⁵ Tests and docs; the canvas bridge requires it and documents why.
 
-### Project hygiene
+</details>
+
+<details>
+<summary><b>Project hygiene</b></summary>
+
 
 | Repo | CI workflows | `py.typed` | pre-commit | Dependabot | CONTRIBUTING | SECURITY.md | CHANGELOG |
 |------|-------------:|:----------:|:----------:|:----------:|:------------:|:-----------:|:---------:|
@@ -260,6 +292,8 @@ Patchright's `check_patch_impact.yml` (upstream drift detection), Clearcote's
 SeleniumBase's nightly matrix across macOS/Ubuntu/Windows.
 
 ---
+
+</details>
 
 ## Per-tool assessment
 

@@ -86,8 +86,9 @@ provenance table, not a scorecard.** See the report's coverage section.
 
 ## Source handling
 
-The nine projects are unaudited third-party code, including stealth browsers and
-patched binaries. They are never cloned onto, or executed on, a workstation.
+> [!IMPORTANT]
+> The nine projects are unaudited third-party code, including stealth browsers and
+> patched binaries. They are never cloned onto, or executed on, a workstation.
 
 `scripts/sandbox.sh` (run on a disposable remote host) does the following:
 
