@@ -2,13 +2,13 @@
 
 > **Repository:** [seleniumbase/SeleniumBase](https://github.com/seleniumbase/SeleniumBase)
 > **Category:** Browser Automation & Testing Framework
-> **Language:** Python (100%)
+> **Language:** Python (~99%, per `AGENTS.md:15`)
 > **Type:** Selenium wrapper with UC Mode + CDP Mode (undetected Chromium automation)
 > **Approach:** ChromeDriver binary patching + disconnect/reconnect + CDP-native driver (based on NoDriver) + optional PyAutoGUI CAPTCHA solving
-> **What is verified:** `seleniumbase/undetected/` ships `patcher.py`, `cdp.py` and a full `cdp_driver/` package; 187 CDP-related Python files across the tree (**Tier A**)
-> **Anti-bot service claims:** the README demonstrates a Cloudflare challenge page via a runnable example script (`examples/cdp_mode/raw_gitlab.py`) rather than publishing a coverage grid (**Tier B**)
-> **Maintenance:** Very actively maintained — **4.51.12** (2026-08-10, "CDP Mode: Patch 128"); near-daily releases. 12.9k stars, 33 contributors, last push 2026-08-14. MIT.
-> **Verified:** 2026-08-14 against `seleniumbase/SeleniumBase` @ `7cd42ef`.
+> **What is verified:** `seleniumbase/undetected/` ships `patcher.py`, `cdp.py` and a full `cdp_driver/` package; 192 Python files with `cdp` in their path across the tree, 176 of them under `examples/cdp_mode/`; an in-tree MCP server (`mcp_servers/server.py`) wraps Pure CDP Mode (**Tier A**)
+> **Anti-bot service claims:** the README demonstrates a Cloudflare challenge page via a runnable example script (`examples/cdp_mode/raw_gitlab.py`, `README.md:221`) rather than publishing a coverage grid (**Tier B**)
+> **Maintenance:** **4.54.13** (2026-09-30); 26 version-bump commits between 2026-08-23 (4.52.2) and 2026-09-30. 13.0k stars, 33 contributors, 14 open issues, last push 2026-09-30. MIT.
+> **Verified:** 2026-09-30 against `seleniumbase/SeleniumBase` @ `f9955d0`.
 
 ---
 
@@ -16,29 +16,33 @@
 
 SeleniumBase is a comprehensive Python framework built on Selenium 4.x that combines browser automation, E2E testing, web crawling/scraping, and anti-bot bypass. It provides two automation transports: **UC Mode** (Undetected-Chromedriver Mode) and **CDP Mode** (a CDP-native driver derived from NoDriver), the latter being the project's documented path for stealth work.
 
-As of the 4.50.x line, the project's own positioning has shifted: the README now brands SeleniumBase as **"Stealthy Chromium Automation with Python"** and states that **CDP Mode**, not UC Mode, is the recommended path "for maximum stealth." UC Mode is still present and is the on-ramp that launches and patches the browser, but the stealthy driving increasingly happens through CDP Mode and the newer **Stealthy Playwright Mode**.
+Across the 4.5x line the project's own positioning has shifted: the README subtitle at `f9955d0` reads **"Stealthy Chromium Automation and E2E Testing."** (`README.md:17`; the `og:title` metadata reads "Stealthy Chromium Automation with Python; and E2E Testing", `README.md:5`) and recommends **CDP Mode** "for maximum stealth" (`README.md:174`, **Tier B**). The agent playbook `SKILLS.md` (line 140) describes UC Mode alone as the older path. UC Mode is still present and is the on-ramp that launches and patches the browser; under `SB(uc=True)`, `sb.open(url)` now calls `activate_cdp_mode(url)` instead of navigating through chromedriver (`fixtures/base_case.py:235-247`, **Tier A**). The newer **Stealthy Playwright Mode** attaches Playwright to the same CDP-driven browser.
+
+Since 4.53.0 the tree also ships an **MCP server** (`mcp_servers/server.py`, 2,056 lines; console script `seleniumbase-mcp`, installed with the `[mcp]` extra) that exposes Pure CDP Mode (`sb_cdp.Chrome`) as 24 MCP tools, including `solve_captcha`. It holds one global browser session, and `start_browser(headless=None)` resolves to headless on Linux and headed on Windows and macOS (`server.py:210-217`); its README notes that headless mode may be less stealthy (**Tier A**).
 
 ## Technical summary
 
 | Property | Verified state |
 |---|---|
-| **Automation transports** | Two: patched ChromeDriver (UC Mode, `undetected/patcher.py`) and a CDP-native driver derived from nodriver (`undetected/cdp_driver/`). 187 CDP-related Python files. **Tier A** |
-| **ChromeDriver marker removal** | `window.cdc_*` / `$cdc_*` injection sites overwritten with equal-length whitespace; call-function cache name randomised. **Tier A** |
-| **`Runtime.enable` tell** | No handling located in source. CDP Mode attaches no WebDriver, but no explicit countermeasure was found. **Tier D** |
-| **Input simulation** | OS-level clicks via PyAutoGUI (`browser_launcher.py:1071-1082`) plus timing jitter. **No mouse-motion model** — no Bézier or trajectory code exists in the tree. **Tier A** |
-| **Fingerprint spoofing** | None implemented at the engine level; stealth is protocol- and driver-level. **Tier A** |
-| **CAPTCHA handling** | Click-based solving for Turnstile, reCAPTCHA, DataDome slider, Friendly Captcha, Incapsula hCaptcha. **Tier A** that the code paths exist |
+| **Automation transports** | Two: patched ChromeDriver (UC Mode, `undetected/patcher.py`) and a CDP-native driver derived from nodriver (`undetected/cdp_driver/`; protocol bindings come from the external `mycdp` package, `setup.py:178`). 192 Python files with `cdp` in their path. **Tier A** |
+| **ChromeDriver marker removal** | `window.cdc_*` / `$cdc_*` injection sites overwritten with equal-length whitespace; call-function cache name randomised (`undetected/patcher.py:212-248`). `Chrome.get()` additionally collects window properties matching `^[a-z]{3}_[a-z]{22}_` and registers a `Page.addScriptToEvaluateOnNewDocument` script that deletes them (`undetected/__init__.py:381-439`). **Tier A** |
+| **`Runtime.enable` tell** | No `Runtime.enable` call and no `Runtime` event handler located in the SeleniumBase tree (0 matches; a control search for `runtime` matches six files under `undetected/`). The CDP bindings come from the external `mycdp` package and the protocol traffic was not observed. CDP Mode attaches no WebDriver, but no explicit countermeasure was found. **Tier D** |
+| **Input simulation** | UC-Mode PyAutoGUI methods move with `pyautogui.moveTo(x, y, 0.25, pyautogui.easeOutQuad)` and then click (`browser_launcher.py:1244-1271`; CDP-Mode equivalent `sb_cdp.py:2279-2307`, 0.27 s). CDP-Mode `click()` sends `Input.dispatchMouseEvent` events — one `mouseMoved` to the element centre, then press and release at the centre ±0.875 px with randomised 3.6–4.6 ms and 15–16 ms pauses (`cdp_driver/element.py:498-583`) — and falls back to a JS `el.click()` (`element.py:369-399`). Typing goes through `Input.dispatchKeyEvent` (rawKeyDown/char/keyUp on Windows and macOS, `char` events on Linux); `press_keys()` adds 40–49 ms per key, and `fast_type()` / `fast_keys()` (added since the previous verification, `7cd42ef`) remove the pauses (`element.py:824-976`). **No mouse-motion model** beyond the single eased move — `rg -i 'bezier|trajector|jitter'` over the whole tree returns 0 matches. **Tier A** |
+| **Fingerprint spoofing** | None implemented at the engine level; stealth is protocol- and driver-level. CDP Mode can apply timezone, locale, user-agent, platform and geolocation overrides over CDP (`cdp_driver/browser.py:455-471, 516-517`) and strips the `Headless` token from the user-agent string in headless mode. No canvas, WebGL, audio or hardware-property rewriting code was located (a search for those terms hits only a `--use-angle=swiftshader-webgl` launch option and recorder JS). **Tier A** |
+| **CDP Mode launch flags** | Chrome is started directly, not through chromedriver, with the `Config` default arguments (`cdp_driver/config.py:227-274`) and a `--disable-features=` list that includes `UserAgentClientHint`, `IsolateOrigins`, `site-per-process` and `WebRtcHideLocalIpsWithMdns` (`:322-331`); `--test-type` is added except for Brave, and `--headless=new` when headless (`:346`). No `--enable-automation` argument; `--disable-blink-features=AutomationControlled` appears once in the tree, in the Edge WebDriver branch (`core/browser_launcher.py:4564-4566`). **Tier A** |
+| **CAPTCHA handling** | Click-based solving for Turnstile, reCAPTCHA, DataDome slider, Friendly Captcha, Incapsula hCaptcha (`sb_cdp.py:2660-2681`); the async `cdp_driver` `Tab.solve_captcha()` handles four of the five, without the DataDome slider (`cdp_driver/tab.py:1696`). **Tier A** that the code paths exist |
 | **Engine coverage** | Chromium only for stealth features |
-| **Test integration** | pytest and unittest — the only tool of the nine providing this |
-| **Project state** | 33 contributors, 13 open issues, last push 2026-08-14, releases near-daily (4.51.12, "CDP Mode: Patch 128") |
+| **Test integration** | pytest and unittest — the only one of the ten tracked tools providing this |
+| **MCP server** | `mcp_servers/server.py`: 24 `@mcp.tool` functions over Pure CDP Mode, stdio transport; `seleniumbase-mcp` console script (`setup.py:342`), `[mcp]` extra. **Tier A** |
+| **Project state** | 33 contributors, 14 open issues, 13,046 stars, 1,592 forks, last push 2026-09-30; 4.54.13 released 2026-09-30 |
 
 Claim scope: the project publishes runnable example scripts against named protected
 sites rather than a coverage grid. Script existence is verifiable (**Tier A**); outcomes
 are not published as measurements.
 
 > **Note on this analysis:** claims below were verified against the SeleniumBase source
-> at commit `7cd42ef` (2026-08-14, v4.51.12 line). Some code excerpts were first read at
-> v4.50.5 (`4de63c8`); file paths are given so you can check them yourself.
+> at commit `f9955d0` (2026-09-30, v4.54.13). Code excerpts were re-read at that commit,
+> and line numbers refer to it; file paths are given so you can check them yourself.
 
 ---
 
@@ -48,7 +52,7 @@ SeleniumBase's stealth is delivered by two cooperating layers plus an optional C
 
 1. **UC Mode** — patches ChromeDriver, launches Chrome, and uses a disconnect/reconnect trick so the browser looks driver-free during detection.
 2. **CDP Mode** — a CDP-native driver (a fork based on `ultrafunkamsterdam/nodriver`) that drives Chrome over the DevTools Protocol with **no WebDriver attached at all**. This is now the recommended "maximum stealth" path.
-3. **PyAutoGUI CAPTCHA layer** (optional extra) — OS-level mouse clicks for checkbox-style CAPTCHAs.
+3. **PyAutoGUI CAPTCHA layer** (optional extra outside Linux) — OS-level mouse clicks for checkbox-style CAPTCHAs.
 
 ### UC Mode (Undetected-Chromedriver Mode)
 
@@ -56,7 +60,7 @@ UC Mode is based on the undetected-chromedriver project but with significant enh
 
 ### 1. ChromeDriver Binary Patching
 
-The patcher modifies the chromedriver executable to remove the JavaScript that injects the `cdc_` markers websites scan for. The real implementation lives in `seleniumbase/undetected/patcher.py` (`Patcher.patch_exe`, lines ~212–248). Rather than just renaming variables, it **overwrites the injected JS with whitespace** (same byte length, so the binary size is preserved) and randomizes the call-function cache name:
+The patcher modifies the chromedriver executable to remove the JavaScript that injects the `cdc_` markers websites scan for. The real implementation lives in `seleniumbase/undetected/patcher.py` (`Patcher.patch_exe`, lines 212–248). Rather than just renaming variables, it **overwrites the injected JS with whitespace** (same byte length, so the binary size is preserved) and randomizes the call-function cache name:
 
 ```python
 # seleniumbase/undetected/patcher.py  (Patcher.patch_exe)
@@ -113,26 +117,32 @@ UC Mode Flow (Stealthy):
 
 ### 3. Disconnect/Reconnect Mechanism
 
-The signature UC Mode technique — disconnect chromedriver during sensitive moments. The real logic is in `seleniumbase/core/browser_launcher.py` (`uc_open_with_reconnect`, line ~589). Note it navigates by opening the URL in a **new tab via `window.open`** while disconnected, then reconnects and switches to that tab:
+The signature UC Mode technique — disconnect chromedriver during sensitive moments. The real logic is in `seleniumbase/core/browser_launcher.py` (`uc_open_with_reconnect`, line 594). Note it navigates by opening the URL in a **new tab via `window.open`** while disconnected, then reconnects and switches to that tab:
 
 ```python
-# seleniumbase/core/browser_launcher.py  (uc_open_with_reconnect)
+# seleniumbase/core/browser_launcher.py  (uc_open_with_reconnect, abridged)
 if url.startswith("http:") or url.startswith("https:"):
     script = 'window.open("%s","_blank");' % url
-    driver.execute_script(script)     # open target in a new tab
-    time.sleep(0.05)
-    driver.close()                    # close the blank origin tab
+    if not hasattr(driver, "cdp_base"):
+        driver.execute_script(script)     # open target in a new tab
+        time.sleep(0.05)
+        driver.close()                    # close the blank origin tab
+    else:
+        driver.cdp.open(url)              # CDP Mode already active
     if reconnect_time == "disconnect":
-        driver.disconnect()           # stay disconnected
+        driver.disconnect()               # stay disconnected
         time.sleep(0.008)
     else:
-        driver.reconnect(reconnect_time)   # disconnect, wait, reconnect
+        driver.reconnect(reconnect_time)  # disconnect, wait, reconnect
+        time.sleep(0.004)
         page_actions.switch_to_window(
             driver, driver.window_handles[-1], 2
         )
 ```
 
-The `reconnect()` / `disconnect()` / `connect()` primitives live in `seleniumbase/undetected/__init__.py` (lines ~469–560). `reconnect(timeout)` stops the chromedriver service, sleeps for `timeout`, then restarts it — so during the wait window the page runs with no WebDriver connection attached.
+The function also short-circuits in two cases: when CDP Mode is already active it calls `driver.cdp.get(url)` instead (`browser_launcher.py:610-613`), and for Opera and Comet it activates CDP Mode rather than reconnecting (`:596-608`).
+
+The `reconnect()` / `disconnect()` / `connect()` primitives live in `seleniumbase/undetected/__init__.py` (`reconnect` line 480, `disconnect` line 532, `connect` lines 549–592). `reconnect(timeout)` (default `0.1` s) stops the chromedriver service, sleeps for `timeout`, then restarts it — so during the wait window the page runs with no WebDriver connection attached.
 
 ```python
 # High-level SB API (aliases of the above):
@@ -146,7 +156,7 @@ sb.uc_click(selector)                              # click while disconnected
 
 ### 4. CDP Mode (the recommended maximum-stealth path)
 
-CDP Mode drives Chrome purely over the Chrome DevTools Protocol with **no WebDriver connected**. Its driver is a fork **"based on NoDriver"** (`seleniumbase/undetected/cdp_driver/`, header comment in `cdp_util.py`), i.e. derived from `ultrafunkamsterdam/nodriver`. The high-level wrapper is `seleniumbase/core/sb_cdp.py` (~3,500 lines, 250+ methods) and the entry class is `sb_cdp.Chrome`.
+CDP Mode drives Chrome purely over the Chrome DevTools Protocol with **no WebDriver connected**. Its driver is a fork **"based on NoDriver"** (`seleniumbase/undetected/cdp_driver/`; the docstring on line 1 of `cdp_util.py` and `browser.py` says so), i.e. derived from `ultrafunkamsterdam/nodriver`. The high-level wrapper is `seleniumbase/core/sb_cdp.py` (3,966 lines; class `CDPMethods` has 274 methods, 215 of them public) and the entry class is `sb_cdp.Chrome` (`sb_cdp.py:3941`).
 
 ```python
 # seleniumbase/fixtures/base_case.py  (activate_cdp_mode)  and
@@ -166,14 +176,14 @@ sb.cdp.scroll_down()
 ```
 
 **CDP Mode advantages:**
-- No WebDriver artifacts at all (the WebDriver is disconnected)
+- No WebDriver session attached (the chromedriver service is stopped on entry from UC Mode, and Pure CDP Mode never starts one)
 - Can be entered from UC Mode mid-session (`sb.activate_cdp_mode()`)
 - A "Pure CDP Mode" entry point (`from seleniumbase import sb_cdp; sb = sb_cdp.Chrome()`) runs CDP-only without ever starting a SeleniumBase test/WebDriver session
-- Best for heavily protected sites
+- The project documents it as the path for heavily protected sites (**Tier B**)
 
-### 5. Stealthy Playwright Mode (NEW)
+### 5. Stealthy Playwright Mode
 
-New in the 4.5x line: **Stealthy Playwright Mode** (`examples/cdp_mode/playwright/`). It is a subset of CDP Mode where **Playwright attaches to the SeleniumBase-launched stealth browser** via the remote-debugging URL using Playwright's `connect_over_cdp()`. This lets Playwright scripts inherit SeleniumBase's stealth and CAPTCHA-solving while using Playwright's own API.
+Added in the 4.5x line: **Stealthy Playwright Mode** (`examples/cdp_mode/playwright/`). It is a subset of CDP Mode where **Playwright attaches to the SeleniumBase-launched stealth browser** via the remote-debugging URL using Playwright's `connect_over_cdp()`. This lets Playwright scripts inherit SeleniumBase's stealth and CAPTCHA-solving while using Playwright's own API.
 
 ```python
 # examples/cdp_mode/playwright/ (sync format)
@@ -191,7 +201,7 @@ It ships in three formats: `sb_cdp` "sync", `SB()` "nested sync", and `cdp_drive
 
 ### 6. PyAutoGUI Integration for CAPTCHAs
 
-For checkbox-style CAPTCHAs, UC/CDP Mode uses PyAutoGUI to click at the OS level, outside the browser context. PyAutoGUI is an **optional extra** (`pip install seleniumbase[pyautogui]`), auto-installed on first use by `install_pyautogui_if_missing()`. The click-solving methods are in `seleniumbase/core/browser_launcher.py` and `seleniumbase/core/sb_cdp.py`:
+For checkbox-style CAPTCHAs, UC/CDP Mode can use PyAutoGUI to click at the OS level, outside the browser context. PyAutoGUI is in `install_requires` on Linux (`setup.py:225`) and an **optional extra** on other platforms (`pip install seleniumbase[pyautogui]`, `setup.py:300`); `install_pyautogui_if_missing()` also installs it on first use (`browser_launcher.py:1156`). The click-solving methods are in `seleniumbase/core/browser_launcher.py` and `seleniumbase/core/sb_cdp.py`:
 
 ```python
 # UC Mode (WebDriver) side — browser_launcher.py
@@ -205,7 +215,7 @@ sb.cdp.solve_captcha()        # click-solve via CDP (alias: click_captcha())
 sb.cdp.gui_click_captcha()    # click-solve via PyAutoGUI
 ```
 
-The dispatcher `sb_cdp.__click_captcha()` inspects the page source and routes to the correct handler. As of 4.50.x it recognizes **five** CAPTCHA situations (detectors at `sb_cdp.py` ~2177–2220):
+The dispatcher `sb_cdp.__click_captcha()` (`sb_cdp.py:2660-2681`) inspects the page source and routes to the correct handler. At `f9955d0` it recognizes **five** CAPTCHA situations (detectors at `sb_cdp.py:2403-2470`):
 
 - Cloudflare Turnstile (`_on_a_cf_turnstile_page`)
 - Google reCAPTCHA (`_on_a_g_recaptcha_page`)
@@ -222,14 +232,14 @@ elif self._on_a_datadome_slider_page():       ... datadome slider
 elif self._on_a_friendly_captcha_page():      ... friendly captcha
 ```
 
-**Why it works:** PyAutoGUI operates at the OS level, completely outside the browser context, so the click is indistinguishable from a real user's. Note: these are **click/slide solvers** for the "prove you're human" checkbox/slider widgets — they are not image-recognition solvers, and they still require a real display (see limitations).
+**Mechanism:** `gui_click_captcha()` issues OS-level mouse events through PyAutoGUI, outside the browser process. `solve_captcha()` / `click_captcha()` run the same dispatcher with `use_cdp=True`, which sends the click as a CDP `click_with_offset()` instead (`sb_cdp.py:2649-2658`); the Incapsula hCaptcha branch always uses the CDP click, and the DataDome slider branch always uses a PyAutoGUI drag (`gui_drag_drop_points`) after reading the slider geometry from the captcha iframe URL opened in a new tab (`sb_cdp.py:2520-2597`). The Turnstile branch first rewrites `center` / `right` alignment in page `class` and `style` attributes to `left` through `page.evaluate()` so that the click offset is predictable (`sb_cdp.py:2734-2816`). Note: these are **click/slide solvers** for the "prove you're human" checkbox/slider widgets — they are not image-recognition solvers, and they still require a real display (see limitations).
 
 ---
 
 ## Architecture
 
 ```
-SeleniumBase Stealth Stack (v4.50.x):
+SeleniumBase Stealth Stack (v4.54.x):
 ┌─────────────────────────────────────────────┐
 │  Your Code                                   │
 │  SB(uc=True) / sb_cdp.Chrome() / sb.cdp.*    │
@@ -247,7 +257,7 @@ SeleniumBase Stealth Stack (v4.50.x):
 │  ├─ Stealthy Playwright Mode                 │
 │  │  (Playwright connect_over_cdp)            │
 ├─────────────────────────────────────────────┤
-│  PyAutoGUI Layer (optional extra)            │
+│  PyAutoGUI Layer (non-Linux extra)           │
 │  - OS-level mouse/keyboard for CAPTCHAs      │
 │  - Turnstile / reCAPTCHA / DataDome slider / │
 │    Friendly Captcha / Incapsula hCaptcha     │
@@ -275,7 +285,7 @@ sb.uc_gui_handle_captcha()                         # auto-detect CF vs reCAPTCHA
 sb.disconnect(); sb.connect(); sb.reconnect(timeout)
 ```
 
-### CDP Mode Methods (`sb_cdp.py`, 250+ methods)
+### CDP Mode Methods (`sb_cdp.py`, 274 methods in `CDPMethods`, 215 public)
 ```python
 sb.activate_cdp_mode(url)          # switch from UC/WebDriver into CDP Mode
 sb.cdp.open(url)
@@ -298,7 +308,7 @@ sb.cdp.get_endpoint_url()          # for Stealthy Playwright attach
 > weaker than a benchmark. Whether any given script still passes today depends on the
 > site's current configuration and your IP. Nothing here was executed. **Tier B.**
 
-Most stealth examples live under `examples/cdp_mode/` (Pure CDP Mode) and `examples/cdp_mode/playwright/` (Stealthy Playwright):
+Most stealth examples live under `examples/cdp_mode/` (Pure CDP Mode; 176 `.py` files) and `examples/cdp_mode/playwright/` (Stealthy Playwright; 35 `.py` files). Protection labels follow the project's own example headings (`examples/cdp_mode/ReadMe.md:129, 180, 228, 273`; for Walmart the heading reads Akamai with PerimeterX):
 
 | Service | Protection Type | Example File (verified present) |
 |---------|-----------------|---------------------------------|
@@ -308,9 +318,9 @@ Most stealth examples live under `examples/cdp_mode/` (Pure CDP Mode) and `examp
 | Kasada | Advanced bot management | `examples/cdp_mode/raw_hyatt.py`, `raw_cdp_hyatt.py` |
 | PerimeterX / general anti-bot | Behavioral / AI detection | `examples/cdp_mode/raw_walmart.py`, `raw_cdp_walmart.py` |
 | Google reCAPTCHA | Invisible / checkbox challenges | `examples/cdp_mode/raw_cdp_recaptcha.py` |
-| Fingerprint / bot-detection probes | Fingerprint & automation checks | `examples/cdp_mode/raw_browserscan.py`, `raw_cdp_sannysoft.py`, `raw_cdp_fingerprint.py`, `raw_cdp_pixelscan.py` |
+| Fingerprint / bot-detection probes | Fingerprint & automation checks | `examples/cdp_mode/raw_browserscan.py`, `raw_cdp_sannysoft.py`, `raw_cdp_fingerprint.py`, `raw_cdp_pixelscan.py`, `raw_cdp_clearcote.py` (Clearcote audit page) |
 
-**Real-world sites demonstrated (current examples):** GitLab, Pokemon.com, Hyatt.com, BestWestern.com, Walmart.com, Nike, Nordstrom, SeatGeek, Indeed, Idealista, Reddit, Amazon, plus dedicated fingerprint/bot-detection test-site scripts (BrowserScan, Sannysoft, Pixelscan). *(Note: the older top-level `raw_bing.py` referenced in prior docs is no longer present; Bing CAPTCHA examples now live under `examples/cdp_mode/playwright/raw_bing_cap_*.py`.)*
+**Real-world sites demonstrated (current examples):** GitLab, Pokemon.com, Hyatt.com, BestWestern.com, Walmart.com, Nike, Nordstrom, SeatGeek, Indeed, Idealista, Reddit, Amazon, Petco, Yelp, NET-A-PORTER, plus dedicated fingerprint/bot-detection test-site scripts (BrowserScan, Sannysoft, Pixelscan). *(Note: the older top-level `raw_bing.py` referenced in prior docs is no longer present; Bing CAPTCHA examples now live under `examples/cdp_mode/playwright/raw_bing_cap_*.py`.)*
 
 ---
 
@@ -373,18 +383,18 @@ with SB(uc=True, proxy="user:pass@host:port", incognito=True) as sb:
 ## Important Limitations
 
 ### 1. UC Mode + Headless = Detectable
-Confirmed in `help_docs/uc_mode.md`: "UC Mode is detectable in Headless Mode, so don't combine those options." On Linux use a virtual display instead:
+Confirmed in `help_docs/uc_mode.md` (line 144): "UC Mode is detectable in Headless Mode, so don't combine those options." On Linux use a virtual display instead:
 ```python
 # DON'T — detectable
 with SB(uc=True, headless=True) as sb: ...
 
-# DO (Linux) — xvfb virtual display (enabled by default when headed/headless not set)
+# DO (Linux) — xvfb virtual display (SB() turns it on by default for UC Mode when headed/headless are unset: plugins/sb_manager.py:819-829)
 with SB(uc=True, xvfb=True) as sb: ...
 ```
 `xvfb=True` is also **required for PyAutoGUI** CAPTCHA methods on headless Linux, since PyAutoGUI needs a display.
 
 ### 2. Reconnect Overhead
-Each reconnect adds latency (chromedriver service stop/start plus the reconnect wait window). The framework's default `reconnect_time` is a small constant; the caller usually supplies a larger value (e.g. `4`) to let detection scripts finish.
+Each reconnect adds latency (chromedriver service stop/start plus the reconnect wait window). The framework's default `reconnect_time` is `constants.UC.RECONNECT_TIME = 2.4` seconds (`fixtures/constants.py:369`); the examples above pass `4` to let detection scripts finish.
 ```
 Standard Selenium: Baseline (1x speed)
 UC Mode:  slower  (reconnect / disconnect wait windows)
@@ -392,15 +402,15 @@ CDP Mode: adds asyncio/CDP round-trip overhead
 ```
 *(Exact slowdown factors are workload-dependent and not benchmarked here — treat "2–5x" style figures as unverified rough guidance, not a measured claim.)*
 
-### 3. PyAutoGUI Requirement (optional extra)
-Click-based CAPTCHA handling requires the optional extra plus a real display:
+### 3. PyAutoGUI Requirement (extra, or Linux dependency)
+Click-based CAPTCHA handling that uses PyAutoGUI requires the package plus a real display:
 ```bash
-pip install seleniumbase[pyautogui]     # or auto-installed on first use
+pip install seleniumbase[pyautogui]     # extra on Windows/macOS; already in install_requires on Linux
 # + display server on Linux (xvfb)
 ```
 
 ### 4. Chromium-only stealth
-UC Mode / CDP Mode stealth targets Chromium-family browsers (Chrome, Chromium, Brave, Edge, Opera). There is no Firefox stealth path. (Recent releases specifically fixed Brave and Opera automation — see v4.50.5.)
+UC Mode / CDP Mode stealth targets Chromium-family browsers (Chrome, Chromium, Chrome for Testing, Brave, Edge, Opera, Comet; `cdp_driver/cdp_util.py:644-673`; Comet is not supported on Linux, `core/detect_b_ver.py:224`). There is no Firefox stealth path. Edge is routed to Pure CDP Mode: `activate_cdp_mode()` from a non-UC Edge driver raises and points to `sb_cdp.Chrome(url, browser="edge")` (`fixtures/base_case.py:5133-5140`).
 
 ### 5. These are click-solvers, not image solvers
 `solve_captcha()` / `uc_gui_click_captcha()` click checkboxes or slide sliders to pass challenges that only require "prove you're human." They do not recognize images or read distorted text; hard interactive challenges (image grids) are not solved.
@@ -413,13 +423,14 @@ UC Mode / CDP Mode stealth targets Chromium-family browsers (Chrome, Chromium, B
 
 | Advantage | Details |
 |-----------|---------|
-| **Most Effective Python Solution** | Proven bypasses against major Chromium-facing anti-bots |
+| **Anti-bot example scripts** | Runnable examples against named protected sites (project-labelled; outcomes not measured here, **Tier B**) |
 | **Multiple Stealth Modes** | UC Mode, CDP Mode (NoDriver-based), Stealthy Playwright Mode |
 | **Built-in CAPTCHA click-solving** | Turnstile, reCAPTCHA, DataDome slider, Friendly Captcha, Incapsula hCaptcha |
 | **Complete Testing Framework** | pytest / unittest / behave (BDD) integration, Recorder, Dashboard |
-| **150+ example scripts** | Working code for real protected + test sites |
-| **Very active development** | Current v4.51.12 (2026-08-10); near-daily releases |
-| **Production Ready** | CI/CD, Docker, S3 logging, proxy (incl. socks5h) support |
+| **Example scripts** | 428 `.py` files under `examples/`, 176 of them under `examples/cdp_mode/` (**Tier A** counts) |
+| **Release cadence** | v4.54.13 (2026-09-30); 26 version-bump commits between 2026-08-23 and 2026-09-30 |
+| **MCP server** | `seleniumbase-mcp` exposes Pure CDP Mode as 24 tools (`mcp_servers/`) |
+| **Deployment support** | CI/CD integrations, `Dockerfile`, S3 logging plugin, proxy (incl. socks5h) support |
 | **MIT licensed** | Fully open source |
 
 ### Limitations
@@ -429,8 +440,8 @@ UC Mode / CDP Mode stealth targets Chromium-family browsers (Chrome, Chromium, B
 | **Complexity** | Large learning curve due to feature breadth |
 | **Performance** | UC/CDP Mode slower than plain Selenium (reconnect + CDP overhead) |
 | **Headless Limitation** | UC Mode detectable in headless mode; use xvfb on Linux |
-| **Heavy Dependencies** | Large dependency tree (Selenium, trio, websockets, pytest, etc.) |
-| **PyAutoGUI + display** | CAPTCHA click-solving needs the extra and a real/virtual display |
+| **Heavy Dependencies** | 59 distinct packages in `install_requires` (selenium==4.49.0, trio, websockets, pytest, …); Python >=3.10 (`setup.py:165`) |
+| **PyAutoGUI + display** | PyAutoGUI-based CAPTCHA clicking needs the package and a real/virtual display |
 | **Chromium-Focused** | Stealth is Chromium-only; no Firefox stealth |
 
 ---
@@ -442,7 +453,7 @@ UC Mode / CDP Mode stealth targets Chromium-family browsers (Chrome, Chromium, B
 | **Automation transports** | 2 (UC Mode, CDP Mode) | 1 (patched Playwright driver) | 1 (raw CDP) | 1 (patched Chromium + Playwright API) |
 | **`Runtime.enable` tell** | Tier D — not located in source | isolated contexts, Console API disabled | not addressed | Tier D — not in wrapper README |
 | **CAPTCHA click-solving** | Turnstile, reCAPTCHA, DataDome slider, Friendly Captcha, Incapsula hCaptcha | none | Cloudflare challenge only | none |
-| **Mouse-motion model** | none (PyAutoGUI clicks + timing jitter) | none | Bézier + Gaussian noise | `humanize` (Tier B) |
+| **Mouse-motion model** | none (single eased move or CDP click, randomised pauses) | none | Bézier + Gaussian noise | `humanize` (Tier B) |
 | **Engine-level fingerprint control** | none | none | none | C++ patches (Tier B) |
 | **Test-framework integration** | pytest, unittest | none | none | none |
 | **Languages** | Python | Python, Node, .NET | Python, Node | Python, Node, .NET |
@@ -455,7 +466,7 @@ UC Mode / CDP Mode stealth targets Chromium-family browsers (Chrome, Chromium, B
 - Complex Chromium sites with **multiple anti-bot layers**
 - Need **click/slide CAPTCHA handling** (Turnstile, reCAPTCHA, DataDome slider)
 - Want a **complete testing framework** (pytest/behave, Recorder, Dashboard)
-- Python preference with **hundreds of proven bypass examples**
+- Python preference with a large set of runnable example scripts (428 `.py` files under `examples/`)
 - Want **Playwright's API with SeleniumBase stealth** (Stealthy Playwright Mode)
 - Projects requiring **CI/CD integration**
 
@@ -470,12 +481,12 @@ UC Mode / CDP Mode stealth targets Chromium-family browsers (Chrome, Chromium, B
 
 ## Performance Characteristics
 
-| Mode | WebDriver attached | Mechanism | Project's stated use |
+| Mode | WebDriver attached | Mechanism | Project's own description (Tier B) |
 |---|---|---|---|
 | Standard Selenium | yes | unmodified chromedriver | no stealth measures |
-| UC Mode | yes, with disconnect/reconnect | `cdc_` markers overwritten in the chromedriver binary; browser-first launch | medium protection |
-| CDP Mode (NoDriver-based) | **no** | driven over CDP with no WebDriver in the loop | the project's documented path for heavy protection |
-| Stealthy Playwright | **no** | CDP Mode stealth behind the Playwright API | Playwright API with the same transport |
+| UC Mode | yes, with disconnect/reconnect | `cdc_` markers overwritten in the chromedriver binary; browser-first launch | the earlier path; `help_docs/uc_mode.md:7` points to CDP Mode as its successor |
+| CDP Mode (NoDriver-based) | **no** | driven over CDP with no WebDriver in the loop | recommended "for maximum stealth" (`README.md:174`); described as bypassing bot-detection with Chromium-based browsers (`README.md:58`) |
+| Stealthy Playwright | **no** | CDP Mode stealth behind the Playwright API | described as extending CDP Mode's stealth to Playwright (`README.md:59`) |
 
 *(Relative speed here is qualitative; SeleniumBase publishes no hard throughput benchmarks and none are asserted in this analysis.)*
 
@@ -485,25 +496,26 @@ UC Mode / CDP Mode stealth targets Chromium-family browsers (Chrome, Chromium, B
 
 | Path | What it contains |
 |------|------------------|
-| `seleniumbase/__version__.py` | Version string (currently `4.50.5`) |
+| `seleniumbase/__version__.py` | Version string (currently `4.54.13`) |
 | `seleniumbase/undetected/patcher.py` | ChromeDriver `cdc_` binary patching |
 | `seleniumbase/undetected/__init__.py` | `reconnect` / `disconnect` / `connect` primitives |
 | `seleniumbase/core/browser_launcher.py` | `uc_open_with_reconnect`, `uc_open_with_disconnect`, `uc_click`, `uc_gui_click_*` |
-| `seleniumbase/undetected/cdp_driver/` | CDP-native driver, "based on NoDriver" |
-| `seleniumbase/core/sb_cdp.py` | CDP Mode wrapper + `solve_captcha` dispatcher (250+ methods) |
+| `seleniumbase/undetected/cdp_driver/` | CDP-native driver, "based on NoDriver" (`config.py`: Chrome launch arguments) |
+| `seleniumbase/core/sb_cdp.py` | CDP Mode wrapper + `solve_captcha` dispatcher (274 methods in `CDPMethods`) |
 | `seleniumbase/fixtures/base_case.py` | `activate_cdp_mode` and the SB API surface |
 | `examples/cdp_mode/` | Pure CDP Mode example scripts (many `raw_*` scripts) |
 | `examples/cdp_mode/playwright/` | Stealthy Playwright Mode examples |
+| `mcp_servers/server.py` | MCP server over Pure CDP Mode (24 tools; `seleniumbase-mcp`) |
 
 ---
 
 ## Bottom Line
 
-SeleniumBase covers a wider feature surface than any other tool compared here: two automation transports, a test framework, and CAPTCHA handling in one package. The 4.5x line re-centred on **CDP Mode** (NoDriver-derived, WebDriver-free) as the project's documented stealth path, added **Stealthy Playwright Mode**, and extended click-solving to Turnstile, reCAPTCHA, DataDome slider, Friendly Captcha, and Incapsula hCaptcha.
+SeleniumBase covers a wider feature surface than any other tool compared here: two automation transports, a test framework, and CAPTCHA handling in one package. The 4.5x line re-centred on **CDP Mode** (NoDriver-derived, WebDriver-free) as the project's documented stealth path, added **Stealthy Playwright Mode**, extended click-solving to Turnstile, reCAPTCHA, DataDome slider, Friendly Captcha, and Incapsula hCaptcha, and (from 4.53.0) added an in-tree MCP server over Pure CDP Mode.
 
-**Applicability:** Chromium targets requiring interactive CAPTCHA handling, or projects that need automation and pytest/unittest integration in one dependency — the only tool of the nine providing the latter.
+**Applicability:** Chromium targets requiring interactive CAPTCHA handling, or projects that need automation and pytest/unittest integration in one dependency — the only one of the ten tracked tools providing the latter.
 
-**Constraints:** Chromium only for stealth features. No engine-level fingerprint spoofing (Layer 2) and no TLS impersonation (Layer 4). No mouse-motion model: input realism is OS-level PyAutoGUI clicks plus timing jitter. `Runtime.enable` handling is Tier D — not located in source. IP reputation remains outside the tool's control.
+**Constraints:** Chromium only for stealth features. No engine-level fingerprint spoofing (Layer 2) and no TLS impersonation (Layer 4). No mouse-motion model: pointer input is a single move plus a click, dispatched over CDP or through PyAutoGUI, with randomised pauses. `Runtime.enable` handling is Tier D — not located in source. IP reputation remains outside the tool's control.
 
 **Layers addressed:** 1 (driver markers), 3 (click timing), plus CAPTCHA handling · **Engine:** Chromium only · **Not addressed:** Layer 2 fingerprinting, Layer 4 TLS
 
@@ -519,4 +531,4 @@ SeleniumBase covers a wider feature surface than any other tool compared here: t
 - [CDP Mode Methods (Stealth API)](https://github.com/seleniumbase/SeleniumBase/blob/master/help_docs/cdp_mode_methods.md)
 - [Discord Community](https://discord.gg/Edhgd7X)
 
-*(Analysis verified against SeleniumBase v4.50.5, commit `4de63c8`, 2026-07-03. Cloned on the research box at `~/research/projects/seleniumbase`, 9.0 MB.)*
+*(Analysis verified against SeleniumBase v4.54.13, commit `f9955d0`, 2026-09-30, read from a clone inside the network-severed sandbox described in [METHODOLOGY.md](METHODOLOGY.md#source-handling).)*

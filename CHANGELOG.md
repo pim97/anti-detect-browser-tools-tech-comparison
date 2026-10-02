@@ -1,5 +1,160 @@
 # Changelog
 
+## 2026-09-30 — Re-verification against upstream (all ten tools)
+
+Every tool page, the README tables, the code review and the interactive matrix were
+re-read against the upstream trees in the sandbox. The previous full pass was
+2026-08-14. Versions and health figures are in [STATUS.md](STATUS.md), regenerated the
+same day. Nothing was installed, built or executed; Tier A still means the code was read.
+
+### Versions and commits read
+
+| Tool | Documented on 2026-08-14 | Now | Commit read |
+|------|--------------------------|-----|-------------|
+| Camoufox | browser `v152.0.4-beta.28`, PyPI `0.5.4` | browser `v156.0.1-beta.33` (pre-release; latest non-pre-release `v152.0.4-beta.30`), PyPI `0.5.6`, repo `0.5.7` | `2f30fea` |
+| Patchright | driver/Node `1.61.1`, Python `1.61.2` | `1.63.0` on GitHub and npm (2026-09-08), PyPI (2026-09-20) | `26ab9ae` |
+| SeleniumBase | `4.51.12` | `4.54.13` (2026-09-30) | `f9955d0` |
+| Botasaurus | core `4.0.97`, driver `4.0.101` | unchanged | `6c9260d`, `db1d291` |
+| XDriver | `v1.0.1` | unchanged, no commits since 2025-09-10 | `b610852` |
+| CloakBrowser | wrapper `0.5.7`, Pro Chromium 150 | wrapper `0.5.11`, Pro Chromium 152 (macOS Pro 151) | `f44864b` |
+| Scrapling | `0.4.14` | `0.4.15` (2026-08-23); `main` has 15 docs-only commits after it | `b11da90` |
+| Obscura | `v0.2.0` | `v0.2.3` (2026-09-20); `main` is 66 commits past the tag | `a005d16` |
+| invisible_playwright | wrapper `0.7.0`, engine `firefox-19` | wrapper `0.25.7` (2026-09-25), engine `firefox-34` (Firefox 151.0) | `3218090`, core `0f4a30c`, engine `fec80c8` |
+| Clearcote | browser `pre.22`, SDK `0.26.1` | browser `pre.23` (2026-09-28), SDK `0.33.0` | `1596f29` |
+
+### What changed upstream
+
+- **Camoufox**: Firefox 152.0.4 to 156.0.1; 34 to 44 top-level patches (2 in
+  `patches/playwright/` unchanged); fpgen replaces BrowserForge at repository HEAD (PyPI
+  0.5.6 still depends on BrowserForge); a coherence check on every generated identity; the
+  C++ `MouseTrajectories.hpp` was removed and the cursor is now a replay of recorded
+  movements (Cursory, vendored, LGPLv3-or-later) in Juggler JS; per-context setters are
+  created sealed; glyph-spacing noise removed; the `outerWidth`/`outerHeight`, scroll
+  min/max, `history.length`, battery and WebGL context-attribute hooks were removed; a
+  TypeScript launcher and a release pipeline were added; bundled real presets 312 to 285.
+- **invisible_playwright**: the wrapper vendors a modified copy of Playwright's Python
+  client (`_pw/`, since 0.7.3) and an in-process Python Juggler server (`_juggler/`, which
+  replaced the Node driver in 0.8.0); `playwright` is no longer a dependency; macOS support
+  dropped; the `invisible_firefox` repository was deleted on 2026-08-18; the engine fork
+  gained a bundled font set and a screencast rework. The launch ping is still on by
+  default; its URL is now a pref that the core sets.
+- **Clearcote**: open build on Chromium 150 with 37 patches (new: `071`, `142`, `220`,
+  `951`, `955`); `enable_mdns` turned on; SDKs 0.26.1 to 0.33.0 (`clearcote` CLI, `serve()`
+  multiplexer, isolated-world DOM reads for `humanize`, MCP server, Docker image); the
+  project README now describes a free-with-GitHub tier and hosted browsers (**Tier B**).
+- **CloakBrowser**: Pro binary Chromium 150 to 152 with 87 claimed patches (was 71); a
+  free GitHub-sign-in key tier; an invalid or unvalidatable key and a failed GeoIP lookup
+  now abort the launch instead of falling back; archives are unpacked without per-entry
+  screening after the signature check; the sandbox default is unchanged.
+- **Obscura** v0.2.0 to v0.2.3: token authentication for CDP and MCP endpoints on
+  non-loopback binds (v0.2.3), a tenth workspace crate (`obscura-ssrf`), `deno_core` 0.350
+  to 0.412, render engine 66,826 to 69,866 lines, Docker image running as non-root.
+- **Patchright** 1.61.x to 1.63.0: 32 to 34 driver modules; since 2026-08-17 init scripts
+  are registered only through CDP `Page.addScriptToEvaluateOnNewDocument` in the current
+  source (the README still describes route-based injection; read, not run); new Python
+  and .NET download paths that fetch `patchright-core`.
+- **Scrapling** 0.4.15: MCP tools 10 to 13 (`get` renamed `make_request`); the HTTP
+  transport refuses to start without a token; the Cloudflare solver is bounded to three
+  attempts; tab reuse; `locale` is passed as launch flags.
+- **SeleniumBase** 4.51.12 to 4.54.13: no change to the UC patcher; an in-tree MCP server
+  (2,056 lines, 24 tools); Python 3.10 minimum; `fast_type`/`fast_keys`; command-injection
+  fix in console scripts (`os.system` 51 to 27 occurrences).
+- **Botasaurus**: no new release; the driver repository's last commit is 2026-07-30 and
+  the JS driver is on npm at 4.0.135 (2026-07-25).
+
+### Corrections: claims that were already wrong at the 2026-08-14 commits
+
+| Tool | Previous statement | Verified state |
+|------|--------------------|----------------|
+| Camoufox | Per-context seeds for audio, canvas and font-spacing noise | Only an audio seed. No canvas noise patch existed at the previous commit (`ci/tribal-rules.yml`, "canvas-is-not-noised"); glyph-spacing noise has since been removed |
+| Camoufox | Hooks for `navigator.vendor`, `deviceMemory` and `languages`; "no timing difference between real and spoofed values" | None of the three was ever hooked (Firefox has no `deviceMemory`); a patch comment says uncached config reads are about 20 times slower |
+| Camoufox | `new_context()` mints a real-preset identity by default | The default is a synthetic identity; real presets are opt-in (`fingerprint_preset=True`) |
+| Camoufox | "v152.0.x drops 32-bit and macOS x86_64" | Not supported: the release matrix still includes macOS x86_64 and Windows i686 (`release.yml:140-152`) |
+| Camoufox | `1-leak-fixes.patch` also neutralises other automation tells (enterprise-policy hints, etc.); an invented source comment in a quoted snippet | The patch changes exactly two files (`Navigator::Webdriver()` and the policies provider); the snippet is replaced by the real hunks |
+| Scrapling | Camoufox removed "as of 0.4.10" | Removed in 0.3.13 (2026-01-01) |
+| Scrapling | Benchmark table figures | Did not match the README; replaced (Selectolax 82.63 to 197.02 ms, BS4+lxml 1,584.31 to 1,562.1 ms, adaptive 2.39 vs 12.45 to 2.3 vs 12.58 ms) |
+| Scrapling | MCP server has 10 tools, built on `FastMCP`; `patchright==1.61.1` / `playwright==1.61.0` pinned | 13 tools on `mcp.server.MCPServer`; the dependencies are minimum versions (`>=`) |
+| Scrapling | DynamicFetcher lacks DNS-over-HTTPS and ad blocking; browserforge generates request headers | Both options exist on DynamicFetcher; with `impersonate` set, `curl_cffi` generates the headers and browserforge supplies only the browser tiers' User-Agent |
+| SeleniumBase | Input simulation at `browser_launcher.py:1071-1082` | Wrong lines at both commits; the PyAutoGUI move and click are at `:1244-1271` |
+| SeleniumBase | PyAutoGUI is an optional extra, installed on first use | An `install_requires` dependency on Linux; the extra applies to other platforms |
+| SeleniumBase | All 42 `shell=True` calls are in CLI tooling | 31 are under `seleniumbase/` (8 in `console_scripts/`, 12 in `core/` launch helpers, 10 in `selenium_grid/`, 1 in `behave/`) and 11 in `examples/` |
+| Patchright | `…OrThrow(` counts of 47 / 40 / 36 in `crPagePatch.ts` / `framesPatch.ts` / `crNetworkManagerPatch.ts` | Never reproduced: 222 across `driver_patches/`, with 33 / 27 / 28 in those three files |
+| Patchright | 30 driver modules; patch of about 5,928 inserted lines; CSP headers "stripped"; Playwright checked out as a submodule | 32 modules at the previous commit (34 now); `patchright.patch` is a 50,211-line documentation diff that is not applied; `_fixCSP` rewrites directives; Playwright is cloned, the only submodule is `patchright-nodejs` |
+| CloakBrowser | GeoIP failures "degrade gracefully" | Resolution failure aborts the launch (0.5.10) |
+| CloakBrowser | Quoted phrases "goes stale within weeks", "native `getOwnPropertyDescriptor`", "no timing differences", "~65% market share"; storage quota "normalised to pass FingerprintJS" | None is in the README at either commit; the README says the quota tuning is unrelated to FingerprintJS |
+| Obscura | WebGL shim with string stubs and random `readPixels` bytes | No such code since v0.2.0: `getContext('webgl')` returns `null` |
+| Obscura | Canvas `toDataURL` returns a fixed string, not a valid image | A JS software rasteriser; `toDataURL` encodes a valid PNG (text glyphs are synthetic) |
+| Obscura | 23 ops; 7,878-line `bootstrap.js`; 12 CDP domains; about 244 method arms; 32 MCP tools; eight crates | 47 ops and 14,635 lines at the previous commit (64 and 16,770 now); 14 domains (IO and Emulation were omitted); 111 method names; 37 tools (35 without render); nine crates at the previous commit (ten now) |
+| Obscura | `userAgentData` brand order permuted per session seed; default persona Windows / Chrome 145; release step `continue-on-error`; cross-compiled releases | Brands are derived from the Chrome major; ordinary builds default to Chrome 143 (145 only in `stealth` builds); no `continue-on-error` in the workflow; releases are built on native runners |
+| Obscura | CODE-REVIEW finding 4: 2,326 `.unwrap()`, 21 `panic!`, per-file counts in `io.rs`/`domsnapshot.rs`/`target.rs`, `catch_unwind` in four named files | Test-inflated. Non-test: 102 and 1 at the previous commit (91 and 1 now); the per-file counts were inside `#[cfg(test)]`; `util.rs` is a test and `serialize.rs` a comment |
+| invisible_playwright | SOCKS5 UDP ASSOCIATE "lets media traffic traverse a SOCKS proxy"; "+2,037 lines in `ice_component.c`" | The engine layer is gated by `network.proxy.socks_remote_udp` (default false) and the core does not set it; `ice_component.c` was a whole added file, not 2,037 lines of new logic |
+| invisible_playwright | Cached engines are re-hashed, which "catches a tampered cache"; checksums verified through `_parse_checksums` | Cache hits get an identity check (version, build ID, markers); `_parse_checksums` has no caller; fresh downloads are verified against a digest shipped in the wheel |
+| invisible_playwright | 0 matches for `usage-counter` in the wrapper README | The badge link at `f777798` contained `usage-counter` (no explanation); the substance is unchanged |
+| Clearcote | The stealth-coherence gate asserts that canvas and WebGL hashes are identical across two registrable domains | That check (`origin-invariant`) is a documented known gap; the gate enforces four other checks and fails if the gap check unexpectedly passes |
+| Clearcote | "Does not touch Chromium's network stack" | Patch `210-tls-network-persona` changes the post-quantum key-share group and the ALPS codepoint when the claimed major differs from the build's |
+| Clearcote | Patch `110` suppresses the `Runtime.enable` tell; a "Linux persona coherence" patch | `110` returns early from `addBindings()`, comments out console reporting and makes `enabled()` return false; there is no Linux persona patch in the series |
+| botasaurus-driver | Last public commit 2025-06-11; JS driver on npm at 4.0.134 | Last commits 2026-07-27 and 2026-07-30; npm 4.0.135 |
+
+Cross-page and README corrections of the same kind: the comparison tables on the
+Camoufox, Clearcote and CloakBrowser pages labelled Patchright "Binary" and credited it
+with partial fingerprint rotation and human-mouse support (it is a TypeScript source patch
+of Playwright's driver with no such code); the Clearcote comparison row listed CloakBrowser
+downloads as not signed or checksummed (the wrapper verifies a pinned Ed25519 signature
+over `SHA256SUMS`, Tier A); the README said "three of the four" independent engines were
+Chromium-derived (two are); the README said `check_patch_impact.yml` opens an issue on
+breaking changes (the release workflow passes `create_issue: false`; a failed release test
+run opens an issue and a draft PR). Scrapling's "cleanest Python" label was replaced by the
+figures, because two newly measured repositories have higher annotation coverage.
+CODE-REVIEW finding 1 no longer says there is no supported configuration with spoofing and
+the sandbox both enabled (the README documents `stealth_args=False` with hand-written
+`--fingerprint` flags) and now records that Playwright itself adds `--no-sandbox`; finding 6
+withdraws the proxy statement (the session proxy is no longer written to `network.proxy.*`)
+and the "0 matches" claim (the wrapper CHANGELOG now describes the ping).
+
+### Methodology and tooling
+
+`scripts/codemetrics.py` now generates every number in the CODE-REVIEW tables. Five
+defects in how the earlier tables were produced were fixed, so some old numbers are not
+comparable with the new ones:
+
+- ripgrep gives the **last** matching glob precedence, and the extension includes came
+  after the excludes, so `*.hpp` re-included the vendored `json.hpp` and `*.js` re-included
+  minified files. Camoufox's previous count was 50,116 lines; the corrected figure for the
+  same commit is 25,351.
+- The `eval`/`exec` search needed `-P` for its lookbehind and returned 0 for every
+  repository. It now runs, but its hits are mostly comments, method names and test
+  helpers, so it is not shown as a column.
+- The annotation rule now includes `*args`, `**kwargs` and positional-only parameters.
+- Line counts follow `wc -l`; the old counts were one higher per file.
+- Rust counts strip `#[cfg(test)]` items and `#[test]` functions. Obscura's previous
+  `.unwrap()` figure of 2,326 becomes 102 at the same commit (3,262 raw, 91 now), and
+  `panic!` 21 becomes 1.
+
+The counting rules also now exclude invisible_playwright's vendored Playwright-Python fork
+(`_pw/`) and its bundled `_juggler/injected.js`, which are not first-party code.
+
+`scripts/sandbox.sh` gained the three `feder-cr` repositories. `feder-cr/invisible_firefox`
+and `feder-cr/firefox-stealth` return HTTP 404 on 2026-09-30; the engine is read from
+`firefox_antidetect_patch`.
+
+### Removed
+
+Rating rows and lines with no source behind them: "Detection Difficulty" (Camoufox and
+CloakBrowser pages), the CloakBrowser "reCAPTCHA v3 Score" comparison row, "Detection
+bypass" and "Effectiveness Rating" (Patchright), "Detection ceiling" and "Effectiveness
+Rating: Moderate" (Obscura), and the "Most Effective Python Solution" and "proven bypass"
+wording (SeleniumBase). The "only tool of the nine" phrasing was updated to ten on the
+Camoufox, Clearcote, CloakBrowser and SeleniumBase pages.
+
+### Updated
+
+README (tables, lineage, capability index, health, "Changes since" section),
+CODE-REVIEW.md (findings 1 to 4 and 6, per-tool assessment, metrics), STATUS.md, all ten
+tool pages, `docs/index.html` (data, findings, lineage with invisible_playwright added),
+`scripts/codemetrics.py`, `scripts/sandbox.sh`. METHODOLOGY.md needed no change.
+
+---
+
 ## 2026-08-14e — Added invisible_playwright (tenth tool)
 
 Added from [issue #1](https://github.com/pim97/anti-detect-browser-tools-tech-comparison/issues/1).

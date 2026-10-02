@@ -35,6 +35,9 @@ h4ckf0r0day/obscura-benchmark
 clearcotelabs/clearcote-browser
 clearcotelabs/clearcote-profiles
 rebrowser/rebrowser-patches
+feder-cr/invisible_playwright
+feder-cr/invisible_core
+feder-cr/invisible_firefox
 "
 
 build_image() {

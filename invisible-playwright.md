@@ -1,17 +1,17 @@
 # invisible_playwright - Technical Analysis
 
-> **Tool Type:** Custom Firefox Build (Anti-Detect Browser) driven by stock Playwright
+> **Tool Type:** Custom Firefox Build (Anti-Detect Browser) driven through a vendored, modified copy of Playwright's Python client
 > **Repository:** [github.com/feder-cr/invisible_playwright](https://github.com/feder-cr/invisible_playwright) (wrapper) · [feder-cr/invisible_core](https://github.com/feder-cr/invisible_core) (config/download) · [feder-cr/firefox_antidetect_patch](https://github.com/feder-cr/firefox_antidetect_patch) (the engine)
-> **Approach:** Firefox patched in C++ source and rebuilt; fingerprint produced by the engine rather than injected into the page. The Playwright client is unmodified.
-> **Verified in source (Tier A):** the engine is a genuine GitHub fork of `mozilla-firefox/firefox`. The stealth work is on branches `stealth/150` and `stealth/151`, **not** on `main`. A diffable tag pair `stealth-base/v150.0.1` → `stealth-head/v150.0.1` resolves to **20 commits / 104 files changed**.
-> **Anti-bot service claims:** none. The project publishes detector-suite results (CreepJS, BotD, FingerprintJS, fpscanner, Sannysoft, BrowserLeaks, reCAPTCHA scoring) rather than WAF pass rates — **Tier B** for the results, **Tier D** for commercial-service coverage.
-> **Maintenance:** wrapper `0.7.0` (2026-08-11); engine release `firefox-19` (2026-08-11, Firefox 151). 1.9k stars, 215 forks, 2 contributors. Wrapper MIT; engine fork inherits MPL-2.0 from mozilla-central (GitHub reports `NOASSERTION`).
-> **Verified:** 2026-08-14 against `invisible_playwright` @ `f777798`, `invisible_core` 19.14.0, `firefox_antidetect_patch` @ `d5457fa7` (`stealth/151`).
+> **Approach:** Firefox patched in C++ source and rebuilt; fingerprint produced by the engine rather than injected into the page. Since wrapper `0.7.3` the Python client is a **modified, vendored copy of Playwright** (`invisible_playwright._pw`), and since `0.8.0` the Node driver is gone: a Python server in `_juggler/` speaks the Juggler protocol to the browser directly. See [The client](#the-client-vendored-playwright-and-an-in-process-juggler-server).
+> **Verified in source (Tier A):** the engine is a genuine GitHub fork of `mozilla-firefox/firefox` (GitHub API, 2026-08-14). The stealth work is on branches `stealth/150` and `stealth/151`, **not** on `main`; the branch that ships is `stealth/151` @ `fec80c8`, sealed into the wrapper's core as engine `firefox-34`. A diffable tag pair `stealth-base/v150.0.1` → `stealth-head/v150.0.1` resolves to **104 files changed, +14,279 / −59** (20 commits per GitHub's compare view on 2026-08-14; the sandbox clone is shallow).
+> **Anti-bot service claims:** none as pass rates. The project publishes detector-suite results (CreepJS, BotD, FingerprintJS, fpscanner, Sannysoft, BrowserLeaks, reCAPTCHA scoring) rather than WAF pass rates — **Tier B** for the results, **Tier D** for commercial-service coverage. Its README names reCAPTCHA, hCaptcha and Cloudflare Turnstile as the scorers of the "two questions" it says it answers (`README.md:14`) and links per-vendor explainer articles.
+> **Maintenance:** wrapper `0.25.7` (2026-09-25), pinning `invisible-core` `34.31.0` (2026-09-25); engine release `firefox-34` (Firefox 151.0, tag dated 2026-09-21). 2,981 stars, 291 forks, 6 contributors, 5 open issues (2026-09-30). The wrapper declares `MIT AND Apache-2.0` (the vendored Playwright client is Apache-2.0; GitHub reports MIT); the engine fork inherits MPL-2.0 from mozilla-central (GitHub reports `NOASSERTION`).
+> **Verified:** 2026-09-30 against `invisible_playwright` @ `3218090`, `invisible_core` @ `0f4a30c` (34.31.0), `firefox_antidetect_patch` @ `fec80c8` (`stealth/151`).
 
 > [!IMPORTANT]
 > **The shipped browser contacts GitHub once on every launch.** It is disclosed and
-> disableable, but the disclosure is not in the package most people install. Details in
-> [Launch telemetry](#launch-telemetry) — read that section before deploying this.
+> disableable. The engine repository's README and the wrapper's `CHANGELOG.md` describe it;
+> the wrapper's README does not. Details in [Launch telemetry](#launch-telemetry).
 
 ---
 
@@ -20,6 +20,7 @@
 - [Are the patches public?](#are-the-patches-public)
 - [Launch telemetry](#launch-telemetry)
 - [What the patches actually change](#what-the-patches-actually-change)
+- [The client: vendored Playwright and an in-process Juggler server](#the-client-vendored-playwright-and-an-in-process-juggler-server)
 - [Supply chain](#supply-chain)
 - [Other network activity](#other-network-activity)
 - [Code quality](#code-quality)
@@ -37,43 +38,53 @@ trustworthy as the source behind it.
 
 | Check | Result |
 |---|---|
-| `firefox_antidetect_patch` is a real fork of `mozilla-firefox/firefox` | **Yes** — GitHub API reports `fork: true`, parent `mozilla-firefox/firefox` |
-| Repository public | Yes, ~4,960 MB |
-| Stealth work present | Yes, on `stealth/150` and `stealth/151` |
-| Diffable base provided | Yes — tags `stealth-base/v150.0.1` and `stealth-head/v150.0.1` |
-| That comparison resolves to | **20 commits, 104 files changed** |
-| Built binaries published | Yes — release tags `firefox-14` … `firefox-19`, per-platform tarballs + `checksums.txt` |
+| `firefox_antidetect_patch` is a real fork of `mozilla-firefox/firefox` | **Yes** — GitHub API reported `fork: true`, parent `mozilla-firefox/firefox` (2026-08-14; the API was not re-queried on 2026-09-30). The clone also carries upstream history, e.g. `0a95d145f7` "Merge autoland to mozilla-central" (2026-05-18) |
+| Repository public | Yes, ~4,960 MB (API, 2026-08-14) |
+| Stealth work present | Yes — `origin/stealth/151` @ `fec80c8` (2026-09-20) and the `stealth/150` tag pair; `main` carries no engine patches |
+| Diffable base provided | Yes — tags `stealth-base/v150.0.1` and `stealth-head/v150.0.1`, unchanged since 2026-08-14 |
+| That comparison resolves to | **104 files changed, +14,279 / −59** (re-derived with `git diff --shortstat` on 2026-09-30); 20 commits per GitHub's compare view on 2026-08-14 |
+| Built binaries published | Yes — git tags `firefox-21` … `firefox-34` in the clone; `firefox-34` (2026-09-21) is the tag the wrapper's seal pins. Per-platform archives (Windows x86_64 `.zip`, Linux x86_64 and arm64 `.tar.gz`) plus a `checksums.txt` generated by the release workflow (`.github/workflows/release.yml:523-528`). macOS legs were removed from the release pipeline on 2026-08-26 (`eed9abeffe`) |
 
 ### Three caveats that matter more than the headline
 
-**1. The default branch shows none of it.** `main` is 5 commits ahead of upstream and
-changes **2 files** — README and CI only. A reviewer who checks the repository's default
-branch for patches concludes there are none. The wrapper repositories reinforce this:
-`invisible_playwright` contains **zero** `.cc`/`.cpp`/`.h` files, **zero** `.patch`
-files, and no `patches/` directory. Nothing in the packages a user installs points at
-the branch where the engine work lives.
+**1. The default branch shows none of the engine work.** `main` is 10 commits after the
+last mozilla-central merge in the clone (`0a95d145f7`) and changes **5 files** —
+`README.md` and four CI workflows (`mac-font-probe.yml`, `republish.yml`,
+`verify-assets.yml`, `verify-cloak.yml`). On 2026-08-14 it was 5 commits and 2 files. The
+`main` README does say that `stealth/151` "is the source of truth" (`README.md:18-20`),
+alongside a stale "Current release: firefox-18". The wrapper repositories contain **zero**
+`.cc`/`.cpp`/`.h` files, **zero** `.patch` files, and no `patches/` directory
+(`git ls-files` over `invisible_playwright` and `invisible_core` at the pinned commits).
+The wrapper README links to the repository `feder-cr/firefox_antidetect_patch`, not to a
+branch.
 
-**2. GitHub cannot render the current diff.** Comparing `last-mozilla-central...stealth/151`
-returns HTTP 422, *"Sorry, this diff is taking too long to generate."* The 150-line pair
-works because it is smaller. Auditing the shipping line requires a local clone of a
-multi-gigabyte tree.
+**2. GitHub could not render the shipping diff.** Comparing
+`last-mozilla-central...stealth/151` returned HTTP 422, *"Sorry, this diff is taking too
+long to generate."* (observed 2026-08-14; not re-queried). The 150-line pair works because
+it is smaller. Auditing the shipping line requires a local clone of a multi-gigabyte
+tree. Between `d5457fa` and `fec80c8` the tree changed in 116 files; the sandbox clone is
+shallow and shows at least 41 commits in that span (its history for the branch begins on
+2026-08-23).
 
-**3. The patch series exists but is not public.** The branch carries a
-`STEALTH_BRANCH_README.md` documenting the workflow, and it is explicit that a numbered
-series (`0001-build-infra.patch` … `0015-storage-quota.patch`) was maintained in a
-separate repository, regenerated with:
+**3. The titled patch series is not public.** The branch carries a
+`STEALTH_BRANCH_README.md` (byte-identical at `d5457fa` and `fec80c8`, and still written
+for `stealth/150`). It says that a companion repository, `feder-cr/firefox-stealth`, held a
+numbered series (`0001-build-infra.patch` … `0015-storage-quota.patch`), that the series
+was consolidated into the branch as commits, and (line 66) how to regenerate one:
 
 ```bash
 git format-patch stealth-base/v150.0.1..stealth/150 -o ../firefox-stealth/
 ```
 
-That repository — `feder-cr/firefox-stealth` — **returns HTTP 404**. So the readable,
-titled series referenced by the project's own documentation is not publicly available;
-only the forked tree and the base/head tag pair are. You can regenerate an equivalent
-series yourself with the command above once you have cloned the fork, which is more than
-[CloakBrowser](./cloakbrowser.md) offers, but less than [Camoufox](./camoufox.md)
-(34 `.patch` files) or [Clearcote](./clearcote.md) (32 in `patches/series`), where the
-diffs can be read in an afternoon without cloning anything.
+That repository — `feder-cr/firefox-stealth` — **returns HTTP 404** (2026-08-14, and
+again at this revision), as does `feder-cr/invisible_firefox`, the repository named in the
+file's clone instructions (line 39; checked 2026-09-30). So the readable, titled series
+referenced by the project's own documentation is not publicly available; only the forked
+tree and the base/head tag pair are. You can regenerate an equivalent series yourself with
+the command above once you have cloned the fork, which is more than
+[CloakBrowser](./cloakbrowser.md) offers, but less than [Camoufox](./camoufox.md) (44
+`.patch` files in `patches/`) or [Clearcote](./clearcote.md) (37 in `patches/series`), where
+the diffs can be read in an afternoon without cloning anything.
 
 **Net:** *auditable in principle, considerably harder in practice.* That is a real
 distinction from [CloakBrowser](./cloakbrowser.md), whose engine source is not published
@@ -84,93 +95,130 @@ at all — but it is not equivalent to a readable patch series.
 ## Launch telemetry
 
 **The patched browser issues one HTTPS GET to GitHub every time the process starts.**
-Verified in source, not inferred:
+Verified in source, not inferred. The address is now a preference rather than a literal
+(it was a literal at `d5457fa`):
 
 ```javascript
-// browser/components/BrowserGlue.sys.mjs:392-408  (branch stealth/151)
+// browser/components/BrowserGlue.sys.mjs:387-423  (branch stealth/151 @ fec80c8; comments abridged)
 // Gate via pref `invisible_firefox.usage_ping.enabled` (default true).
 // To permanently disable, remove this block and rebuild from source.
 // Full disclosure: "Anonymous launch counter" in this repo's README.
 try {
   if (Services.prefs.getBoolPref("invisible_firefox.usage_ping.enabled", true)) {
-    fetch("https://github.com/feder-cr/invisible_firefox/releases/download/usage-counter/launch.txt",
-          { method: "GET", credentials: "omit", cache: "no-store" })
+    const usagePingUrl = Services.prefs.getStringPref(
+      "invisible_firefox.usage_ping.url",
+      "https://github.com/feder-cr/invisible_playwright/releases/download/usage-counter/launch.txt");
+    fetch(usagePingUrl, { method: "GET", credentials: "omit", cache: "no-store" })
       .catch(() => {});
   }
 } catch (e) {}
 ```
 
 ```javascript
-// browser/app/profile/firefox.js:3618
+// browser/app/profile/firefox.js:3683 and :3689
 pref("invisible_firefox.usage_ping.enabled", true);
+pref("invisible_firefox.usage_ping.url", "https://github.com/feder-cr/firefox_antidetect_patch/releases/download/usage-counter/launch.txt");
 ```
 
-The asset's GitHub `download_count` is used as a global launch counter for a badge.
+```python
+# invisible_core  src/invisible_core/prefs.py:360-361 and :2076  (@ 0f4a30c), applied to every session
+USAGE_PING_URL = ("https://github.com/feder-cr/firefox_antidetect_patch"
+                  "/releases/download/usage-counter/launch.txt")
+prefs.setdefault("invisible_firefox.usage_ping.url", USAGE_PING_URL)
+```
+
+The asset's GitHub `download_count` is used as a global launch counter for a badge
+(rendered at `README.md:305` of the wrapper).
+
+**What changed since 2026-08-14.** At `d5457fa` the address was a literal,
+`https://github.com/feder-cr/invisible_firefox/releases/download/usage-counter/launch.txt`
+(`BrowserGlue.sys.mjs:404`). The comment now in the block (`:396-408`) records that the
+counter "has died twice" because the address was a repository name compiled into every
+binary: a repository name was reused on 2026-07-22, and the hosting repository was
+deleted on 2026-08-18. The `invisible_firefox` repository returns HTTP 404 (checked
+2026-09-30). The pref was introduced with `firefox-21`; engines older than that do not
+read it (`invisible_core/prefs.py:2072-2073`). The check is still present, still on by
+default, and still gated by `invisible_firefox.usage_ping.enabled`.
 
 ### Assessment
 
 | Property | Finding |
 |---|---|
-| **Enabled by default** | Yes — `pref(..., true)` |
+| **Enabled by default** | Yes — `pref(..., true)` (`firefox.js:3683`). Neither `invisible_playwright` nor `invisible_core` sets `invisible_firefox.usage_ping.enabled`; the only assignment of it in either tree is a test (`invisible_core/tests/test_usage_ping_address.py:49-50`) |
 | **What is transmitted** | An HTTP GET with a standard Firefox User-Agent. `credentials: "omit"` (no cookies), `cache: "no-store"`, no payload, no identifier, no query string |
-| **When** | At `final-ui-startup`, before any tab exists |
-| **Failure behaviour** | Fire-and-forget; `.catch(() => {})`, wrapped in `try/catch`. The browser never blocks on it |
-| **Does it respect the proxy?** | **Yes.** It is a privileged `fetch()` through Firefox's own network stack, so it follows the `network.proxy.*` prefs `invisible_core` sets. `prefs.py` also sets `network.proxy.failover_direct = False` and `socks_remote_dns = True`, so there is no direct-connection fallback and no DNS leak if the proxy is down |
-| **Opt-out** | `invisible_firefox.usage_ping.enabled = false` via `about:config` or `extra_prefs={...}` at launch; permanently by removing the block and rebuilding |
-| **Disclosed** | Yes — a dedicated "Anonymous launch counter" section in the engine repo's README, plus comments at both source sites |
+| **Where it goes** | The URL in pref `invisible_firefox.usage_ping.url`. The engine default (`firefox.js:3689`) and the value the core declares for every session (`prefs.py:360-361`) are the same address on `firefox_antidetect_patch`; the literal fallback if the pref is absent points at `invisible_playwright` (`BrowserGlue.sys.mjs:419`) |
+| **When** | At `final-ui-startup`, before any tab exists: `_beforeUIStartup` (`BrowserGlue.sys.mjs:386`) is called from the `final-ui-startup` case (`:194-195`) |
+| **Failure behaviour** | Fire-and-forget; `.catch(() => {})`, wrapped in `try/catch` (`:415-423`). The browser never blocks on it |
+| **Does it respect the proxy?** | **Not established, and the source ordering points the other way.** The previous revision of this page said "Yes" on the basis of `network.proxy.*` prefs; that no longer describes the code. Session proxies are no longer written to `network.proxy.*` for any scheme (`invisible_core/_proxy.py:145-150`). The wrapper instead sends the engine command `Browser.setBrowserProxy` over the Juggler pipe after the browser starts (`_juggler/server.py:3460-3462`), and the engine applies it through a channel filter created in Juggler's own `final-ui-startup` handler (engine files `juggler/components/Juggler.js:92-96`, `juggler/NetworkObserver.js:625-653`, `juggler/TargetRegistry.js:397-411`). The ping `fetch()` is issued from the same notification (`BrowserGlue.sys.mjs:420`), before any command can arrive over that pipe. `prefs.py:447-449` still sets `socks_remote_dns` and `socks5_remote_dns` to `True` and `failover_direct` to `False`. Whether the request leaves through the session proxy was not run — **Tier D** |
+| **Opt-out** | `invisible_firefox.usage_ping.enabled = false` via `about:config` or `InvisiblePlaywright(extra_prefs={...})` (`launcher.py:106`); permanently by removing the block and rebuilding |
+| **Disclosed** | Engine repository: an "Anonymous launch counter" section in its README (`README.md:43-77`, which still names `feder-cr/invisible_firefox` as the host at `:46` and `:54`), plus comments at both source sites. Wrapper: `CHANGELOG.md:739-751` (0.12.2, 2026-09-05) and a badge image (`README.md:305`). The comment at `firefox.js:3682` points to the README of `invisible_playwright` as the full disclosure |
 
 > [!WARNING]
-> **The disclosure is absent from the package most users install.** Searching the entire
-> `invisible_playwright` repository — README, docs, source, tests — for `usage_ping`,
-> `launch counter`, `launch.txt`, or `usage-counter` returns **0 matches**. A developer
-> who runs `pip install invisible-playwright` and reads its documentation will not learn
-> that their browser contacts GitHub on every launch. The disclosure lives in a
-> different repository that most users have no reason to open.
+> **The wrapper's README does not disclose it.** Searching the `invisible_playwright`
+> repository at `3218090` for `usage_ping`, `launch counter`, `launch.txt` or
+> `usage-counter` returns matches only in `CHANGELOG.md` (lines 739-745, the 0.12.2 entry)
+> and in a maintainer script (`scripts/sync_article_pixels.py:11`). `README.md` and
+> `docs/` return none, and `README.md:305` shows only a "browser launches" badge image.
+> `CHANGELOG.md` is linked from the project URLs (`pyproject.toml:189`) but is not among the
+> files the sdist includes (`pyproject.toml:202`). The 2026-08-14 revision of this page
+> reported 0 matches in the whole repository; at `f777798` the README already carried a
+> badge link whose URL contained `usage-counter`, with no explanation. A user who installs
+> the package and reads its README is not told that the browser contacts GitHub on every
+> launch.
 
-**Is this "bad stuff"?** No. It is a counter, not surveillance: no identifier, no
-payload, no cookies, disclosed in plain language at the engine repo, gated behind a
-documented pref, and routed through the same proxy as everything else. The honest
-criticism is placement, not intent — the disclosure belongs in the README of the package
-being installed, and the ping arguably should be opt-in for a tool whose entire purpose
-is not being seen. Anyone running this against a target that also observes GitHub
-traffic should turn it off.
+**What the ping is and is not.** It is a counter, not a profile: no identifier, no
+payload, no cookies, a documented pref gates it, and the engine repository documents it.
+The open points are where the disclosure sits (engine README and wrapper changelog, not
+the wrapper README), the default state (on), and the proxy behaviour above. If the ping
+precedes the session proxy, as the source ordering suggests, the request to `github.com`
+would not use it; the pref removes the request.
 
 ---
 
 ## What the patches actually change
 
-Areas touched by the 104-file `stealth-base → stealth-head` diff, grouped by tree
-location. This maps cleanly onto the [detection-layer taxonomy](README.md#detection-layers-and-which-tools-address-them):
+Areas touched by the 104-file `stealth-base → stealth-head` diff (the `stealth/150` tag
+pair, re-derived 2026-09-30), grouped by tree location. This maps cleanly onto the
+[detection-layer taxonomy](README.md#detection-layers-and-which-tools-address-them):
 
 | Area | Files | Layer |
 |------|------:|-------|
 | `juggler/**` (screencast, content, protocol, pipe, components) | 41 | automation protocol — Playwright's Firefox transport |
 | `netwerk/**` (socket, http, base) | 9 | 4 — network |
 | `gfx/thebes` | 6 | 2 — fonts, graphics |
-| `dom/media/webrtc/transport` + `nICEr/src/ice` | 6 | 4 — WebRTC IP |
+| `dom/media/webrtc/transport` (incl. `nICEr/src/ice`) | 7 | 4 — WebRTC IP |
 | `dom/base` | 5 | 2 — navigator surfaces |
 | `dom/media/webaudio` | 4 | 2 — audio fingerprint |
 | `js/src/vm`, `js/src/debugger` | 4 | 1 — JS engine / debugger tells |
 | `dom/media/webspeech/synth` | 2 | 2 — speech voices |
 | `modules/libpref/init` | 2 | defaults (includes the usage-ping pref) |
 
+The shipping branch has moved since that pair was cut: between `d5457fa` and `fec80c8`
+`stealth/151` changed in 116 files (at least 41 commits are visible in the shallow clone).
+By commit subject and diff, those changes include a
+rework of the screencast and hidden-window capture, a visible-pointer overlay
+(`juggler/StealthCursor.js`), a bundled font set with a generated metrics manifest
+(`browser/fonts/`, `gfx/thebes/StealthBundleFontList.cpp`), removal of the updater from the
+build, a fix for authenticated HTTP proxies going out direct, and the removal of macOS from
+the release pipeline. The tables and snippets below describe the tag pair unless a
+`fec80c8` line says otherwise.
+
 > [!NOTE]
-> **The Juggler files do not contradict "stock Playwright".** Playwright drives Firefox
-> over Juggler, which is not part of upstream Firefox — any Firefox intended to be driven
-> by Playwright must carry it. What is unmodified here is the **Playwright client**
-> (`pip install playwright`), not Juggler. [Camoufox](./camoufox.md) makes the same
-> trade differently: it patches Juggler *and* ships its own launcher.
+> **The Juggler files are the part of the engine a Playwright-style client needs.**
+> Playwright drives Firefox over Juggler, which is not part of upstream Firefox — any
+> Firefox intended to be driven this way must carry it. That is separate from the *client*
+> side, which is no longer a stock `playwright` package: see
+> [The client](#the-client-vendored-playwright-and-an-in-process-juggler-server).
+> [Camoufox](./camoufox.md) makes a different trade: it patches Juggler *and* ships its
+> own launcher.
 
-This is a coherent anti-detect patch set with no components that look out of place for
-the stated purpose.
+### What the code level shows
 
-### Is it substantive, or superficial pref-flipping?
+The diff is **+14,279 / −59 lines**. Read at the code level, three things stand out:
 
-**Substantive.** The diff is **+14,279 / −59 lines**. Read at the code level, three
-things establish that this is real engine work rather than configuration:
-
-**1. A C++ fingerprint surface driven by static prefs.** `StaticPrefList.yaml` adds 20+
-`zoom.stealth.*` entries, read inside the engine:
+**1. A C++ fingerprint surface driven by static prefs.** At `stealth-head/v150.0.1`,
+`StaticPrefList.yaml` adds 24 `zoom.stealth.*` entries (44 at `fec80c8`), read inside the
+engine:
 
 ```
 zoom.stealth.fpp.hw_seed            zoom.stealth.webgl.renderer
@@ -183,14 +231,23 @@ zoom.stealth.voices.list            zoom.stealth.canvas.noise_skip_mask
 zoom.stealth.timezone               zoom.stealth.canvas.substitute_pixels
 ```
 
+At `fec80c8` this list differs. Four tag-head entries are gone (`font.metrics`,
+`font.whitelist`, `timezone`, `webrtc.public_ip`; a comment at `StaticPrefList.yaml:20752`
+says nothing read `timezone`, and it was removed 2026-08-09), and 24 were added, among them
+fonts (`font.fontlist`, `fonts.manifest`, `text.coverage_ladder`), screen and window
+geometry (`screen.chrome_w`, `chrome_h`, `taskbar_px`, `window_x`, `window_y`,
+`color_depth`), pointer and touch (`pointer.primary`, `pointer.all`, `max_touch_points`),
+media (`media.decode_support`, `media.decoding_info`), `audio.fp_noise`,
+`http.accept_language`, `dns.no_local_resolution` and `webrtc.no_direct_udp`.
+
 Architecturally this is the same pattern as Camoufox's `MaskConfig`: one seeded config
 consumed by C++ getters, so there is no JS wrapper to inspect. (The `zoom.` prefix is
 reuse of an existing pref branch that already had `mirror:always` plumbing to reach all
 processes — pragmatic, but it does mean the namespace reads oddly.)
 
 **2. Canvas noise written against specific detector internals.** From
-`CanvasRenderingContext2D.cpp`, applied to the pixel buffer *before* `toDataURL` /
-`getImageData` return:
+`CanvasRenderingContext2D.cpp` (`:2264-2338` at `fec80c8`; `:2261-2312` at the tag head),
+applied to the pixel buffer *before* `toDataURL` / `getImageData` return:
 
 - Skips canvases below 64×64 — reCAPTCHA probe canvases and favicon-sized assets — "to
   avoid altering signals reCAPTCHA uses for behavioural coherence".
@@ -199,25 +256,70 @@ processes — pragmatic, but it does mean the namespace reads oddly.)
   CreepJS draws, clears, then re-reads; if cleared pixels are not 0 it sets `lied=true`.
 - ±1 on a single channel for ~12.5% of pixels, via a configurable skip mask; the comment
   notes Intel HD profiles use ~6.25% "to stay below FP Pro's `tampering_ml` threshold".
-- Seed → Fibonacci hash mixed with pixel index, so it is deterministic per seed.
+- Seed → multiplicative (Fibonacci-style) hash mixed with pixel index, so it is
+  deterministic per seed.
 
-Knowing that CreepJS flags non-zero cleared pixels, and tuning noise density against a
-named detector's ML threshold, is not something a superficial patch set contains.
+The comments name CreepJS's `clearRect` check and FP Pro's `tampering_ml` as the detector
+behaviour the density was tuned against. At `fec80c8` the file also has a substitution mode
+(`zoom.stealth.canvas.substitute_pixels`) and a skip for privileged readbacks
+(`:2345-2352`), and comments in the substitution path (`:2389-2407`) say that the actual
+FP Pro `tampering_ml` driver was `OfflineAudioContext` noise (`zoom.stealth.audio.fp_noise`)
+and that the earlier small-canvas hypothesis was a red herring.
 
-**3. A full SOCKS5 UDP ASSOCIATE implementation.** `nsSOCKSUDPIOLayer.cpp` (+423) adds
-greeting, optional user/password auth, UDP associate, relay addressing and logging —
-alongside +2,037 lines in nICEr's `ice_component.c`. Firefox does not proxy WebRTC UDP
-natively; this is what lets media traffic traverse a SOCKS proxy instead of revealing
-the host address. It is the single largest and hardest piece of work in the diff, and it
-targets the leak channel that defeats most proxy setups.
+**3. A SOCKS5 UDP ASSOCIATE implementation in the network stack — present, and gated
+off by default.** `nsSOCKSUDPIOLayer.cpp` (+423 lines against upstream, the same at the tag
+head and at `fec80c8`) adds greeting, optional user/password auth, UDP associate, relay
+addressing and logging. At the tag pair the diff also adds `nICEr/src/ice/ice_component.c`
+(2,037 lines; the upstream `150.0.1` tree has `ice_component.cpp`, 1,821 lines, and no
+`.c`) and +127 lines in `ice_component.cpp`; at `fec80c8` `ice_component.c` is absent and
+`ice_component.cpp` is 371 lines larger than the `150.0.1` tree (ignoring line endings).
+Firefox does not proxy WebRTC UDP natively, and this layer is what would let media traffic
+traverse a SOCKS proxy. It is only hooked in when the pref `network.proxy.socks_remote_udp`
+is true (`netwerk/base/nsUDPSocket.cpp:614-624`, default `false`), and `invisible_core` does
+not set it: `_proxy.py:278-290` records `UDP_GOES_THROUGH_SOCKS = False` ("UDP goes around
+the proxy" without it). Behind a proxy the core sets `zoom.stealth.webrtc.no_direct_udp`
+(`_proxy.py:271`) and the engine synthesises a server-reflexive candidate from the exit IP
+(`ice_component.cpp`, `nr_stealth_bridge.cpp`). The previous revision of this page
+described the UDP layer as what carries WebRTC media through a SOCKS proxy; the code
+shows it is available but not enabled by the wrapper or core.
 
-Font handling shows similar care: `zoom.stealth.font.metrics` accepts either a
-multiplicative factor or an absolute px target, with the arithmetic done in C++ so one
-pref value behaves identically on a Linux host presenting a Windows persona.
+Font handling at the tag pair shows similar care: `zoom.stealth.font.metrics` accepts either
+a multiplicative factor or an absolute px target (`gfx/thebes/gfxTextRun.cpp:43-65`), with
+the arithmetic done in C++ so one pref value behaves identically on a Linux host presenting
+a Windows persona. At `fec80c8` that pref is absent and fonts come from a bundled set:
+`browser/fonts/` (128 files) with a generated manifest, `bundle-fonts.list`, carrying
+per-face vertical metrics (`gfx/thebes/StealthBundleFontList.cpp`).
 
-**Assessment:** comparable in ambition and detector-awareness to Camoufox. The claim
-"the fingerprint is produced by the engine instead of injected into the page" is
-supported by the code.
+**Architecture:** the same seeded-config-in-C++ pattern as Camoufox. The claim "the
+fingerprint is produced by the engine instead of injected into the page" is consistent
+with the code; the wrapper additionally runs a page-side script (`_juggler/injected.js`)
+in Firefox's utility world for selectors and actionability, and generates pointer motion in
+Python (see below).
+
+---
+
+## The client: vendored Playwright and an in-process Juggler server
+
+The first revision of this page described the client as an unmodified `playwright`
+package. That was accurate at wrapper `0.7.0` (`playwright>=1.55,<=1.61.0` was a
+dependency) and is not accurate at `0.25.7`.
+
+| Property | Finding | Tier |
+|---|---|:--:|
+| Dependencies | `invisible_core==34.31.0`, `psutil>=5.9`, `pyee>=13,<14`, `greenlet>=3.1.1,<4.0.0`. **`playwright` is not a runtime dependency** (`pyproject.toml:46-117`; the comment at `:73-78` says reintroducing it would not visibly break anything); it appears only in the `dev` extra, pinned `playwright==1.61.0` (`:120`) | **A** |
+| What is vendored | Playwright's Python client as `invisible_playwright._pw` (68 files), Apache-2.0 (`_pw/LICENSE`). `THIRD_PARTY_FORK.md:14` gives the version as 1.61.1; `_pw/_repo_version.py` and `_pw/README.md` say 1.61.0. Added in wrapper `0.7.3` (2026-08-26; `CHANGELOG.md:1084-1090`). Imports are rewritten to the `invisible_playwright._pw` namespace so it does not collide with an installed `playwright` (`THIRD_PARTY_FORK.md:16-18`). `pyproject.toml:30` declares `MIT AND Apache-2.0` | **A** |
+| What was changed in it | Files carrying a `MODIFIED by invisible_playwright` marker: `_pw/_impl/_connection.py:485`, `_pw/_impl/_playwright.py:44` (chromium and webkit refused), `_pw/{sync,async}_api/_context_manager.py` (transport selection and a bridge to the in-process server), `_pw/{sync,async}_api/_generated.py` (chromium/webkit accessors raise). The `0.7.3` changelog entry lists four changes over upstream 1.61.1: `set_content` waits for load, ~643 KB of unused subsystems removed (android, electron, bidi, recorder, chromium, webkit), `_exposeConsoleApi` neutralised, `console.debug` dropped from injected code | **A** |
+| Node driver | **Removed.** `_driver/` (6 MB of JavaScript) and the 92 MB `node.exe` download are gone (`CHANGELOG.md:1002-1010`, `0.8.0`, 2026-08-30; `THIRD_PARTY_FORK.md:20` dates it 2026-08-28). A first install downloads the browser only | **A** |
+| What replaces it | `_juggler/`: a Python implementation of the Playwright protocol backed by Juggler — `server.py` (3,552 lines), `actions.py`, `protocol.py` (generated from the `Protocol.js` inside the shipped binary), `connection.py` (JSON delimited by a zero byte; fd 3/4 on POSIX, inheritable handles on Windows), `injected.py`, and `injected.js` (8,119 lines, extracted from Playwright's injected script, with four marked changes at `:6489`, `:6674`, `:7417`, `:7695`) loaded into Firefox's utility world | **A** |
+| Out of scope (refused by name) | Tracing, HAR, video annotations, the recorder, `APIRequestContext`, CDP sessions, clock, WebAuthn, PDF (`_juggler/perimeter.py`); a few operations refuse for lack of an engine command (`setOffline`, `setWebSocketInterceptionPatterns`). The README lists the same area as "tracing, HAR, CDP, the API request context" (`README.md:43`) | **A** |
+| Pointer motion | `humanize=True` is the default (`launcher.py:103`). `_cursor.py` wraps the funnel behind `click`/`hover`/`dblclick`/`tap`/`check` and `mouse.move`, and `_motion.py` plans the path in Python from the session seed, so the browser no longer expands the motion. `show_cursor` draws an overlay in the browser's chrome window. `prep_recaptcha=True` (opt-in; ignored when `profile_dir` is used, `launcher.py:218`) seeds cookies derived from the persona seed (`_recaptcha_seed.py`) | **A** |
+| Version coupling | `_engine.assert_playwright_range()` (`_engine.py:71`) compares the **vendored** client's version with the range carried in the seal (`seal.json`: 1.55.0 – 1.61.0) | **A** |
+
+The wrapper's README still says the returned object "is a `playwright.sync_api.Browser`"
+(`README.md:75`); `launcher.py:9` imports `Browser` from `invisible_playwright._pw.sync_api`,
+the vendored copy. `_fpforge/` and `_webgl_personas.py` inside the wrapper are 17- and 4-line
+shims that alias the same modules in `invisible_core`, where the fingerprint sampler and the
+GPU persona pool live.
 
 ---
 
@@ -225,81 +327,90 @@ supported by the code.
 
 | Property | Finding | Tier |
 |---|---|:--:|
-| Binary origin | `https://github.com/feder-cr/firefox_antidetect_patch/releases/download/{tag}/{asset}` — same org as the source, public | **A** |
-| Checksums published | `checksums.txt` in every release | **A** |
-| Checksums verified in code | **Yes** — `download.py` uses `hashlib`, `_sha256_file`, `_parse_checksums`, `verify_engine` | **A** |
-| Cached binaries re-verified | **Yes** — verification runs against already-cached engines, not just fresh downloads | **A** |
-| Dependency pinning | `invisible-core==19.14.0`, an exact `==` specifier rather than a git direct reference, with an import-time assertion in `_pin.py` | **A** |
-| Dangerous constructs | **None found**: no `eval`/`exec`, no `pickle.load`, no `shell=True`, no `verify=False` in either package | **A** |
+| Binary origin | `https://github.com/feder-cr/firefox_antidetect_patch/releases/download/{tag}/{asset}` (`invisible_core/constants.py:115-117`) — same org as the source, public. The same host also served the profile manager until its deletion on 2026-08-18 (`constants.py:110-114`); releases below `firefox-14` were removed (`download.py:114-120`). The pinned tag is `firefox-34` (`seal.json`) | **A** |
+| Checksums published | `checksums.txt` generated by the release workflow (`firefox_antidetect_patch/.github/workflows/release.yml:523-528` @ `fec80c8`) | **A** |
+| Checksums verified in code | **Yes — against the seal rather than the release file.** The archive's SHA-256 (`_sha256_file`, `download.py:398`) is compared with the per-asset digest in `seal.json`, which ships inside the `invisible-core` wheel (`download.py:626-631`). `_parse_checksums` (`download.py:406`) is defined and has no caller | **A** |
+| Cached binaries re-checked | **Partly.** Each launch path runs `verify_engine` (`seal.py:603`; on a cache hit at `download.py:605-606`). It compares `application.ini` and `platform.ini` Version and BuildID with the sealed leg and requires the stealth markers in the Juggler entries (`seal.py:564-600`): an identity check, not a re-hash of the tree. The one content hash on the reuse path is `omni.ja` on Windows (`download.py:459-465`); the code prints that a Linux leg has no sealed payload digest (`download.py:466-472`) | **A** |
+| Dependency pinning | `invisible_core==34.31.0`, an exact `==` specifier rather than a git direct reference (`pyproject.toml:72`), with an import-time assertion in `_pin.py`. The literal moves on every engine release (`pyproject.toml:61-63`) | **A** |
+| Dangerous constructs | **None found** in either package's Python source, including the vendored `_pw/`: no `eval`/`exec`, no `pickle.load`, no `shell=True`, no `verify=False`. The page-side `_juggler/injected.js` calls `eval` at `:6521`, `:6668`, `:6697` and `:6987` as part of Playwright's expression evaluation | **A** |
 
-Re-verifying cached engines is better practice than most tools here — it catches a
-tampered cache, not just a tampered download. The pinning rationale is documented at
-length in `pyproject.toml`: they moved off a git direct reference specifically because
-`pip check` cannot detect a violated direct reference and reports success.
+The pinning rationale is documented at length in `pyproject.toml` (`:51-71`): the
+maintainers moved off a git direct reference because `pip check` cannot detect a violated
+direct reference and reports success.
 
 ---
 
 ## Other network activity
 
-Every external host referenced in the two installed packages:
+Every external host referenced in the two installed packages (Python and JSON source; the
+wrapper references none, the core's are below). The browser's own launch request is
+covered under [Launch telemetry](#launch-telemetry):
 
 | Host | Purpose | Trigger |
 |------|---------|---------|
-| `github.com` | engine binary download | first run / version change |
-| `api.github.com` | release lookup | download path |
-| `api.ipify.org`, `icanhazip.com`, `checkip.amazonaws.com` | public-IP echo for `timezone="auto"` geo resolution; routed through the proxy when one is set | only when timezone auto-resolution is used |
-| `pypi.org` | version checks in maintainer tooling | not the runtime path |
+| `github.com` | engine binary download from `firefox_antidetect_patch` releases (`constants.py:115-117`); GeoIP database from `daijro/geoip-all-in-one` (`constants.py:133-134`, `_geoip_db.py:57`) | engine: first run / version change; GeoIP: when timezone or locale resolution is used |
+| `api.github.com` | release lookup when `STEALTHFOX_GITHUB_TOKEN` or `GITHUB_TOKEN` is set (`download.py:42-45`, `:99`); latest-tag fallback for the GeoIP database (`_geoip_db.py:69`) | download path |
+| `api.ipify.org`, `icanhazip.com`, `checkip.amazonaws.com` (`_geo.py:51-53`) | public-IP echo for timezone and locale resolution; routed through the proxy when one is set, from the host's own address otherwise | **default launch**: `timezone=""` and `locale="auto"` both resolve from the egress IP (`launcher.py:104-105`) |
+| `api.ipify.org` over plain HTTP, through the proxy (`_capability.py:112`) | exit-capability probe | only reached if `UDP_GOES_THROUGH_SOCKS` is true (`_geo.py:796-800`); it is `False` (`_proxy.py:290`) |
+| `pypi.org` (`release.py:107`) | version checks in maintainer tooling | not the runtime path |
 
-A fourth package, [`invisible_firefox`](https://github.com/feder-cr/invisible_firefox)
-(a desktop profile manager), integrates the commercial proxy provider `api.sx.org` using
-a key the user supplies. **It is not a dependency of `invisible_playwright`** — that
-package requires only `invisible-core` and `playwright` — so it is not in the install
-path being reviewed here.
+`nodejs.org`, previously the source of the Node runtime, is no longer referenced: the
+Node driver was removed in `0.8.0`.
+
+The repository [`feder-cr/invisible_firefox`](https://github.com/feder-cr/invisible_firefox)
+(a desktop profile manager that, in the last copy read, `602f70f` of 2026-08-14,
+integrated the commercial proxy provider `api.sx.org` with a user-supplied key) **returns
+HTTP 404** as of 2026-09-30. The wrapper's `pyproject.toml:61-63` and the core's
+`constants.py:112-113` state that it was deleted on 2026-08-18. It was never a dependency
+of `invisible_playwright`, which now requires only `invisible-core`, `psutil`, `pyee` and
+`greenlet`; the current wrapper and core trees contain no URL of it except a changelog line
+recording the rename (`CHANGELOG.md:1360`).
 
 ---
 
 ## Code quality
 
-Production code only; tests and vendored trees excluded. Method and comparison against
-the other tools: [CODE-REVIEW.md](CODE-REVIEW.md).
+Production code only; tests and vendored trees excluded (here the vendored Playwright
+client `_pw/` and the bundled `_juggler/injected.js`). Method and comparison against the
+other tools: [CODE-REVIEW.md](CODE-REVIEW.md).
 
 | Metric | `invisible_playwright` | `invisible_core` |
 |---|---:|---:|
-| Production LOC | 6,744 | 10,536 |
-| Test files | 48 | 40 |
-| Bare `except:` | 2 | 0 |
-| Broad `except` | 36 (5.3/kLOC) | 37 (3.5/kLOC) |
-| `print(` | 394 | 156 |
-| `time.sleep` | 33 | 3 |
+| Production LOC | 21,406 | 14,214 |
+| Test files | 98 | 55 |
+| Bare `except:` | 1 | 0 |
+| Broad `except` | 64 (3.0/kLOC) | 40 (2.8/kLOC) |
+| `print(` | 622 | 203 |
+| `time.sleep` | 56 | 3 |
 | TODO/FIXME | 0 | 0 |
 | `shell=True` / `eval` / `pickle` / `verify=False` | 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 |
 
-Notable: **88 test files across two small packages** is a high ratio — comparable to
-Scrapling's discipline and far above Botasaurus's driver (zero). Broad-exception density
-(~5.3/kLOC in the wrapper) is on the higher end, similar to SeleniumBase and Clearcote.
-The comment style is unusually discursive: `pyproject.toml` carries ~25 lines explaining
-one version pin, and commit subjects read as prose rather than conventional-commit
-prefixes.
+For scale: the vendored `_pw/` is 68 files and 61,836 Python lines (two 23,000-line
+generated API files among them), and `_juggler/injected.js` is 8,119 lines. The wrapper has
+9 CI workflows and the core 3. The comment style is discursive: `pyproject.toml` carries
+about 25 lines explaining one version pin (`:47-71`) and commit subjects read as prose
+rather than conventional-commit prefixes.
 
 ---
 
 ## Claims versus source
 
 The submission stated *"I would rather give you what is measured than what is claimed."*
-That holds up better than most:
+Against the source at the commits above:
 
 | Claim | Status |
 |---|---|
-| Firefox patched in C++ and rebuilt | **Verified (A)** — 104 files across `gfx`, `dom`, `netwerk`, `js/src` |
-| Fingerprint set in the engine, no JS shims on the page | **Consistent with the diff (A)** — changes are in C++ engine paths, not content scripts |
-| Driven by stock Playwright | **Verified (A)** — wrapper depends on unmodified `playwright`; Juggler lives in the browser, as it must |
+| Firefox patched in C++ and rebuilt | **Verified (A)** — 104 files across `gfx`, `dom`, `netwerk`, `js/src` at the `stealth/150` tag pair; `stealth/151` has changed 116 further files since `d5457fa` |
+| Fingerprint set in the engine, no JS shims on the page | **Consistent with the diff (A)** — changes are in C++ engine paths, not content scripts. The wrapper also runs a page-side script, `_juggler/injected.js`, in the utility world for selectors and actionability, with four marked changes |
+| Driven by stock Playwright | **No longer accurate (A)** — true of `0.7.0`; at `0.25.7` the wrapper ships a modified vendored client (`_pw/`), no longer depends on `playwright`, and drives Firefox through a Python Juggler server ([The client](#the-client-vendored-playwright-and-an-in-process-juggler-server)). Juggler itself lives in the browser, as it must |
+| "Playwright's API, sync and async, with no code changes" (`README.md:43`) | **API-compatible with named exclusions (A)** — tracing, HAR, CDP, `APIRequestContext` and others refuse by name (`_juggler/perimeter.py`); the returned classes are the vendored copy's, not those of an installed `playwright` |
 | Same seed reproduces the same machine | **Not verified (D)** — no run was performed |
-| Test harness is public and reproducible | **Verified present (A)** — 48 test files, 9 CI workflows, all six named detectors plus reCAPTCHA referenced throughout |
-| Detector-suite results in the README | **Tier B** — author-run, not reproduced here |
-| Anti-bot service coverage | **Not claimed** — the project makes no Cloudflare/DataDome/Kasada assertions |
+| Test harness is public and reproducible | **Verified present (A)** — 98 test files (per `scripts/codemetrics.py`), 9 CI workflows; CreepJS, BotD, FingerprintJS, fpscanner, Sannysoft, BrowserLeaks and reCAPTCHA are each referenced under `tests/` (1 to 7 files each), with offline copies of BotD, CreepJS, FingerprintJS and fpscanner in `tests/vendor/` |
+| Detector-suite results in the README | **Tier B** — author-run, not reproduced here (e.g. the "5/5 detection suites passed" image, `README.md:10`) |
+| Anti-bot service coverage | **Not claimed as pass rates** — the README names reCAPTCHA, hCaptcha and Cloudflare Turnstile as scorers and links explainer articles per vendor, with no pass-rate table |
 
-Declining to claim WAF coverage while publishing detector results is the same posture
-[Clearcote](./clearcote.md) takes, and it is more checkable than a vendor grid.
+Declining to publish WAF pass rates while publishing detector results is the same posture
+[Clearcote](./clearcote.md) takes.
 
 ---
 
@@ -309,39 +420,48 @@ Against the other engine-level Firefox and Chromium entries:
 
 | | invisible_playwright | Camoufox | Clearcote | CloakBrowser |
 |---|---|---|---|---|
-| Engine | Firefox 151 fork | Firefox 152 fork | Chromium 149 (ungoogled) | Chromium 150 |
+| Engine | Firefox 151 fork | Firefox 152 fork | Chromium 150 (ungoogled) | Chromium 152 (Pro) |
 | Spoofing level | C++ engine | C++ engine | C++ engine | C++ engine |
 | Engine source published | **Yes** — full fork | Yes | Yes | **No** |
-| Patch readability | tree diff, no series | 34 `.patch` files | 32 in `patches/series` | n/a |
-| Client | **stock Playwright** | own launcher | Playwright/Puppeteer SDK | Playwright/Puppeteer SDK |
+| Patch readability | tree diff, no series | 44 `.patch` files | 37 in `patches/series` | n/a |
+| Client | **vendored, modified Playwright Python client** + in-process Juggler server | own launcher | Playwright/Puppeteer SDK | Playwright/Puppeteer SDK |
 | Launch telemetry | **yes, on by default** | none found | none found | none found |
-| Binary checksum verified in code | Yes, incl. cached | Yes | Yes (+ GPG) | Yes (Ed25519) |
+| Binary checksum verified in code | Yes — fresh download against the sealed digest; cached engine: identity check | Yes | Yes (+ GPG) | Yes (Ed25519) |
 | Fingerprint rotation | per-seed | BrowserForge statistical | per-seed / real-profile import | per-seed |
 
 It is the **only tool in this comparison whose browser makes an unsolicited network
-request at startup by default**, and the only Firefox entry driven by an unmodified
-Playwright client.
+request at startup by default**. Of the two Firefox entries, Camoufox ships its own
+launcher while invisible_playwright keeps the Playwright API shape on a vendored copy of the
+client.
 
 ---
 
 ## Applicability
 
 **Suited to:** Playwright codebases that want engine-level Firefox fingerprinting without
-adopting a bespoke launcher API — existing `playwright` code runs against it unchanged.
+adopting a bespoke launcher API — the README describes a two-line switch from
+`playwright.sync_api`, with named exclusions (tracing, HAR, CDP, `APIRequestContext`).
 Also to reviewers who want to read the actual engine changes, provided they are willing
 to clone a multi-gigabyte tree.
 
 **Constraints:** Firefox only, so targets that probe SpiderMonkey engine behaviour
 identify the browser family regardless of configuration — the same structural limit
-Camoufox documents. Two contributors. The engine fork is large and awkward to audit, and
-the shipping line's diff exceeds what GitHub will render. Turn the launch ping off if
-startup traffic to `github.com` is in your threat model.
+Camoufox documents. Windows x86_64 and Linux x86_64/arm64 only; macOS support ended with
+wrapper `0.7.3`. Six contributors. The engine fork is large and awkward to audit, the
+shipping line's diff exceeded what GitHub would render (2026-08-14), and the wrapper now
+carries a modified copy of Playwright's client rather than depending on it. The launch ping
+to `github.com` is on by default; see [Launch telemetry](#launch-telemetry).
 
-**Before deploying:**
+**Opting out of the launch ping:**
 
 ```python
-browser = firefox.launch(extra_prefs={"invisible_firefox.usage_ping.enabled": False})
+from invisible_playwright import InvisiblePlaywright
+
+with InvisiblePlaywright(extra_prefs={"invisible_firefox.usage_ping.enabled": False}) as browser:
+    ...
 ```
+
+`extra_prefs` is a constructor argument of `InvisiblePlaywright` (`launcher.py:106`).
 
 ---
 
