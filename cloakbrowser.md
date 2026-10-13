@@ -6,19 +6,19 @@
 > **Language:** Python, Node.js (TypeScript), .NET (C#)
 > **What is verified:** the wrapper source (default arguments, download and signature verification, license handling, humanize module) read at the commit below (**Tier A**), plus the patch counts and platform matrix read from the project's own README (**Tier A** that they are *claimed*; the binary itself is closed, so what the patches do cannot be verified here)
 > **Anti-bot service claims:** Turnstile, FingerprintJS, **reCAPTCHA v3 score 0.9**, "tested against 30+ detection sites" — all **Tier B**, stated for the README's "latest Pro/current build". The keyless free binary (Chromium 146) is not claimed to reach these numbers.
-> **Maintenance:** wrapper **0.5.11** (2026-09-24); latest GitHub release `chromium-v152.0.7977.82.1-pro` (2026-09-23); last push 2026-09-29. 31.8k stars, 2.6k forks, 20 contributors, 237 open issues. MIT wrapper, **proprietary binary**.
-> **Verified:** 2026-09-30 against `CloakHQ/CloakBrowser` @ `f44864b`.
+> **Maintenance:** wrapper **0.6.2** (2026-10-12); latest GitHub release `chromium-v154.0.8037.57.1-pro` (2026-10-06); last push 2026-10-13. 32.1k stars, 2.7k forks, 23 contributors, 244 open issues. MIT wrapper, **proprietary binary**.
+> **Verified:** 2026-10-13 against `CloakHQ/CloakBrowser` @ `485f678` (0.6.2 plus two later commits; previous revision `f44864b`, 2026-09-30).
 
-> ### Patch counts — current as of 2026-09-30
+> ### Patch counts — current as of 2026-10-13
 >
 > | Platform | Free | Pro |
 > |---|---|---|
-> | Linux x86_64 / arm64 | Chromium 146 (**58** patches) | Chromium 152 (**87** patches) |
-> | Windows x86_64 | Chromium 146 (**58** patches) | Chromium 152 (**87** patches) |
-> | macOS arm64 / x86_64 | Chromium 145 (**26** patches) | Chromium 151 (**87** patches) |
+> | Linux x86_64 / arm64 | Chromium 146 (**58** patches) | Chromium 154 (**87** patches) |
+> | Windows x86_64 | Chromium 146 (**58** patches) | Chromium 154 (**87** patches) |
+> | macOS arm64 / x86_64 | Chromium 145 (**26** patches) | Chromium 154 (**87** patches) |
 >
-> Source: the vendor README (`README.md:893-897`). The Free column is the binary the wrapper downloads without a key (`cloakbrowser/config.py:18-26`); the README separately offers the latest build on a free GitHub-sign-in key (see [Free vs Pro](#free-vs-pro-delayed-free-release-model)) and states no patch count for it.
-> Earlier revisions of this report cited "33", "66" (Chromium 148) and "71" (Chromium 150); all are superseded. **Patch count is a measure of surface area
+> Source: the vendor README (`README.md:897-901`). The Free column is the binary the wrapper downloads without a key (`cloakbrowser/config.py:25-31`); the README separately offers the latest build on a free GitHub-sign-in key (see [Free vs Pro](#free-vs-pro-delayed-free-release-model)) and states no patch count for it.
+> Earlier revisions of this report cited "33", "66" (Chromium 148) and "71" (Chromium 150); all are superseded. The count stayed at 87 when Pro moved from Chromium 152 (151 on macOS) to 154 on every platform (0.6.0). **Patch count is a measure of surface area
 > touched, not of quality** — it is not comparable across projects that split changes
 > differently.
 
@@ -27,7 +27,7 @@
 ## Table of Contents
 
 - [What is CloakBrowser?](#what-is-cloakbrowser)
-- [Current State (2026-09)](#current-state-2026-09)
+- [Current State (2026-10)](#current-state-2026-10)
 - [How It Works](#how-it-works)
 - [Free vs Pro (Delayed Free-Release Model)](#free-vs-pro-delayed-free-release-model)
 - [Human Behavior System](#human-behavior-system)
@@ -49,32 +49,32 @@ CloakBrowser is a **patched Chromium binary** with source-level C++ modification
 
 **Engine:** it targets **Chromium** (not Firefox), which gives native Playwright/Puppeteer API support; the vendor reports TLS fingerprints identical to Chrome (README test table, Tier B).
 
-**What changed since the last analysis:** the tool has moved fast. The patch count has grown (33 → 66 → 71 → **87** on the newest binaries), Chromium has advanced (145 → **146 keyless free / 152 Pro**), a **keyed tier** now gates the newest binary (a **free GitHub-sign-in key** limited to one concurrent session, and paid plans), a **.NET/C# client** was added alongside Python and Node.js, and binary downloads are protected by a **pinned Ed25519 signature** rather than the old self-referential checksums. See [Current State](#current-state-2026-09).
+**What changed since the last analysis:** the tool has moved fast. The patch count has grown (33 → 66 → 71 → **87** on the newest binaries), Chromium has advanced (145 → **146 keyless free / 154 Pro**, macOS included), a **keyed tier** now gates the newest binary (a **free GitHub-sign-in key** limited to one concurrent session, and paid plans), a **.NET/C# client** was added alongside Python and Node.js, and binary downloads are protected by a **pinned Ed25519 signature** rather than the old self-referential checksums. Since 0.6.0 the `humanize` layer runs on one engine built on Playwright's own selector engine, and persistent profiles keep one fingerprint seed. See [Current State](#current-state-2026-10).
 
 ---
 
-## Current State (2026-09)
+## Current State (2026-10)
 
-Verified against the repo source and release history (repo cloned at `f44864b`, 2026-09-29; previous revision `2488311`, 2026-08-11):
+Verified against the repo source and release history (repo read at `485f678`, 2026-10-13; previous revisions `f44864b`, 2026-09-29, and `2488311`, 2026-08-11):
 
 | Fact | Value | Evidence |
 |------|-------|----------|
-| Wrapper version | **0.5.11** (2026-09-24) | `cloakbrowser/_version.py:1`, `js/package.json:3`, `dotnet/src/CloakBrowser/CloakBrowser.csproj:13`, PyPI / npm |
-| Free binary (keyless default) | **Chromium 146.0.7680.177.5** (Linux/Windows x64), 146.0.7680.177.3 (Linux arm64), 145.0.7632.109.2 (macOS) | `cloakbrowser/config.py:18-26` → `PLATFORM_CHROMIUM_VERSIONS` (unchanged since `2488311`) |
-| Free binary with GitHub-sign-in key | "Latest build", one concurrent session; `cloakbrowser login` (since 0.5.0). The README names Chromium 151 for this tier | `README.md:190-197`, `cloakbrowser/__main__.py:584-660`, `cloakbrowser/download.py:224-243`, CHANGELOG 0.5.0 |
-| Pro binary (latest) | **Chromium 152.0.7977.82.1** (Linux x64/arm64, Windows x64); **151.0.7922.108.3** (macOS) | GitHub release `chromium-v152.0.7977.82.1-pro` (2026-09-23); `README.md:153-156` |
-| C++ patch count | **87** on Chromium 152 / 151 (Pro); **58** on 146 (free); **26** on macOS 145 | `README.md:39`, `README.md:289`, `README.md:893-897` |
+| Wrapper version | **0.6.2** (2026-10-12); one unreleased code commit after it (async launches, below) | `cloakbrowser/_version.py:1`, `js/package.json:3`, `dotnet/src/CloakBrowser/CloakBrowser.csproj:13`, PyPI / npm |
+| Free binary (keyless default) | **Chromium 146.0.7680.177.5** (Linux/Windows x64), 146.0.7680.177.3 (Linux arm64), 145.0.7632.109.2 (macOS) | `cloakbrowser/config.py:25-31` → `PLATFORM_CHROMIUM_VERSIONS` (unchanged since `2488311`) |
+| Free binary with GitHub-sign-in key | "Latest build", one concurrent session; `cloakbrowser login` (since 0.5.0). The README names Chromium 154 for this tier | `README.md:190-197`, `cloakbrowser/__main__.py:584-660`, `cloakbrowser/download.py:234-253`, CHANGELOG 0.5.0 |
+| Pro binary (latest) | **Chromium 154.0.8037.57.1** on every platform (Linux x64/arm64, Windows x64, macOS arm64/x64; macOS moved up from 151). Linux Preview channel: 154.0.8037.57.2 | GitHub release `chromium-v154.0.8037.57.1-pro` (2026-10-06); `README.md:153-158`; CHANGELOG 0.6.0 |
+| C++ patch count | **87** on Chromium 154 (Pro); **58** on 146 (free); **26** on macOS 145 | `README.md:39`, `README.md:289`, `README.md:897-901` |
 | CDP input mimicking | Included in the patch set (input behavior mimicking) | README "How It Works" (`README.md:289`) |
-| Languages | Python (≥3.9), Node.js/TypeScript (≥20), **.NET 8 / C# (NuGet; contributed by an outside author in PR #385, CHANGELOG 0.4.3)** | `pyproject.toml:11`, `js/package.json:57-59`, `dotnet/src/CloakBrowser/CloakBrowser.csproj:4`, `CHANGELOG.md:180-182` |
+| Languages | Python (≥3.9; depends on `playwright>=1.53` since 0.6.0, was `>=1.40`), Node.js/TypeScript (20.19+ or 22.12+ since 0.6.0, which also added CommonJS `require()`), **.NET 8 / C# (NuGet; contributed by an outside author in PR #385, CHANGELOG 0.4.3)** | `pyproject.toml:11`, `pyproject.toml:52`, `js/package.json:57-59`, `dotnet/src/CloakBrowser/CloakBrowser.csproj:4`, `CHANGELOG.md:237-239` |
 | License (wrapper) | **MIT** | `LICENSE`, `pyproject.toml:10` |
 | License (binary) | Proprietary (`BINARY-LICENSE.md` v1.3, July 2026): the latest major requires a subscription at a tier CloakHQ designates; other versions stay under the same restrictions | `BINARY-LICENSE.md` ("Version-Specific Terms", "Restrictions") |
-| Platforms | Linux x64/arm64, macOS arm64/x64, Windows x64 | `cloakbrowser/config.py:91-98` → `SUPPORTED_PLATFORMS` |
-| Maintenance | Last push 2026-09-29; 20 contributors, 237 open issues, 31,814 stars | GitHub API (`STATUS.md`) |
-| Last tested (by author) | Aug 2026 (Chromium 151) | `README.md:220` |
+| Platforms | Linux x64/arm64, macOS arm64/x64, Windows x64 | `cloakbrowser/config.py:192-199` → `SUPPORTED_PLATFORMS` |
+| Maintenance | Last push 2026-10-13; 23 contributors, 244 open issues, 32,143 stars | GitHub API (`STATUS.md`) |
+| Last tested (by author) | Oct 2026 (Chromium 154) | `README.md:220` |
 
-> **Note on patch counts:** there is no single number. The patch count is versioned to the binary: the newest Pro builds (Chromium 152, macOS 151) are stated as **87**, the keyless free build (146) as **58**, and the older macOS free build (145) as **26**. The "33" figure from an earlier analysis and the "71" figure from the 2026-08-14 revision are outdated.
+> **Note on patch counts:** there is no single number. The patch count is versioned to the binary: the newest Pro builds (Chromium 154 on every platform) are stated as **87**, the keyless free build (146) as **58**, and the older macOS free build (145) as **26**. The "33" figure from an earlier analysis and the "71" figure from the 2026-08-14 revision are outdated.
 
-> **Free-key version:** `README.md:190` names Chromium 151 for the free-key tier while `README.md:153` gives 152 as Pro Stable; the wrapper selects the binary the same way for free and paid keys (`cloakbrowser/download.py:401-404`), so the build a free key resolves to is decided server-side and is not established here (Tier D).
+> **Free-key version:** `README.md:190` names Chromium 154 for the free-key tier, the same major as Pro Stable (`README.md:153`); at `f44864b` the README named 151 for the free key and 152 for Pro. The wrapper selects the binary the same way for free and paid keys (`cloakbrowser/download.py:411-414`), so the build a free key resolves to is decided server-side and is not established here (Tier D).
 
 ---
 
@@ -106,7 +106,7 @@ Verified against the repo source and release history (repo cloned at `f44864b`, 
 │  ┌──────────────────────────────────────────────┐                │
 │  │  PATCHED CHROMIUM BINARY (~200MB download)   │                │
 │  │  Free: Chromium 146 (58 patches)             │                │
-│  │  Pro:  Chromium 152 (87 patches)             │                │
+│  │  Pro:  Chromium 154 (87 patches)             │                │
 │  │  ┌────────────────────────────────────────┐  │                │
 │  │  │  Source-Level C++ Patches               │  │                │
 │  │  │  - Canvas fingerprint randomization     │  │                │
@@ -136,15 +136,17 @@ Verified against the repo source and release history (repo cloned at `f44864b`, 
 CloakBrowser is a thin wrapper around a custom-built Chromium binary:
 
 1. **You install** → `pip install cloakbrowser` / `npm install cloakbrowser` / NuGet `CloakBrowser`
-2. **First launch** → binary auto-downloads for your platform (no key: free Chromium 146; with a free or paid license key: the latest keyed build, Pro Stable being Chromium 152 on Linux/Windows)
+2. **First launch** → binary auto-downloads for your platform (no key: free Chromium 146; with a free or paid license key: the latest keyed build, Pro Stable being Chromium 154 on every platform)
 3. **Every launch** → Playwright or Puppeteer starts with the CloakBrowser binary + stealth args
 4. **You write code** → standard Playwright/Puppeteer API, nothing new to learn
 
 ### 1. Fingerprint Seed System
 
-Every launch generates a **random seed** (`--fingerprint=<10000..99999>`) that deterministically controls all fingerprint values. Same seed = same fingerprint across launches (useful for returning-visitor patterns; the README explicitly recommends a fixed seed when hitting the same site repeatedly).
+Every launch generates a **random seed** (`--fingerprint=<10000..99999>`, `config.py:59`) that deterministically controls all fingerprint values. Same seed = same fingerprint across launches (useful for returning-visitor patterns; the README explicitly recommends a fixed seed when hitting the same site repeatedly).
 
-The stealth-args builder is now much leaner than in earlier versions. From `cloakbrowser/config.py:54-76` (comments abridged):
+**Persistent profiles keep their seed (0.6.0, behaviour change).** `launch_persistent_context()` stores the seed in `<user_data_dir>/.cloakbrowser-seed` on first launch and reuses it afterwards; an explicit `--fingerprint=` in `args` or `stealth_args=False` leaves the file alone, a corrupt file is replaced with a warning, and concurrent first launches agree on one seed through an exclusive hard link (`config.py:63-152`, `browser.py:659`). The file format is shared with the JS and .NET wrappers. Non-persistent launches stay random. Deleting the file rotates the identity (`README.md:420`).
+
+The stealth-args builder is now much leaner than in earlier versions. From `cloakbrowser/config.py:155-177` (comments abridged):
 
 ```python
 def get_default_stealth_args() -> list[str]:
@@ -153,7 +155,7 @@ def get_default_stealth_args() -> list[str]:
     On macOS, skips platform/GPU spoofing — runs as a native Mac browser.
     Spoofing Windows on Mac creates detectable mismatches (fonts, GPU, etc.).
     """
-    seed = random.randint(10000, 99999)
+    seed = _random_seed()  # SEED_MIN..SEED_MAX = 10000..99999
     system = platform.system()
 
     base = [
@@ -171,7 +173,7 @@ def get_default_stealth_args() -> list[str]:
 
 > **Changed since the previous analysis:** the wrapper no longer hardcodes `--fingerprint-gpu-vendor` / `--fingerprint-gpu-renderer` / `--disable-blink-features=AutomationControlled` in the default args. The binary now derives a **coherent hardware identity** (screen, GPU, RAM, CPU cores, color depth, fonts, audio) from the seed itself — "chosen together so they form a popular, self-consistent device with no internal contradictions" (CHANGELOG 0.4.8). Automation-signal suppression happens at the C++ level, and Playwright's `--enable-automation` / `--enable-unsafe-swiftshader` are stripped via `IGNORE_DEFAULT_ARGS`.
 
-**`--no-sandbox` default:** `--no-sandbox` is the first entry of the default list (`config.py:64`) in the Python, JavaScript (`js/src/config.ts:426`) and .NET (`dotnet/src/CloakBrowser/Config.cs:77`) wrappers, and `cloakserve` builds its Chrome arguments from the same list (`bin/cloakserve:354-355`). Caller `args` can override a flag but cannot remove it (`browser.py:1424-1429`); `stealth_args=False` omits the whole default list, and the README shows supplying `--fingerprint` and `--fingerprint-platform` manually in that case (`README.md:818-821`). The README does not mention the flag; CHANGELOG 0.5.2 records that the binary stops showing an unsupported-flag warning bar when the sandbox is disabled, which it describes as required when running as root, for example in Docker (`CHANGELOG.md:100`).
+**`--no-sandbox` default:** `--no-sandbox` is the first entry of the default list (`config.py:165`) in the Python, JavaScript (`js/src/config.ts:433`) and .NET (`dotnet/src/CloakBrowser/Config.cs:207`) wrappers, and `cloakserve` builds its Chrome arguments from the same list (`bin/cloakserve:354-355`). Caller `args` can override a flag but cannot remove it (`browser.py:1455-1460`); `stealth_args=False` omits the whole default list, and the README shows supplying `--fingerprint` and `--fingerprint-platform` manually in that case (`README.md:822-825`). The README does not mention the flag; CHANGELOG 0.5.2 records that the binary stops showing an unsupported-flag warning bar when the sandbox is disabled, which it describes as required when running as root, for example in Docker (`CHANGELOG.md:157`). Unchanged at `485f678`.
 
 **Why platform-aware defaults matter:**
 - macOS binary runs as a native Mac browser (Apple GPU, macOS UA) — spoofing Windows on Mac creates detectable font/GPU mismatches
@@ -194,22 +196,22 @@ The vendor states the patches are compiled into the Chromium binary (Tier B; the
 | Font enumeration | Font-list masking; optional Windows font-metric alignment (`--fingerprint-windows-font-metrics`, 148+) |
 | WebRTC / network | Exit-IP injection, network-timing signals matched to real Chrome |
 | Locale/timezone | Native C++ locale spoofing (not CDP emulation) |
-| Storage quota | Normalized by default (also hides the real disk size); `--fingerprint-storage-quota` overrides it. The README notes BrowserScan's incognito check reads the default as incognito (`README.md:452`, `README.md:747`) |
+| Storage quota | Normalized by default (also hides the real disk size); `--fingerprint-storage-quota` overrides it. The README notes BrowserScan's incognito check reads the default as incognito (`README.md:454`, `README.md:751`) |
 
-Patch counts by binary (`README.md:893-897`):
+Patch counts by binary (`README.md:897-901`):
 
 | Platform | Free binary | Pro binary |
 |----------|-------------|------------|
-| Linux x86_64 | Chromium 146 (**58 patches**) | Chromium 152 (**87 patches**) |
-| Linux arm64 | Chromium 146 (58) | Chromium 152 (87) |
-| macOS arm64 / x86_64 | Chromium 145 (**26 patches**) | Chromium 151 (87) |
-| Windows x86_64 | Chromium 146 (58) | Chromium 152 (87) |
+| Linux x86_64 | Chromium 146 (**58 patches**) | Chromium 154 (**87 patches**) |
+| Linux arm64 | Chromium 146 (58) | Chromium 154 (87) |
+| macOS arm64 / x86_64 | Chromium 145 (**26 patches**) | Chromium 154 (87) |
+| Windows x86_64 | Chromium 146 (58) | Chromium 154 (87) |
 
 **Properties the vendor reports for the patched binary (Tier B):**
 - `navigator.webdriver` returns `false`
 - `navigator.plugins.length` returns `5`
 - `window.chrome` is present as an `object`
-- User-Agent has no `HeadlessChrome` leak (`Chrome/151.0.0.0` in the latest test run)
+- User-Agent has no `HeadlessChrome` leak (the README test table still shows `Chrome/151.0.0.0` although its header now says Oct 2026, Chromium 154; `README.md:220`, `README.md:235`)
 - CDP detection `isAutomatedWithCDP: false`; TLS fingerprint reported identical to Chrome (ja3n / ja4 / akamai)
 - Changes are described as compiled into the binary rather than injected via JavaScript (`README.md:22`, `README.md:179`)
 
@@ -235,28 +237,29 @@ From `cloakbrowser/download.py` + `config.py`:
 
 ```
 pip install cloakbrowser
-    → first launch triggers binary resolution (ensure_binary, download.py:184)
+    → first launch triggers binary resolution (ensure_binary, download.py:194)
     → no key: downloads the free binary (Chromium 146) from cloakbrowser.dev,
-      falling back to GitHub Releases (download.py:361-370)
+      falling back to GitHub Releases (download.py:371-380)
     → license key set (free GitHub key or paid): POSTs the key to
       cloakbrowser.dev/api/license/validate, then downloads the latest build from
       cloakbrowser.dev/api/download/<version> with the key as a bearer token
-      (download.py:224-243, 530-565)
+      (download.py:234-253, 540-575)
     → fetches SHA256SUMS + detached SHA256SUMS.sig
     → verifies the Ed25519 signature against a PINNED public key, checks that the
       signed manifest's version= line matches the requested version, then verifies
-      the file hash against the signed manifest (download.py:633-703)
-    → extracts to ~/.cloakbrowser/chromium-{version}[-pro]/
-    → background update check (rate-limited to once per hour, download.py:67, 1268-1279)
+      the file hash against the signed manifest (download.py:643-713)
+    → extracts into a private staging dir, then renames it to
+      ~/.cloakbrowser/chromium-{version}[-pro]/ (download.py:906-966)
+    → background update check (rate-limited to once per hour, download.py:68, 1319-1330)
 ```
 
-> **Changed since the previous analysis:** downloads are no longer protected only by same-origin checksums. Since 0.4.0, the wrapper verifies a **pinned Ed25519 signature** (`BINARY_SIGNING_PUBKEYS`, `config.py:37-39`; one key is pinned) on the published `SHA256SUMS`, and the signed manifest's `version=` line must match the requested version, so a mirror cannot substitute a genuinely signed older build (`download.py:684-694`). Verification is mandatory on the official and Pro download paths. `CLOAKBROWSER_SKIP_CHECKSUM` and `CLOAKBROWSER_DOWNLOAD_URL` apply only to a self-hosted origin, where the Pro path and background updates are switched off (`download.py:221-222, 633-670, 1137`). This closes the "self-referential checksums" gap the earlier audit flagged.
+> **Changed since the previous analysis:** downloads are no longer protected only by same-origin checksums. Since 0.4.0, the wrapper verifies a **pinned Ed25519 signature** (`BINARY_SIGNING_PUBKEYS`, `config.py:42-44`; one key is pinned) on the published `SHA256SUMS`, and the signed manifest's `version=` line must match the requested version, so a mirror cannot substitute a genuinely signed older build (`download.py:694-704`). Verification is mandatory on the official and Pro download paths. `CLOAKBROWSER_SKIP_CHECKSUM` and `CLOAKBROWSER_DOWNLOAD_URL` apply only to a self-hosted origin, where the Pro path and background updates are switched off (`download.py:231-232, 643-680, 1188`). This closes the "self-referential checksums" gap the earlier audit flagged.
 
-> **Extraction (0.5.11):** once the signature and checksum verify, archives are unpacked directly with `tarfile.extractall(filter="fully_trusted")` and `zipfile.extractall`; the earlier per-entry path-traversal and symlink screening was removed (`download.py:935-951`, `CHANGELOG.md:13`). The trust boundary for extraction is therefore the signature check.
+> **Extraction (0.5.11, 0.6.0):** once the signature and checksum verify, archives are unpacked directly with `tarfile.extractall(filter="fully_trusted")` and `zipfile.extractall`; the earlier per-entry path-traversal and symlink screening was removed in 0.5.11 (`download.py:986-1002`, `CHANGELOG.md:70`). The trust boundary for extraction is therefore the signature check. Since 0.6.0 each download extracts into its own `<dir>.partial-<uuid>` staging directory that is renamed into place (the first complete install wins; Windows renames are retried for about 2.5 s), so concurrent first launches no longer delete each other's half-written install (`download.py:906-984`; CHANGELOG 0.6.0, #555).
 
 The README also documents manual verification (`README.md:1432-1449`): a GPG-signed release tag, GitHub/Sigstore build attestation for the binary archives, and a Cosign signature for the Docker image (vendor-documented, Tier B). The repository contains the workflows for the last two: `.github/workflows/attest-release.yml` (manual dispatch, attests release archives) and `.github/workflows/publish.yml:155-159` (Cosign signing and attestation of the Docker image).
 
-Binary size: ~200MB compressed download (`README.md:127`), cached under `~/.cloakbrowser/`. Runtime footprint (`README.md:1074`): ~190MB RAM idle, ~280MB with 3 tabs, ~30MB per additional tab.
+Binary size: ~200MB compressed download (`README.md:127`), cached under `~/.cloakbrowser/`. Runtime footprint (`README.md:1078`): ~190MB RAM idle, ~280MB with 3 tabs, ~30MB per additional tab.
 
 ---
 
@@ -266,15 +269,16 @@ The **wrapper (Python + JS + .NET) is MIT.** The **binary** is proprietary (`BIN
 
 | Tier | Binary | Where | Notes |
 |------|--------|-------|-------|
-| **Free, no key** | Chromium **146** (58 patches); 145 (26) on macOS | cloakbrowser.dev, GitHub Releases as fallback | Auto-downloads, no key. The README says this older build "ages fast as detection evolves" (`README.md:192`); the launch banner invites the free login (`download.py:163-174`) |
-| **Free, GitHub-sign-in key** | "Latest build" (README names Chromium 151, see [Current State](#current-state-2026-09)) | cloakbrowser.dev (`/api/download/<version>`, key as bearer token) | `cloakbrowser login` opens a GitHub sign-in and the key is emailed to the GitHub address (`__main__.py:601-615`); **one concurrent session**; a version pin is ignored for this plan (`download.py:231-232`) |
-| **Pro, paid key** | Chromium **152.0.7977.82.1** (Linux/Windows), 151 (macOS); 87 patches | cloakbrowser.dev | Newest patches first; the README lists plans of 5, 20, 200 or 2,000+ concurrent sessions (`README.md:191`). Set `license_key` / `CLOAKBROWSER_LICENSE_KEY` / `~/.cloakbrowser/license.key` |
+| **Free, no key** | Chromium **146** (58 patches); 145 (26) on macOS | cloakbrowser.dev, GitHub Releases as fallback | Auto-downloads, no key. The README says this older build "ages fast as detection evolves" (`README.md:192`); the launch banner invites the free login (`download.py:173-184`) |
+| **Free, GitHub-sign-in key** | "Latest build" (README names Chromium 154, see [Current State](#current-state-2026-10)) | cloakbrowser.dev (`/api/download/<version>`, key as bearer token) | `cloakbrowser login` opens a GitHub sign-in and the key is emailed to the GitHub address (`__main__.py:601-615`); **one concurrent session**; a version pin is ignored for this plan (`download.py:241-242`) |
+| **Pro, paid key** | Chromium **154.0.8037.57.1** (all platforms); 87 patches | cloakbrowser.dev | Newest patches first; the README lists plans of 5, 20, 200 or 2,000+ concurrent sessions (`README.md:191`). Set `license_key` / `CLOAKBROWSER_LICENSE_KEY` / `~/.cloakbrowser/license.key` |
 
-- **Key handling.** Resolution order is explicit parameter, then `CLOAKBROWSER_LICENSE_KEY`, then `license.key` in the cache directory (`cloakbrowser/license.py:262-292`). Keys are opaque strings to the wrapper (no format is enforced); validation is a POST to `cloakbrowser.dev/api/license/validate` (`license.py:26, 399-404`), cached locally for 24h keyed by a SHA-256 of the key (`license.py:30, 392-395, 622-634`), and a stale cache is used if the server is unreachable (`license.py:421-424`). `cloakbrowser info` reports the plan (default `solo` when the server omits it, `license.py:410`) as `tier` (`__main__.py:144`) and, for keyed plans, live session seats as used/limit (`__main__.py:267-278`, `license.py:517-569`).
-- **Server-side enforcement.** The wrapper comments state that the server enforces the concurrency cap (`download.py:401-404`). The Pro binary reports license denials through process exit codes 76-79 (`license.py:102-119`) and, for denials after the CDP handshake, a per-launch status file named by `CLOAKBROWSER_LICENSE_STATUS_FILE` (`license.py:143-150, 227-242`), which the wrapper converts to `CloakBrowserLicenseError`. These are wrapper-side facts (Tier A); what the binary does is Tier B.
-- **No silent downgrade.** A key the server rejects, or one that cannot be validated (server unreachable and no cached result), now raises `CloakBrowserLicenseError` instead of falling back to the free binary (`download.py:256-269`; CHANGELOG 0.5.10, `CHANGELOG.md:22`). A valid key also hard-fails on a download or signature error (`download.py:237-255`).
-- **Test claims.** The Pro test claims (0.9 reCAPTCHA v3, FingerprintJS pass) are labeled "Pro/current build" in the README (`README.md:220-228`); the keyless free v146 binary is not claimed to hit them. As of 0.4.7 the public Docker `cloaktest` suite uses free-tier-stable checks (Sannysoft, Incolumitas, Rebrowser, deviceandbrowserinfo, BrowserScan, CreepJS lies/noise=false); FingerprintJS and reCAPTCHA v3 are not hard-pass checks for the free image (`CHANGELOG.md:161`).
-- **Release channel.** Since 0.5.2 `release_channel="preview"` / `CLOAKBROWSER_RELEASE_CHANNEL=preview` selects the newest build available for the platform and falls back to Stable (`config.py:107-114`, `CHANGELOG.md:90`).
+- **Key handling.** Resolution order is explicit parameter, then `CLOAKBROWSER_LICENSE_KEY`, then `license.key` in the cache directory (`cloakbrowser/license.py:266-296`). Keys are opaque strings to the wrapper (no format is enforced); validation is a POST to `cloakbrowser.dev/api/license/validate` (`license.py:26, 403-408`), cached locally for 24h keyed by a SHA-256 of the key (`license.py:30, 396-399, 626-638`), and a stale cache is used if the server is unreachable (`license.py:425-428`). `cloakbrowser info` reports the plan (default `solo` when the server omits it, `license.py:414`) as `tier` (`__main__.py:144`) and, for keyed plans, live session seats as used/limit (`__main__.py:267-278`, `license.py:521-573`).
+- **Server-side enforcement.** The wrapper comments state that the server enforces the concurrency cap (`download.py:411-414`). The Pro binary reports license denials through process exit codes 76-79 (`license.py:102-123`) and, for denials after the CDP handshake, a per-launch status file named by `CLOAKBROWSER_LICENSE_STATUS_FILE` (`license.py:147-154, 231-246`), which the wrapper converts to `CloakBrowserLicenseError`; since 0.6.1 the JS Puppeteer and .NET launchers also read that file when a launch fails, instead of surfacing a raw launch crash. The session-limit message (code 76) now states that a crashed or killed session frees its seat within 4 min (free/trial/solo), 15 min (team) or 30 min (business/scale), and code 79 also names an invalid `--license-route` value (`license.py:103-121`); `--license-route=auto|direct|proxy` is a flag of the 154 Preview binary per CHANGELOG 0.6.0 (Tier B). These are wrapper-side facts (Tier A); what the binary does is Tier B.
+- **No silent downgrade.** A key the server rejects, or one that cannot be validated (server unreachable and no cached result), now raises `CloakBrowserLicenseError` instead of falling back to the free binary (`download.py:266-279`; CHANGELOG 0.5.10, `CHANGELOG.md:79`). A valid key also hard-fails on a download or signature error (`download.py:247-265`).
+- **Test claims.** The Pro test claims (0.9 reCAPTCHA v3, FingerprintJS pass) are labeled "Pro/current build" in the README (`README.md:220-228`); the keyless free v146 binary is not claimed to hit them. As of 0.4.7 the public Docker `cloaktest` suite uses free-tier-stable checks (Sannysoft, Incolumitas, Rebrowser, deviceandbrowserinfo, BrowserScan, CreepJS lies/noise=false); FingerprintJS and reCAPTCHA v3 are not hard-pass checks for the free image (`CHANGELOG.md:218`).
+- **Release channel.** Since 0.5.2 `release_channel="preview"` / `CLOAKBROWSER_RELEASE_CHANNEL=preview` selects the newest build available for the platform and falls back to Stable (`config.py:208-215`, `CHANGELOG.md:147`).
+- **Version pinning.** Since `485f678` the README documents `browser_version=` / `CLOAKBROWSER_VERSION` as paid-key only (`README.md:692`, `README.md:1299`; at `f44864b` it said the pin worked for Free and Pro). In the wrapper code a free GitHub key drops the pin (`download.py:241-242`), while the keyless path still downloads and launches a pinned public build (`download.py:284-305`); that commit changed documentation only.
 - **Binary license terms** (`BINARY-LICENSE.md`): the latest major version requires an active paid subscription at a tier CloakHQ designates; the license prohibits redistribution, resale or repackaging, reverse engineering, and modification, and forbids sharing license keys. The README separately offers the free-key tier above.
 
 ---
@@ -318,20 +322,22 @@ The mouse movement system:
 From `cloakbrowser/human/keyboard.py` (config values in `cloakbrowser/human/config.py`):
 
 - Default typing delay **70ms** ± **40ms** spread; `careful` preset **100ms** ± **50ms**
-- **2%** mistype chance (`mistype_chance = 0.02`) — types a keyboard-layout-adjacent key, then backspace-corrects with a "notice" delay (100–300ms) before correction (50–150ms)
+- **2%** mistype chance (`mistype_chance = 0.02`) — types a keyboard-layout-adjacent key, then backspace-corrects with a "notice" delay (100–300ms) before correction (50–150ms). Digit typos stay digits (0.5.12, `human/keyboard.py:32-35`); typos are skipped in number, email, password, tel and url inputs (`human/fields.py:56-60`), and a typo the page rejects is not corrected (`human/engine.py:1085-1103`)
 - **10%** thinking-pause chance (`typing_pause_chance = 0.1`, 400–1000ms; `careful` = 15%, 500–1200ms)
 - Different handling for uppercase (Shift down → char → Shift up), shift-symbols, and normal chars; individual key hold durations
 - Non-ASCII characters (Cyrillic, CJK, emoji) use an `insertText` fallback
-- Shift-symbols are sent through CDP `Input.dispatchKeyEvent` when a CDP session is available (`isTrusted=true`); otherwise a `page.evaluate` fallback that the source comments call detectable (`human/keyboard.py:123-181`)
+- Shift-symbols are sent through CDP `Input.dispatchKeyEvent` (`human/engine.py:1111-1139`). The `page.evaluate` fallback that the source comments call detectable remains only in the exported `human_type` helper (`human/keyboard.py:125-183`), which the 0.6.0 engine does not call
 
-### Selector Handling and Patched Methods
+### Selector Handling and Patched Methods (engine rewritten in 0.6.0)
 
-The humanize layer reads element state and geometry in a CDP isolated world (`Page.createIsolatedWorld`, `cloakbrowser/human/__init__.py:76-106`) instead of through Playwright's selector/evaluate machinery, so it reimplements a subset of Playwright's selector grammar (`cloakbrowser/human/stealth_dom.py:1-32`):
+Since 0.6.0 every humanized action in Python, JavaScript (Playwright) and .NET runs through one engine (`cloakbrowser/human/engine.py`, `js/src/human/engine.ts`, `dotnet/src/CloakBrowser/Human/HumanEngine.cs`; CHANGELOG 0.6.0, #578). The 0.5.x modules `stealth_dom.py`, `actionability.py` and `scroll.py` were removed. The engine creates a CDP isolated world per frame (`Page.createIsolatedWorld`, `human/world.py:412-428`) and evaluates Playwright's own InjectedScript there, extracted from the installed Playwright driver bundle (`human/injected.py:1-12`):
 
-- **Supported:** CSS (including `:has-text`), `text=`, `xpath=`, `get_by_test_id`, `get_by_placeholder`, `get_by_alt_text`, `get_by_title`, `get_by_text`, `get_by_label`, and a trailing `.first` / `.nth()` / `.last`.
-- **Not supported** (raises `UnsupportedHumanizeSelectorError`; there is no fallback to Playwright DOM reads): `get_by_role`, chained locators (`>>`, `.filter()`, `.and_()`, `.or_()`), `frame_locator`, `:visible`, `:nth-match` (`stealth_dom.py:54-72`).
-- **Patched page methods (Python):** `goto`, `click`, `dblclick`, `hover`, `type`, `fill`, `check`, `uncheck`, `select_option`, `press`, plus `query_selector`, `query_selector_all`, `wait_for_selector`, locators, element handles and frames (`human/__init__.py:1233-1242, 1655-1657`). Actions run actionability checks (attached, visible, stable, enabled, editable, receives events) before the cursor moves (`human/actionability.py`).
-- **Scrolling:** scroll-into-view now works on both axes (`human/scroll.py:236-278`); the x-axis handling landed after the 0.5.11 release commit.
+- **Selectors:** full Playwright selector syntax, including `get_by_role`, `>>` chains, `filter(has=/has_text=)`, `:visible`, `nth` and `frame_locator`. Strict mode applies: an ambiguous locator raises `strict mode violation` instead of using the first match (`human/world.py:99-106`; behaviour change in 0.6.0). Through 0.5.x the layer used its own subset of the grammar and rejected `get_by_role`, chained locators and `frame_locator`; `UnsupportedHumanizeSelectorError` and the other 0.5.x error classes stay importable, but actions no longer raise them (`human/__init__.py:23-28`).
+- **Pipeline:** resolve, then wait for element states (visible, enabled, editable, stable), then scroll into view with mouse-wheel bursts on both axes, then a Bézier move, then a hit-target check through every ancestor `<iframe>`, then press or type (`human/engine.py:1-14`). Failures raise Playwright `Error` / `TimeoutError` with a call log (for example `... intercepts pointer events`, `element is outside of the viewport`) instead of falling back to Playwright's stock action. The one exception: an `ElementHandle` read or `dispatch_event` on an element the isolated world cannot uniquely locate runs Playwright's own call (`RawFallback`, `human/patch.py:14-18`, `human/engine.py:262-290`).
+- **Patching (Python):** class-level on Playwright's `Page`, `Frame`, `Locator`, `ElementHandle`, `Mouse` and `Keyboard`; each wrapper checks whether its page was humanized and otherwise calls the original method (`human/patch.py:1-6, 293-349`). Patched: `click`, `dblclick`, `hover`, `tap`, `fill`, `type`, `press`, `check`, `uncheck`, `set_checked`, `select_option`, `focus`, the element reads `input_value`, `text_content`, `inner_text`, `inner_html`, `get_attribute` and `dispatch_event` (0.6.1), `drag_and_drop` (page, frame), `clear`, `press_sequentially`, `drag_to` (locator), `scroll_into_view_if_needed`, `mouse.move` / `click` / `dblclick` and `keyboard.type` (`human/patch.py:163-286`). `goto` is no longer wrapped. `page._original` gives the raw Playwright calls and `page._stealth_world.evaluate()` evaluates in the isolated world (`human/patch.py:357-400`).
+- **Requirements:** Playwright 1.53 or newer; on an older or internals-incompatible Playwright, `humanize=True` raises instead of running actions un-humanized (`human/patch.py:63-101`). 0.6.1 accepted compiled (Nuitka) Playwright builds; 0.6.2 fixed humanized actions timing out with `element is not visible` on Playwright 1.64 (CHANGELOG 0.6.1, 0.6.2).
+- **Value fields (0.6.0, 0.6.1):** date and time inputs are typed part by part in the locale's order, sliders are clicked and nudged with arrow keys, `select_option` opens the dropdown and uses type-ahead plus arrow keys (on a macOS host the label is typed; emoji-led labels raise there), and `fill()` on `<input type=color>` raises. Select-all and `ControlOrMeta` follow the persona (`--fingerprint-platform=macos` uses Meta), not the host OS.
+- **Removed in 0.6.0 (Python):** `scroll_to_element`, `human_scroll_into_view`, the `async_human_*` helpers, the `RawMouse` / `RawKeyboard` re-exports and `ensure_actionable` / `ensure_stable` / `check_pointer_events` (CHANGELOG 0.6.0).
 
 ### Interaction Summary
 
@@ -340,7 +346,7 @@ The humanize layer reads element state and geometry in a CDP isolated world (`Pa
 | Mouse movement | Instant teleport | Bézier curve with easing and overshoot |
 | Clicks | Instant | Aim delay (inputs 60–140ms / buttons 80–200ms) + hold duration |
 | Keyboard | Instant fill | Per-character with 70ms ± 40ms variance |
-| Scroll | Jump | Accelerate → cruise → decelerate micro-steps |
+| Scroll | Jump | Mouse-wheel bursts: accelerate → cruise → decelerate (`human/engine.py:496-525`) |
 | `fill()` | Instant value set | Clear field + type character by character |
 | Between actions | Nothing | Optional idle micro-movements (`careful` preset) |
 
@@ -375,10 +381,12 @@ How it works:
 2. Caches the database in `~/.cloakbrowser/geoip/` (`geoip.py:291-294`)
 3. Resolves the exit IP via HTTP echo services (ipify.org, checkip.amazonaws.com, ifconfig.me; `geoip.py:197-199`)
 4. Extracts country → locale mapping — **expanded from 50 to 132 countries** in 0.4.8
-5. Sets `--fingerprint-timezone`, `--lang` and `--fingerprint-locale` binary flags rather than CDP emulation (`browser.py:1443-1455`)
+5. Sets `--fingerprint-timezone`, `--lang` and `--fingerprint-locale` binary flags rather than CDP emulation (`browser.py:1474-1486`)
 6. **Auto-injects `--fingerprint-webrtc-ip`** to prevent WebRTC IP leaks (no extra cost)
 
-Explicit timezone/locale always override auto-detection. Since 0.5.10, a requested resolution that fails (timeout, missing database, unresolved timezone or locale) **aborts the launch** instead of continuing; the default timeout is 20 s (was 5 s), configurable with `CLOAKBROWSER_GEOIP_TIMEOUT_SECONDS` (`browser.py:1330-1334`, `geoip.py:32-33`, `CHANGELOG.md:21`). WebRTC IP spoofing can also be used standalone: `args=["--fingerprint-webrtc-ip=auto"]` (resolves the proxy exit IP; requires a proxy, otherwise the flag is removed with a warning, `browser.py:1355-1358`) or `--fingerprint-webrtc-ip=1.2.3.4` (explicit, no network call).
+Explicit timezone/locale always override auto-detection. Since 0.5.10, a requested resolution that fails (timeout, missing database, unresolved timezone or locale) **aborts the launch** instead of continuing; the default timeout is 20 s (was 5 s), configurable with `CLOAKBROWSER_GEOIP_TIMEOUT_SECONDS` (`browser.py:1361-1365`, `geoip.py:32-33`, `CHANGELOG.md:78`). After 0.6.2 (commit `89fb671`, unreleased), the async launchers run the binary/license check and the GeoIP and WebRTC exit-IP lookups in a worker thread instead of on the caller's event loop (`browser.py:513-516`, `browser.py:826-829`). WebRTC IP spoofing can also be used standalone: `args=["--fingerprint-webrtc-ip=auto"]` (resolves the proxy exit IP; requires a proxy, otherwise the flag is removed with a warning, `browser.py:1386-1389`) or `--fingerprint-webrtc-ip=1.2.3.4` (explicit, no network call).
+
+**Proxy and Playwright's request client (0.6.0).** A SOCKS5 or credentialed HTTP proxy is passed to the browser as `--proxy-server`, so `context.request`, `page.request` and `route.fetch()` do not use it and send from the machine's own IP. The wrapper logs a one-time warning when they are used (`browser.py:434-438`, `browser.py:1774`; #579), and the README suggests an in-page `fetch()` instead.
 
 ---
 
@@ -399,7 +407,7 @@ New since the previous analysis. CloakBrowser ships example integrations (`examp
 | agent-browser | Shell | `examples/integrations/agent_browser.sh` |
 | AWS Lambda (container) | — | `examples/integrations/aws_lambda/` |
 
-`cloakserve` (`bin/cloakserve`) runs the binary as a CDP server (`docker run -d -p 127.0.0.1:9222:9222 cloakhq/cloakbrowser cloakserve`), rewrites the CDP WebSocket discovery URLs so clients connect through the proxy, and keeps per-seed process routing. It binds `0.0.0.0` inside a container and `127.0.0.1` otherwise (`bin/cloakserve:906-908`), starts each per-seed Chrome with `--remote-debugging-address=127.0.0.1` (`bin/cloakserve:374`), keeps idle cleanup off by default (`--idle-timeout`, `bin/cloakserve:184`) and exposes `POST /fingerprint/{seed}/close` (`bin/cloakserve:891`). `cloaktest` runs the bundled bot-detection smoke suite. Widevine/DRM is supported through an opt-in CDM fetch in the Docker entrypoint (`CLOAKBROWSER_FETCH_WIDEVINE`, `bin/docker-entrypoint.sh:29-33`) from Google's component server (`bin/fetch-widevine.py:38`); the wrapper itself only seeds the hint file for a CDM the user supplies (`cloakbrowser/widevine.py:1-20`).
+`cloakserve` (`bin/cloakserve`) runs the binary as a CDP server (`docker run -d -p 127.0.0.1:9222:9222 cloakhq/cloakbrowser cloakserve`), rewrites the CDP WebSocket discovery URLs so clients connect through the proxy, and keeps per-seed process routing. It binds `0.0.0.0` inside a container and `127.0.0.1` otherwise (`bin/cloakserve:908-910`), starts each per-seed Chrome with `--remote-debugging-address=127.0.0.1` (`bin/cloakserve:374`), keeps idle cleanup off by default (`--idle-timeout`, `bin/cloakserve:184`) and exposes `POST /fingerprint/{seed}/close` (`bin/cloakserve:893`). Since 0.6.0 a browser started through `/json/version` or `/json/list` with no WebSocket client attached is also scheduled for idle cleanup (`bin/cloakserve:410-411`, #558). `cloaktest` runs the bundled bot-detection smoke suite. Widevine/DRM is supported through an opt-in CDM fetch in the Docker entrypoint (`CLOAKBROWSER_FETCH_WIDEVINE`, `bin/docker-entrypoint.sh:29-33`) from Google's component server (`bin/fetch-widevine.py:38`); the wrapper itself only seeds the hint file for a CDM the user supplies (`cloakbrowser/widevine.py:1-20`).
 
 ---
 
@@ -409,7 +417,7 @@ New since the previous analysis. CloakBrowser ships example integrations (`examp
 > reproductions, and the strongest of them are stated for the Pro/current build. The binary is closed,
 > so nothing in this table can be verified from source — only that it is claimed.
 
-Results are for the **latest Pro/current build** unless noted. **Last tested by the author: Aug 2026 (Chromium 151)** (`README.md:220`).
+Results are for the **latest Pro/current build** unless noted. **Last tested by the author: Oct 2026 (Chromium 154)** (`README.md:220`).
 
 | Detection Service | Stock Playwright | CloakBrowser | Notes |
 |---|---|---|---|
@@ -424,7 +432,7 @@ Results are for the **latest Pro/current build** unless noted. **Last tested by 
 | `navigator.webdriver` | `true` | **`false`** | Source-level patch |
 | `navigator.plugins.length` | 0 | **5** | Real plugin list |
 | `window.chrome` | `undefined` | **`object`** | Present like real Chrome |
-| UA string | `HeadlessChrome` | **`Chrome/151.0.0.0`** | No headless leak |
+| UA string | `HeadlessChrome` | **`Chrome/151.0.0.0`** | No headless leak; row not updated for the Oct 2026 run |
 | CDP detection | Detected | **Not detected** | `isAutomatedWithCDP: false` |
 | TLS fingerprint | Mismatch | **Identical to Chrome** | ja3n/ja4/akamai match |
 | Overall | — | **"Tested against 30+ detection sites"** | Author's claim |
@@ -445,7 +453,7 @@ Results are for the **latest Pro/current build** unless noted. **Last tested by 
 > **Full audit:** [CloakBrowser Security Audit](https://github.com/pim97/cloakbrowser-analyze)
 > **Audit date:** March 2026 | **Binary:** Chromium 145.0.7632.159.7 (Linux x64)
 
-> **Caveat (2026-09):** the public audit was done on the **Chromium 145** binary. The current keyless free binary is **146** and the Pro binary is **152** (Linux/Windows) / **151** (macOS), none of which the audit covers. The audit's behavioral conclusions do not automatically transfer to the newer binaries, and its network results concern a keyless free binary: the README states that licensed binaries make license/session calls to cloakbrowser.dev (`README.md:755`; Tier B).
+> **Caveat (2026-10):** the public audit was done on the **Chromium 145** binary. The current keyless free binary is **146** and the Pro binary is **154** on every platform, none of which the audit covers. The audit's behavioral conclusions do not automatically transfer to the newer binaries, and its network results concern a keyless free binary: the README states that licensed binaries make license/session calls to cloakbrowser.dev (`README.md:759`; Tier B).
 
 ### Trust Model
 
@@ -465,13 +473,13 @@ Outbound destinations found in the Python wrapper source; the JS and .NET wrappe
 
 | Destination | Purpose | Evidence |
 |---|---|---|
-| `cloakbrowser.dev` | Binary download (keyless and keyed), license validation (POST of the key), Pro version lookup, session-seat count, GitHub-sign-in start URL | `config.py:277-280`, `license.py:26-28`, `__main__.py:584` |
-| `github.com`, `api.github.com` | Fallback binary and signed-manifest download; hourly latest-release check on the keyless path; GeoLite2 database mirror | `config.py:282-284`, `download.py:1151-1170`, `geoip.py:26-29` |
-| `pypi.org` (npm registry in JS, NuGet in .NET) | Wrapper update check, once per process | `download.py:1205-1230`, `js/src/download.ts:1202`, `dotnet/src/CloakBrowser/Download.cs:1278` |
+| `cloakbrowser.dev` | Binary download (keyless and keyed), license validation (POST of the key), Pro version lookup, session-seat count, GitHub-sign-in start URL | `config.py:378-381`, `license.py:26-28`, `__main__.py:584` |
+| `github.com`, `api.github.com` | Fallback binary and signed-manifest download; hourly latest-release check on the keyless path; GeoLite2 database mirror | `config.py:383-385`, `download.py:1202-1221`, `geoip.py:26-29` |
+| `pypi.org` (npm registry in JS, NuGet in .NET) | Wrapper update check, once per process | `download.py:1256-1281`, `js/src/download.ts:1266`, `dotnet/src/CloakBrowser/Download.cs:1362` |
 | `api.ipify.org`, `checkip.amazonaws.com`, `ifconfig.me` | Exit-IP lookup, only with `geoip=True` or `--fingerprint-webrtc-ip=auto` | `geoip.py:197-199` |
 | `update.googleapis.com` | Widevine CDM fetch, only through `CLOAKBROWSER_FETCH_WIDEVINE` / `bin/fetch-widevine.py` | `bin/fetch-widevine.py:38` |
 
-A search of `cloakbrowser/`, `js/src/`, `dotnet/src/` and `bin/` for `telemetry`, `analytics`, `posthog`, `sentry`, `beacon`, `mixpanel`, `amplitude` and `datadog` returns no matches. `CLOAKBROWSER_AUTO_UPDATE=false` disables the PyPI and release checks (`download.py:1133, 1211`) but not license validation. The binary's own network behavior is outside what the wrapper shows; the README states that licensed (Pro) binaries contact cloakbrowser.dev for license and session calls (`README.md:755`; Tier B).
+A search of `cloakbrowser/`, `js/src/`, `dotnet/src/` and `bin/` for `telemetry`, `analytics`, `posthog`, `sentry`, `beacon`, `mixpanel`, `amplitude` and `datadog` returns no matches. `CLOAKBROWSER_AUTO_UPDATE=false` disables the PyPI and release checks (`download.py:1184, 1262`) but not license validation. The binary's own network behavior is outside what the wrapper shows; the README states that licensed (Pro) binaries contact cloakbrowser.dev for license and session calls (`README.md:759`; Tier B).
 
 ### Audit Results: 9/9 Tests Passed (on the Chromium 145 binary)
 
@@ -501,7 +509,7 @@ Audit conclusion: the binary "appears to be doing exactly what it claims — and
 
 ### Risk Level: MEDIUM
 
-The binary behaved legitimately in all tests, but it remains closed-source, and the audited version (145) is now behind the shipping versions (146 keyless free / 152 Pro). The license prohibits reverse engineering. Separately, the wrapper's default arguments include `--no-sandbox` (see [How It Works §1](#1-fingerprint-seed-system)).
+The binary behaved legitimately in all tests, but it remains closed-source, and the audited version (145) is now behind the shipping versions (146 keyless free / 154 Pro). The license prohibits reverse engineering. Separately, the wrapper's default arguments include `--no-sandbox` (see [How It Works §1](#1-fingerprint-seed-system)).
 
 ### Mitigation Recommendations
 
@@ -509,7 +517,8 @@ The binary behaved legitimately in all tests, but it remains closed-source, and 
 # Disable auto-update (prevents silent binary replacement)
 export CLOAKBROWSER_AUTO_UPDATE=false
 
-# Pin an exact binary version (rollback / reproducibility)
+# Pin an exact binary version (rollback / reproducibility); the README documents
+# pinning for paid keys, the keyless code path also honours it (see Free vs Pro)
 export CLOAKBROWSER_VERSION=146.0.7680.177.5
 
 # Run in Docker with restricted network
@@ -537,10 +546,10 @@ export CLOAKBROWSER_BINARY_PATH=/path/to/your/chromium
 
 | Pro | Details |
 |-----|---------|
-| **C++ Chromium patches** | 87 source-level modifications stated for the latest Pro binaries (Chromium 152); vendor-stated, not JS injection or config flags |
+| **C++ Chromium patches** | 87 source-level modifications stated for the latest Pro binaries (Chromium 154); vendor-stated, not JS injection or config flags |
 | **Chromium engine** | TLS fingerprint reported to match real Chrome (Tier B) |
 | **Drop-in Playwright/Puppeteer** | Same API — swap the import, keep your code |
-| **`humanize=True`** | One flag for Bézier mouse, typing simulation, scroll patterns |
+| **`humanize=True`** | One flag for Bézier mouse, typing simulation, wheel scrolling; full Playwright selector syntax and strict mode since 0.6.0 |
 | **0.9 reCAPTCHA v3** (Pro) | Vendor-reported score on the Pro/current build (Tier B) |
 | **Multi-language** | Python + Node.js (TypeScript) + **.NET 8 / C#** with full type definitions |
 | **Cross-platform** | Linux x64/arm64, macOS arm64/x64, Windows x64 |
@@ -550,9 +559,9 @@ export CLOAKBROWSER_BINARY_PATH=/path/to/your/chromium
 | **GeoIP + WebRTC coherence** | Timezone/locale/WebRTC-IP from proxy or own IP (132 countries) |
 | **Framework integrations** | browser-use, Crawl4AI, Crawlee, Scrapling, Stagehand, LangChain, Selenium, UC |
 | **`cloakserve` CDP server** | Per-seed CDP routing for framework/Docker deployments |
-| **Version pinning/rollback** | `browser_version=` / `CLOAKBROWSER_VERSION` for keyless Free and paid keys; ignored with a free GitHub key (`download.py:231-232`) |
+| **Version pinning/rollback** | `browser_version=` / `CLOAKBROWSER_VERSION`; the README documents it for paid keys only, the keyless code path also honours it (`download.py:284-305`), a free GitHub key ignores it (`download.py:241-242`) |
 | **Widevine/DRM** | Opt-in CDM auto-fetch for persistent contexts |
-| **Persistent profiles** | Cookies/localStorage across sessions |
+| **Persistent profiles** | Cookies/localStorage across sessions; one fingerprint seed per profile since 0.6.0 |
 | **Zero config** | Launch sets the seed and platform flags; no arguments required |
 
 ### Disadvantages
@@ -561,13 +570,14 @@ export CLOAKBROWSER_BINARY_PATH=/path/to/your/chromium
 |-----|---------|
 | **Closed-source binary** | Proprietary Chromium — cannot verify the C++ patches |
 | **Best results are paid** | 0.9 reCAPTCHA v3 / FingerprintJS pass are stated for the Pro/current build; the keyless free binary is v146 and the README says it "ages fast"; a free GitHub-sign-in key (one concurrent session) provides the latest build |
-| **Audit lags shipping version** | Public audit covers Chromium 145; keyless free is 146, Pro is 152 |
-| **`--no-sandbox`** | Runs with the Chromium sandbox disabled by default (`config.py:64`); `stealth_args=False` omits the default list |
+| **Audit lags shipping version** | Public audit covers Chromium 145; keyless free is 146, Pro is 154 |
+| **`--no-sandbox`** | Runs with the Chromium sandbox disabled by default (`config.py:165`); `stealth_args=False` omits the default list |
 | **Large download** | ~200MB compressed binary on first run |
 | **Auto-update** | Background update check (can be disabled) |
 | **No CAPTCHA solving** | Prevents CAPTCHAs from appearing, doesn't solve them |
 | **License restrictions** | Binary license prohibits redistribution and reverse engineering |
 | **Author-reported tests** | Detection results are the vendor's own, not independent reproductions |
+| **0.6.0 behaviour changes** | Humanized actions use strict mode and raise instead of falling back; several Python helpers were removed; Playwright 1.53+ required |
 
 ---
 
@@ -650,7 +660,7 @@ browser = launch(geoip=True)
 ```python
 from cloakbrowser import launch_persistent_context
 
-ctx = launch_persistent_context("./my-profile", headless=False)
+ctx = launch_persistent_context("./my-profile", headless=False)  # seed kept in ./my-profile/.cloakbrowser-seed (0.6.0)
 page = ctx.new_page()
 page.goto("https://protected-site.com")
 ctx.close()  # cookies/localStorage saved and restored next run
@@ -662,8 +672,8 @@ ctx.close()  # cookies/localStorage saved and restored next run
 # Same seed = same identity across launches (returning visitor)
 browser = launch(args=["--fingerprint=42069"])
 
-# Pin an exact binary (rollback if a new build regresses)
-browser = launch(browser_version="146.0.7680.177.5")
+# Pin an exact binary (rollback if a new build regresses); the README shows this with a paid key
+browser = launch(license_key="cb_xxxxxxxx", browser_version="154.0.8037.57.1")
 ```
 
 ### CLI / Docker
@@ -713,20 +723,22 @@ docker run -d --name cloak -p 127.0.0.1:9222:9222 cloakhq/cloakbrowser cloakserv
 
 | File | Purpose |
 |------|---------|
-| `cloakbrowser/_version.py` | Wrapper version (`0.5.11`) |
-| `cloakbrowser/config.py` | Stealth args, platform detection, seed, Chromium version map, signed-download config |
+| `cloakbrowser/_version.py` | Wrapper version (`0.6.2`) |
+| `cloakbrowser/config.py` | Stealth args, platform detection, seed (incl. per-profile `.cloakbrowser-seed`), Chromium version map, signed-download config |
 | `cloakbrowser/browser.py` | `launch()`, `launch_async()`, `launch_context()`, `launch_persistent_context()` |
 | `cloakbrowser/__main__.py` | CLI: `install`, `info` / `doctor`, `update`, `clear-cache`, `login`, `logout` |
 | `cloakbrowser/download.py` | Binary download, Ed25519-signed verification, auto-update, keyless / keyed routing |
 | `cloakbrowser/license.py` | License validation/caching, session seats, denial-code mapping, Pro version check |
 | `cloakbrowser/geoip.py` | MaxMind GeoIP timezone/locale + WebRTC-IP detection |
 | `cloakbrowser/widevine.py` | Widevine CDM handling for DRM playback |
+| `cloakbrowser/human/engine.py` | Unified humanize engine: resolve, element states, wheel scrolling, hit-target check, press/type (0.6.0) |
+| `cloakbrowser/human/world.py` | Per-frame CDP isolated worlds and helper library |
+| `cloakbrowser/human/injected.py` | Loads Playwright's InjectedScript from the installed driver |
+| `cloakbrowser/human/patch.py` | Class-level wiring into Playwright's sync and async APIs |
+| `cloakbrowser/human/fields.py` | Per-input-type rules (typo suppression, value normalisation) |
 | `cloakbrowser/human/mouse.py` | Bézier curve movement, click targeting, overshoot |
-| `cloakbrowser/human/keyboard.py` | Per-character typing, typo simulation, shift handling |
-| `cloakbrowser/human/scroll.py` | Accelerate → cruise → decelerate scroll physics |
+| `cloakbrowser/human/keyboard.py` | Adjacent-key and shift-symbol tables; legacy `human_type` helper |
 | `cloakbrowser/human/config.py` | `HumanConfig` dataclass, `default` / `careful` presets |
-| `cloakbrowser/human/stealth_dom.py` | Isolated-world DOM reads and the supported selector-grammar subset |
-| `cloakbrowser/human/actionability.py` | Pre-action checks (attached, visible, stable, enabled, editable, receives events) |
 | `js/src/` | Node.js/TypeScript wrapper (Playwright + Puppeteer + human) |
 | `dotnet/src/CloakBrowser/` | .NET 8 / C# wrapper (NuGet `CloakBrowser`) |
 | `bin/cloakserve` | CDP multiplexer: one Chrome process per fingerprint seed |
@@ -752,15 +764,15 @@ docker run -d --name cloak -p 127.0.0.1:9222:9222 cloakhq/cloakbrowser cloakserv
 
 ## Conclusion
 
-CloakBrowser modifies Chromium at the C++ source level (vendor-stated: **87 patches** on the latest Pro binaries, 58 on the keyless free binary), and the author reports passes on major detection services including reCAPTCHA v3 (0.9 score) and Cloudflare Turnstile (Tier B). Since the last analysis it has added a **free GitHub-sign-in key tier**, a **.NET/C# client**, **coherent seed-built hardware identities**, **Ed25519-signed downloads**, **WebRTC-IP coherence**, **132-country GeoIP**, **version pinning/rollback**, **Widevine/DRM**, a **macOS persona**, and a broad set of **AI-agent/framework integrations**.
+CloakBrowser modifies Chromium at the C++ source level (vendor-stated: **87 patches** on the latest Pro binaries, 58 on the keyless free binary), and the author reports passes on major detection services including reCAPTCHA v3 (0.9 score) and Cloudflare Turnstile (Tier B). Since the last analysis it has added a **free GitHub-sign-in key tier**, a **.NET/C# client**, **coherent seed-built hardware identities**, **Ed25519-signed downloads**, **WebRTC-IP coherence**, **132-country GeoIP**, **version pinning/rollback**, **Widevine/DRM**, a **macOS persona**, **per-profile persistent seeds**, and a broad set of **AI-agent/framework integrations**.
 
-The `humanize=True` flag adds behavioral simulation (Bézier mouse curves, typing with typos, scroll physics) in readable wrapper code; the layer reads the DOM in a CDP isolated world and supports a subset of Playwright's selector grammar.
+The `humanize=True` flag adds behavioral simulation (Bézier mouse curves, typing with typos, scroll physics) in readable wrapper code; the layer reads the DOM in a CDP isolated world and, since 0.6.0, runs Playwright's own selector engine there (full selector syntax, strict mode, errors instead of fallbacks).
 
-**The trade-offs.** The Chromium binary is **closed-source** and proprietary, and the newest builds are delivered through license keys (a free key limited to one concurrent session, and paid plans); the keyless free binary (Chromium 146) is older. The public security audit (9/9 tests passed, no malicious behavior found) covers the **older Chromium 145** binary, not the 146/151/152 builds now shipping, so its conclusions do not fully transfer. The Ed25519 signing closes the old self-referential-checksum gap, but it proves authenticity, not what the patches do. The wrapper's default arguments include `--no-sandbox`.
+**The trade-offs.** The Chromium binary is **closed-source** and proprietary, and the newest builds are delivered through license keys (a free key limited to one concurrent session, and paid plans); the keyless free binary (Chromium 146) is older. The public security audit (9/9 tests passed, no malicious behavior found) covers the **older Chromium 145** binary, not the 146/154 builds now shipping, so its conclusions do not fully transfer. The Ed25519 signing closes the old self-referential-checksum gap, but it proves authenticity, not what the patches do. The wrapper's default arguments include `--no-sandbox`.
 
 **Applicability:** Chromium automation via the Playwright or Puppeteer API where engine-level fingerprint control and built-in humanized input are required and a closed binary is acceptable. The published figures (reCAPTCHA v3 0.9, FingerprintJS pass) are Tier B and stated for the Pro/current build.
 
-**Constraints:** the engine is proprietary — the 87 patches cannot be read or independently verified, and the MIT license covers only the wrapper. Free and Pro binaries differ in Chromium version (146 vs 152) and patch count (58 vs 87). The independent audit covered Chromium 145, which no current binary matches. CloakBrowser's engine source is unpublished (the repository contains the wrapper only); Camoufox, Clearcote, and Obscura publish theirs.
+**Constraints:** the engine is proprietary — the 87 patches cannot be read or independently verified, and the MIT license covers only the wrapper. Free and Pro binaries differ in Chromium version (146 vs 154) and patch count (58 vs 87). The independent audit covered Chromium 145, which no current binary matches. CloakBrowser's engine source is unpublished (the repository contains the wrapper only); Camoufox, Clearcote, and Obscura publish theirs.
 
 ---
 

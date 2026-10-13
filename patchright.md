@@ -5,8 +5,8 @@
 > **Approach:** Compile-time source patching of the Playwright driver via AST manipulation (ts-morph) — removes CDP-level automation tells rather than injecting JavaScript on top
 > **What is verified:** `patchright_driver_patch.ts` is a 275-line `ts-morph` transform over the Playwright driver source (**Tier A**). The driver patches remove the `Runtime.enable` sends and resolve execution contexts by hand (**Tier A**: `crPagePatch.ts`, `framesPatch.ts`); the project's README describes the result as executing JS in isolated execution contexts and disabling the Console API entirely (**Tier B**)
 > **Anti-bot service claims:** the README lists **Cloudflare, Kasada, Akamai, DataDome** with ✅ (**Tier B** — no methodology, targets, or dates published; not reproduced here)
-> **Maintenance:** Auto-tracks Playwright releases (hourly release check in `patchright_release.yml`). GitHub release **v1.63.0** (2026-09-08), npm **1.63.0** (2026-09-08), PyPI **1.63.0** (2026-09-20), tracking Playwright 1.63.0. 4,720 stars, 233 forks, 40 contributors, 5 open issues, last push 2026-09-13. Apache-2.0.
-> **Verified:** 2026-09-30 against `Kaliiiiiiiiii-Vinyzu/patchright` @ `26ab9ae`.
+> **Maintenance:** Auto-tracks Playwright releases (hourly release check in `patchright_release.yml`). GitHub release **v1.63.0** (2026-09-08), npm **1.63.0** (2026-09-08), PyPI **1.63.0** (2026-09-20), tracking Playwright 1.63.0. 4,841 stars, 236 forks, 40 contributors, 5 open issues, last push 2026-10-11. Apache-2.0.
+> **Verified:** 2026-10-13 against `Kaliiiiiiiiii-Vinyzu/patchright` @ `ba8bd9b` (`main`, four commits after the 2026-09-30 read of `26ab9ae`; the v1.63.0 release tag is `f34b861`).
 
 ---
 
@@ -66,11 +66,11 @@ await client.send('Runtime.enable');  // Detectable!
 ```
 
 **Patchright:**
-- Removes the `Runtime.enable` sends from the patched driver (**Tier A**): `crPagePatch.ts:153` (the `FrameSession._initialize` promise list, together with the `Runtime.addBinding` call for Playwright's own binding) and `:463-469` (`_onAttachedToTarget`), `crDevToolsPatch.ts:22-28` and `crServiceWorkerPatch.ts:31-34`.
+- Removes the `Runtime.enable` sends from the patched driver (**Tier A**): `crPagePatch.ts:168` (the `FrameSession._initialize` promise list, together with the `Runtime.addBinding` call for Playwright's own binding) and `:471-477` (`_onAttachedToTarget`), `crDevToolsPatch.ts:22-28` and `crServiceWorkerPatch.ts:31-34`.
 - Removes Playwright's own isolated-world bootstrap and rebuilds context handling manually. In `crPagePatch.ts` the patch *strips out* the original `Page.createIsolatedWorld` loop and re-inserts its own logic that resolves the `"utility"` context lazily and re-evaluates page bindings per frame:
 
   ```javascript
-  // driver_patches/crPagePatch.ts:211-218 — logic inserted into the non-initial-page branch (template text from the AST edit)
+  // driver_patches/crPagePatch.ts:226-233 — logic inserted into the non-initial-page branch (template text from the AST edit)
   const localFrames = this._isMainFrame()
     ? this._page.frames()
     : [this._page.frameManager.frame(this._targetId)!];
@@ -80,7 +80,7 @@ await client.send('Runtime.enable');  // Detectable!
       frame.evaluateExpression(binding.source).catch(e => {});
   }
   ```
-- `framesPatch.ts:211-310` replaces `Frame.context()` with a lazy `_context(world)`: the main-world context id comes from `Runtime.evaluate("globalThis")` with `serializationOptions: { serialization: "idOnly" }` and is parsed out of the returned `objectId` (l.256-265); an iframe's main world is resolved through `DOM.getFrameOwner` → `DOM.describeNode` → `DOM.resolveNode` (l.183-210); the isolated world is created on first use with `Page.createIsolatedWorld` (l.281). Since `88cf0a0` these lookups are cached per frame as promises (`_mainWorldContextPromise` and siblings).
+- `framesPatch.ts:211-314` replaces `Frame.context()` with a lazy `_context(world)`: the main-world context id comes from `Runtime.evaluate("globalThis")` with `serializationOptions: { serialization: "idOnly" }` and is parsed out of the returned `objectId` (l.260-269); an iframe's main world is resolved through `DOM.getFrameOwner` → `DOM.describeNode` → `DOM.resolveNode` (l.183-210); the isolated world is created on first use with `Page.createIsolatedWorld` (l.285). Since `88cf0a0` these lookups are cached per frame as promises (`_mainWorldContextPromise` and siblings). On `main` since `86be858` (2026-10-01, not in a release as of 2026-10-13) the two lookups use `send` instead of `_sendMayFail` and rethrow session-closed errors (commit title: "Fix request listener leak and crash retry loop").
 - Adds an `isolatedContext?: boolean` parameter throughout the evaluate chain (`server/javascript.ts`, `frameSelectors.ts`, and the `frame.yml` / `handles.yml` / `worker.yml` protocol specs) so callers can choose the **Main** or **Isolated** world. The "choose execution context (Main/Isolated)" TODO is now done. On the client side the parameter defaults to `true` (`patchright-nodejs` `client_patches/pagePatch.ts:54,76`; an `isolated_context` keyword with default `True` in the Python wrapper), so `page.evaluate()` runs in the isolated world unless `false` is passed; the READMEs state the same default.
 - `crExecutionContextPatch.ts` (new since the previous verification) adds `CRExecutionContext.findFunctions` (l.13-81), which finds the `callbackBridge` function objects of bindings created with `noGlobal` through `Runtime.evaluate`, `Runtime.getProperties` and `Runtime.queryObjects`; `utilityScriptPatch.ts` adds the matching `takeFunctionCallback` hook and `javascriptPatch.ts:10-35` the `ExecutionContext.findFunctions` entry point.
 
@@ -90,14 +90,14 @@ The README says Patchright patches the Console leak by **disabling the Console A
 
 #### 3. Init-Script Injection (README: Playwright Routes instead of CDP)
 
-The README (**Tier B**) says that, to run init scripts without `Runtime.enable`, Patchright injects JavaScript into HTML responses through **Playwright Routes** rather than a CDP `addScriptToEvaluateOnNewDocument` call. What the source contains (**Tier A**, read at `26ab9ae`, not executed):
+The README (**Tier B**) says that, to run init scripts without `Runtime.enable`, Patchright injects JavaScript into HTML responses through **Playwright Routes** rather than a CDP `addScriptToEvaluateOnNewDocument` call. What the source contains (**Tier A**, read at `26ab9ae` and re-read at `ba8bd9b`, not executed; line numbers below are at `ba8bd9b`):
 
 - **Client side** (`patchright-nodejs` `client_patches/pagePatch.ts:27-47`, `browserContextPatch.ts:27-47`): `addInitScript`, `exposeBinding` and `exposeFunction` first call `installInjectRoute()`, which registers a `**/*` route that calls `route.fallback({ patchrightInitScript: true })` for `http(s)` document requests (the flag is carried through the `network.yml` protocol spec).
-- **Server side** (`crNetworkManagerPatch.ts`): `RouteImpl.continue` with that flag sends `Fetch.continueRequest` with `interceptResponse: true` (l.534-560); the response-stage event reads the body with `Fetch.getResponseBody` and calls `fulfill` (l.562-600). `fulfill` (l.391-496) can insert one self-removing `<script>` per init script into the `<head>`, and rewrites `content-security-policy` / `-report-only` response headers and `<meta http-equiv="Content-Security-Policy">` tags through `_fixCSP` (l.198-310). `_fixCSP` adds the nonce found in the existing CSP (or `'unsafe-inline'` when there is none), `'unsafe-eval'` and a wildcard source to `script-src` and relaxes `style-src`, `img-src` / `font-src`, `connect-src` and `frame-ancestors`.
-- **What feeds `fulfill`:** it builds the `<script>` tags from `_mainFrameSession._evaluateOnNewDocumentScripts` (l.397-402) and injects nothing when that list is empty. At `88cf0a0` the patched `FrameSession._evaluateOnNewDocument` appended every init script to that list *and* called CDP `Page.addScriptToEvaluateOnNewDocument`. At `26ab9ae` (since commit `e8295b9`, 2026-08-17) `crPagePatch.ts:503-507` only makes the CDP call, and a search of `driver_patches/`, the generated `patchright.patch` and the three wrapper repositories finds no other code that adds to the list. Read from source, the route-injection branch therefore has nothing to inject at this commit, and context- and page-level init scripts (`crPagePatch.ts:244-250`) and bindings (`crPagePatch.ts:299`, with `runImmediately`) are registered through `Page.addScriptToEvaluateOnNewDocument`. The README text did not change. No runtime test was run here, so the behaviour of the published packages is unconfirmed (**Tier D**).
+- **Server side** (`crNetworkManagerPatch.ts`): `RouteImpl.continue` with that flag sends `Fetch.continueRequest` with `interceptResponse: true` (l.567-593); the response-stage event reads the body with `Fetch.getResponseBody` and calls `fulfill` (l.595-633). `fulfill` (l.397-508) can insert one self-removing `<script>` per init script into the `<head>`, and rewrites `content-security-policy` / `-report-only` response headers and `<meta http-equiv="Content-Security-Policy">` tags through `_fixCSP` (l.204-316). `_fixCSP` adds the nonce found in the existing CSP (or `'unsafe-inline'` when there is none), `'unsafe-eval'` and a wildcard source to `script-src` and relaxes `style-src`, `img-src` / `font-src`, `connect-src` and `frame-ancestors`.
+- **What feeds `fulfill`:** it builds the `<script>` tags from `_mainFrameSession._evaluateOnNewDocumentScripts` (l.403-408) and injects nothing when that list is empty. At `88cf0a0` the patched `FrameSession._evaluateOnNewDocument` appended every init script to that list *and* called CDP `Page.addScriptToEvaluateOnNewDocument`. At `26ab9ae` (since commit `e8295b9`, 2026-08-17) `crPagePatch.ts:511-515` only makes the CDP call, and a search of `driver_patches/`, the generated `patchright.patch` and the three wrapper repositories finds no other code that adds to the list. Read from source, the route-injection branch therefore has nothing to inject at this commit or at `ba8bd9b`, and context- and page-level init scripts (`crPagePatch.ts:259-265`) and bindings (`crPagePatch.ts:314`, with `runImmediately`) are registered through `Page.addScriptToEvaluateOnNewDocument`. The README text did not change. No runtime test was run here, so the behaviour of the published packages is unconfirmed (**Tier D**).
 
 ```html
-<!-- Template built by fulfill() (crNetworkManagerPatch.ts:473-477) -->
+<!-- Template built by fulfill() (crNetworkManagerPatch.ts:479-483) -->
 <script class="<initScriptTag>" nonce="..." id="randomId" type="text/javascript">
   document.getElementById("randomId")?.remove();  // self-delete
   /* init script source */
@@ -147,7 +147,7 @@ and **adds**:
 | `navigator.webdriver` | `--disable-blink-features=AutomationControlled` added, `--enable-automation` removed | `chromiumSwitchesPatch.ts` |
 | `Runtime.enable` timing/probe | `Runtime.enable` sends removed; execution contexts resolved by hand | `crPagePatch.ts`, `crDevToolsPatch.ts`, `crServiceWorkerPatch.ts`, `framesPatch.ts`, `javascriptPatch.ts` |
 | Console API probe (README: `Console.enable`) | README: Console API disabled; no patch module references `Console.enable` (section 2) | `crPagePatch.ts` (Runtime removal) |
-| Init-script fingerprinting | README: HTML-response injection through Routes with a self-removing `<script>`. Source at `26ab9ae`: CDP `Page.addScriptToEvaluateOnNewDocument` registration, with the route-injection list not populated (section 3) | `crPagePatch.ts`, `crNetworkManagerPatch.ts` |
+| Init-script fingerprinting | README: HTML-response injection through Routes with a self-removing `<script>`. Source at `ba8bd9b`: CDP `Page.addScriptToEvaluateOnNewDocument` registration, with the route-injection list not populated (section 3) | `crPagePatch.ts`, `crNetworkManagerPatch.ts` |
 | CSP blocking injected scripts | `_fixCSP` rewrites CSP response headers and `<meta>` CSP tags (reached only when the injection list is non-empty) | `crNetworkManagerPatch.ts` |
 | Stealth-driver flag tells | `--disable-component-update` etc. removed | `chromiumSwitchesPatch.ts` |
 | Closed shadow-root probes | Locators/XPath pierce closed shadow roots | `frameSelectorsPatch.ts`, `XPathSelectorEnginePatch.ts` |
@@ -301,7 +301,7 @@ crExecutionContextPatch         networkPatch              XPathSelectorEnginePat
 credentialsPatch
 ```
 
-The heaviest modules by size: `framesPatch.ts` (~56 KB — the `Runtime.enable` avoidance and context management), `crNetworkManagerPatch.ts` (~23 KB — network interception, route fulfilment and CSP rewriting), `crPagePatch.ts` (~22 KB — script injection & bindings), `frameSelectorsPatch.ts` (~18 KB — shadow-root piercing), `utilityScriptSerializersPatch.ts` (~14 KB). `driver_patches/` contains 36 files: the 34 modules plus `index.ts` and `utils.ts`.
+The heaviest modules by size: `framesPatch.ts` (~56 KB — the `Runtime.enable` avoidance and context management), `crNetworkManagerPatch.ts` (~24 KB — network interception, route fulfilment and CSP rewriting), `crPagePatch.ts` (~22 KB — script injection & bindings), `frameSelectorsPatch.ts` (~18 KB — shadow-root piercing), `utilityScriptSerializersPatch.ts` (~14 KB). `driver_patches/` contains 36 files: the 34 modules plus `index.ts` and `utils.ts`.
 
 ### Build Process
 
@@ -372,7 +372,7 @@ Only the Patchright column was read from source; the Undetected-Chromedriver and
 | `driver_patches/cliAliasPatch.ts` | `patchright` CLI branding/alias |
 | `driver_patches/javascriptPatch.ts` | Adds `isolatedContext?` to `JSHandle` evaluate methods; adds `ExecutionContext.findFunctions` |
 | `driver_patches/index.ts` | Barrel export listing all 34 driver patch modules |
-| `patchright.patch` | The generated diff (50,211 lines; documentation only, per its header; `playwright-core` hunks appear under two source trees) |
+| `patchright.patch` | The generated diff (50,277 lines at `ba8bd9b`; documentation only, per its header; `playwright-core` hunks appear under two source trees) |
 | `patchright-nodejs/` (submodule) | Client-side patches (browserContext, clientHelper, clock, frame, jsHandle, locator, network, page, tracing, worker) |
 | `package.json` | Build scripts + toolchain (ts-morph 27, TS 6, Biome 2.4) |
 | `.github/workflows/patchright_release.yml` | Hourly release check, test gate, npm publish, GitHub release |
@@ -398,7 +398,7 @@ Patchright is a **CDP-tell-removal layer** for Playwright. It rewrites the Playw
 
 What it does not implement: fingerprint spoofing, TLS impersonation, or an input motion model. It ships no canvas/WebGL/audio spoofing and no fingerprint rotation (no module in `driver_patches/` touches them); the README states that route-based init injection can be detected by timing attacks (rated low risk by the maintainers; section 3 describes what the current source does); and Console output is unavailable by design. The README pairs it with CDP-Patches for Brotector.
 
-As of 2026-09-30 (verified against `26ab9ae`): version 1.63.0 tracking Playwright 1.63.0 (GitHub release 2026-09-08, npm the same day, PyPI 2026-09-20), repo last pushed 2026-09-13, 40 contributors, 5 open issues, 4,720 stars, and a per-release test run against the Playwright suite before publishing. Since the previous verification (2026-08-14, `88cf0a0`) the driver moved from 1.61.1 to 1.63.0 (the history includes fixes for the Playwright 1.62.1 and 1.63.0 release failures), `driver_patches/` grew from 32 to 34 modules, driver distribution moved from per-platform zip bundles to the `patchright-core` npm package, and the init-script registration in `crPagePatch.ts` changed (section 3).
+As of 2026-10-13 (verified against `ba8bd9b`): version 1.63.0 tracking Playwright 1.63.0 (GitHub release 2026-09-08, npm the same day, PyPI 2026-09-20), repo last pushed 2026-10-11, 40 contributors, 5 open issues, 4,841 stars, and a per-release test run against the Playwright suite before publishing. Since the previous verification (2026-08-14, `88cf0a0`) the driver moved from 1.61.1 to 1.63.0 (the history includes fixes for the Playwright 1.62.1 and 1.63.0 release failures), `driver_patches/` grew from 32 to 34 modules, driver distribution moved from per-platform zip bundles to the `patchright-core` npm package, and the init-script registration in `crPagePatch.ts` changed (section 3). After the 2026-09-30 read, `main` gained one code commit not yet in a release (`86be858`, 2026-10-01, "Fix request listener leak and crash retry loop"): `RouteImpl` no longer adds its own `Fetch.requestPaused` listener (already-tracked paused requests are forwarded to the route from `_onRequestPaused`); a fulfilled service-worker request whose response event Chromium omits gets a synthesised response in `_onLoadingFinished`; the extra `Runtime.runIfWaitingForDebugger` sends in the lifecycle and navigation handlers were removed, and a main-frame session without an opener awaits its setup commands before resuming the target; frame-context lookups rethrow session-closed errors. The other three commits are README sponsor changes and the regenerated `patchright.patch`. None of this changes the claims above.
 
 **Evidence:** Tier A for the driver patch mechanics above; Tier B for the anti-bot service list; no independent detection measurements (see [METHODOLOGY.md](METHODOLOGY.md)).
 

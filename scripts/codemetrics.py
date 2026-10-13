@@ -56,7 +56,10 @@ EXCLUDE = ["!.git", "!node_modules", "!bundles", "!dist", "!build", "!target",
            # invisible_playwright vendors a Playwright-Python fork in _pw/ (see its
            # THIRD_PARTY_FORK.md) and ships an esbuild bundle of Playwright's
            # injectedScript.ts as _juggler/injected.js.
-           "!_pw", "!**/_juggler/injected.js"]
+           "!_pw", "!**/_juggler/injected.js",
+           # Since core 38.34.0 the Juggler client (and its injected.js bundle) lives in
+           # invisible_core/juggler/.
+           "!**/juggler/injected.js"]
 TESTGLOBS = ["tests", "test", "*_test.*", "test_*.*", "*.test.*", "spec"]
 EXTS = ["py", "js", "ts", "rs", "cc", "cpp", "h", "hpp", "cs"]
 

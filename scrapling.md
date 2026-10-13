@@ -4,9 +4,9 @@
 > **Repository:** [github.com/D4Vinci/Scrapling](https://github.com/D4Vinci/Scrapling)
 > **Approach:** Three-tier fetching (HTTP/Dynamic/Stealth) + adaptive element tracking + spider framework
 > **What is verified:** `pyproject.toml` requires `curl_cffi>=0.16.1` (HTTP-tier TLS impersonation) and `patchright>=1.62.1` (minimum versions, not exact pins) — **the browser-tier evasion is Patchright's**, inherited wholesale rather than implemented here (**Tier A**)
-> **Anti-bot service claims:** Cloudflare Turnstile handled out of the box (**Tier B**). The README's sponsor table (line 134) **lists a third-party paid token API for Akamai, DataDome, Kasada and Incapsula** rather than claiming coverage of them.
-> **Maintenance:** latest release **v0.4.15** (2026-08-23); 0.4.11–0.4.15 added feed spiders, AutoThrottle, a reworked 13-tool MCP server, and browser-tab reuse. No release since; the 15 commits after the v0.4.15 tag touch only README, docs, images and `zensical.toml`. 84.6k stars, 31 contributors, 9 open issues. BSD-3-Clause.
-> **Verified:** 2026-09-30 against `D4Vinci/Scrapling` @ `b11da90`.
+> **Anti-bot service claims:** Cloudflare Turnstile handled out of the box (**Tier B**). The README's sponsor table (line 116) **lists a third-party paid token API for Akamai, DataDome, Kasada and Incapsula** rather than claiming coverage of them.
+> **Maintenance:** latest release **v0.4.15** (2026-08-23); 0.4.11–0.4.15 added feed spiders, AutoThrottle, a reworked 13-tool MCP server, and browser-tab reuse. No release since; the 24 commits after the v0.4.15 tag touch only README, docs, images, `zensical.toml`, `CONTRIBUTING.md` and `.gitignore`. 87.1k stars, 31 contributors, 20 open issues. BSD-3-Clause.
+> **Verified:** 2026-10-13 against `D4Vinci/Scrapling` @ `7a68493`.
 
 ---
 
@@ -34,14 +34,14 @@ Scrapling is an **all-in-one Python web scraping framework** that bundles fetchi
 
 **What makes it different from the other tools analyzed here:** The tools in this repo ([Camoufox](./camoufox.md), [Patchright](./patchright.md), [SeleniumBase](./seleniumbase.md), etc.) are **browser automation stealth tools**. Scrapling is a **scraping framework** that *uses* one of them (Patchright) under the hood for its stealth tier, and layers fetching / parsing / crawling on top. It's a layer above, not a competitor.
 
-**Project facts (verified against source, 2026-09-30):**
+**Project facts (verified against source, 2026-10-13):**
 
 | Attribute | Value | Evidence |
 |-----------|-------|----------|
 | Current version | **0.4.15** | `pyproject.toml` `version = "0.4.15"`, `scrapling/__init__.py` `__version__ = "0.4.15"`; GitHub release `v0.4.15` and PyPI upload 2026-08-23 |
-| Release cadence | point releases between 1 day and 4 weeks apart from June to August 2026; none after 0.4.15 as of 2026-09-30 | `CHANGELOG.md`: 0.4.15 (Aug 23), 0.4.14 (Aug 10), 0.4.13 (Aug 9), 0.4.12 (Jul 26), 0.4.11 (Jul 12), 0.4.10 (Jul 4) |
-| Last commit | 2026-09-29 (`b11da90`, docs/sponsor edit); last commit touching `scrapling/`, `tests/` or `pyproject.toml`: 2026-08-23 (`3e03f78`) | `git log -1` on the sandboxed clone; `git diff --stat v0.4.15..HEAD` lists only README, docs, images, `zensical.toml` |
-| Community | 84,635 stars, 31 contributors, 9 open issues | GitHub API |
+| Release cadence | point releases between 1 day and 4 weeks apart from June to August 2026; none after 0.4.15 as of 2026-10-13 | `CHANGELOG.md`: 0.4.15 (Aug 23), 0.4.14 (Aug 10), 0.4.13 (Aug 9), 0.4.12 (Jul 26), 0.4.11 (Jul 12), 0.4.10 (Jul 4) |
+| Last commit | 2026-10-11 (`7a68493`, docs/sponsor edit); last commit touching `scrapling/`, `tests/` or `pyproject.toml`: 2026-08-23 (`3e03f78`) | `git log -1` on the sandboxed clone; `git diff --stat v0.4.15..HEAD` lists only README, docs, images, `zensical.toml`, `CONTRIBUTING.md`, `.gitignore` |
+| Community | 87,122 stars, 31 contributors, 20 open issues (2026-10-13) | GitHub API |
 | Language | **Python only** (CPython) | `Programming Language :: Python :: 3 :: Only` classifier |
 | Python versions | **3.10 – 3.13** | `requires-python = ">=3.10"` |
 | License | **BSD 3-Clause** | `LICENSE`; `License :: OSI Approved :: BSD License` |
@@ -177,7 +177,7 @@ response = StealthyFetcher.fetch(
 )
 ```
 
-**What StealthyFetcher does under the hood (as of 0.4.15; identical on `b11da90`):**
+**What StealthyFetcher does under the hood (as of 0.4.15; identical on `7a68493`):**
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -216,7 +216,7 @@ response = StealthyFetcher.fetch(
 
 > **Corrections vs. previous edition:** (1) `disable_webgl=True` is not the real parameter — WebGL is controlled by `allow_webgl` (default **True**; the docstring warns disabling it is risky because many WAFs now check WebGL is present). (2) `block_webrtc` does **not** "block" WebRTC — it forces Chromium to route WebRTC only through the proxy (`disable_non_proxied_udp`), preventing local-IP leaks. (3) `hide_canvas` is a native Chromium **launch flag** (`--fingerprinting-canvas-image-data-noise`), not JS-injected canvas noise. (4) There is no Camoufox/Firefox path anymore.
 
-**Fixed launch and context settings (Tier A, `b11da90`):** the stealth tier launches Chromium with the 53-entry `STEALTH_ARGS` set (includes `--disable-blink-features=AutomationControlled`) plus 11 `DEFAULT_ARGS`, removes 5 `HARMFUL_ARGS` from Playwright's defaults (including `--enable-automation`), and sets `is_mobile=False`, `has_touch=False`, `ignore_https_errors=True`, a 1920x1080 screen and viewport, and `permissions=["geolocation", "notifications"]` (`scrapling/engines/constants.py:15-92`; `_base.py:547-554`). `color_scheme="dark"` and `device_scale_factor=2` are set for both browser tiers (`_base.py:444`; the code comment says dark mode avoids a CreepJS preferred-light-colour check). A `locale` is applied through `--lang` and `--accept-lang` launch flags rather than the Playwright context option, except on `cdp_url` sessions (`_base.py:468-470`, `491-500`; 0.4.15).
+**Fixed launch and context settings (Tier A, `7a68493`):** the stealth tier launches Chromium with the 53-entry `STEALTH_ARGS` set (includes `--disable-blink-features=AutomationControlled`) plus 11 `DEFAULT_ARGS`, removes 5 `HARMFUL_ARGS` from Playwright's defaults (including `--enable-automation`), and sets `is_mobile=False`, `has_touch=False`, `ignore_https_errors=True`, a 1920x1080 screen and viewport, and `permissions=["geolocation", "notifications"]` (`scrapling/engines/constants.py:15-92`; `_base.py:547-554`). `color_scheme="dark"` and `device_scale_factor=2` are set for both browser tiers (`_base.py:444`; the code comment says dark mode avoids a CreepJS preferred-light-colour check). A `locale` is applied through `--lang` and `--accept-lang` launch flags rather than the Playwright context option, except on `cdp_url` sessions (`_base.py:468-470`, `491-500`; 0.4.15).
 
 ---
 
@@ -342,7 +342,7 @@ all_cards = card.find_similar()
 
 ### Text-Extraction Speed (5000 nested elements, 100+ runs)
 
-Numbers from the project's README (`README.md:498-523`, which points to `benchmarks.py` for methodology; **Tier B** — the maintainer's own benchmark, not reproduced here):
+Numbers from the project's README (`README.md:467-492`, which points to `benchmarks.py` for methodology; **Tier B** — the maintainer's own benchmark, not reproduced here):
 
 | # | Library | Time (ms) | vs Scrapling |
 |---|---------|:---------:|:------------:|
@@ -511,7 +511,7 @@ Not MCP-specific: 0.4.15 added `Response.markdown()` (`scrapling/engines/toolbel
 | TLS impersonation (HTTP tier) | **Yes** — `curl_cffi>=0.16.1`, `--impersonate` with Chrome/Firefox/Safari profiles | **A** | Real JA3/JA4 impersonation. The most concretely verifiable stealth feature here. |
 | Cloudflare Turnstile / Interstitial solver | **Yes** — `solve_cloudflare` in StealthyFetcher | **A** | The code path exists and is first-party. Whether it succeeds on a given deployment is untested here. |
 | CDP-level automation-tell removal | **Delegated** — `patchright>=1.62.1` | **A** | Not Scrapling's work. Its browser-tier evasion is exactly Patchright's, with Patchright's strengths and limits. |
-| Fingerprint spoofing (canvas/WebGL/audio) | **No** first-party implementation | **A** | Exposes flags (canvas noise, WebGL toggle, timezone/locale match, WebRTC→proxy) but implements no engine-level spoofing. Camoufox has not been used since 0.3.13. The README's feature list (line 277) describes the stealth tier as including fingerprint spoofing (**Tier B**); in source it is launch flags and context options, as above. |
+| Fingerprint spoofing (canvas/WebGL/audio) | **No** first-party implementation | **A** | Exposes flags (canvas noise, WebGL toggle, timezone/locale match, WebRTC→proxy) but implements no engine-level spoofing. Camoufox has not been used since 0.3.13. The README's feature list (line 246) describes the stealth tier as including fingerprint spoofing (**Tier B**); in source it is launch flags and context options, as above. |
 | DataDome / Kasada / Akamai / Incapsula | **No** first-party handling | **A** | Notably, the project **does not claim these** — its README routes them to a third-party paid token API. |
 
 **Scope stated by the project.** Scrapling's README routes Akamai, DataDome, Kasada,
@@ -680,10 +680,10 @@ Scrapling is a **framework, not a stealth engine**. Its browser anti-detection i
 
 **Constraints:** no first-party fingerprint spoofing, and no first-party handling for Akamai, DataDome, Kasada, or Incapsula — the project routes those to an external paid API. Using Patchright directly provides the same browser-tier evasion without the framework layer.
 
-**Scope summary:** Scrapling's browser-tier stealth is Patchright's implementation, reached through a dependency (`patchright>=1.62.1`). Using Patchright directly provides the same evasion without the framework. Scrapling adds the HTTP tier (`curl_cffi` TLS impersonation), the parser, adaptive element tracking, and the spider framework. Project state at 2026-09-30: 0.4.15 shipped 2026-08-23, 31 contributors, 9 open issues, 92% test coverage stated in the README (Tier B), BSD-3-Clause. Its published benchmarks measure parser throughput, not WAF outcomes.
+**Scope summary:** Scrapling's browser-tier stealth is Patchright's implementation, reached through a dependency (`patchright>=1.62.1`). Using Patchright directly provides the same evasion without the framework. Scrapling adds the HTTP tier (`curl_cffi` TLS impersonation), the parser, adaptive element tracking, and the spider framework. Project state at 2026-10-13: 0.4.15 shipped 2026-08-23, 31 contributors, 20 open issues, 92% test coverage stated in the README (Tier B), BSD-3-Clause. Its published benchmarks measure parser throughput, not WAF outcomes.
 
 **Unique value:** The adaptive element tracking system remains the standout — automatic selector recovery when a site's DOM changes is something none of the other tools analyzed in this repository provide.
 
 ---
 
-*Analysis conducted for educational purposes against Scrapling v0.4.15 source (`b11da90`, read 2026-09-30 in an isolated container; the `scrapling/` tree is identical to the v0.4.15 tag). Use responsibly.*
+*Analysis conducted for educational purposes against Scrapling v0.4.15 source (`7a68493`, read 2026-10-13 in an isolated container; the `scrapling/` tree is identical to the v0.4.15 tag). Use responsibly.*

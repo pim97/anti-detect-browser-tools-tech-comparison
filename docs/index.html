@@ -229,7 +229,7 @@ footer a{color:var(--signal)}
 <div class="wrap">
 
 <header class="masthead">
-  <div class="eyebrow">Source-verified · 2026-09-30</div>
+  <div class="eyebrow">Source-verified · 2026-10-13</div>
   <h1>Ten anti-detect tools, and <em>how well each claim is actually known</em>.</h1>
   <p class="prose lede" style="margin-top:14px">
     Read from source in an isolated container. No benchmarks were run, so no claim about
@@ -361,7 +361,7 @@ footer a{color:var(--signal)}
 </div>
 
 <script>
-/* ── Data. Every value verified 2026-09-30 against the commits in STATUS.md. ── */
+/* ── Data. Every value verified 2026-10-13 against the commits in STATUS.md. ── */
 const TOOLS = ["Camoufox","Patchright","SeleniumBase","Botasaurus","XDriver","CloakBrowser","Scrapling","Obscura","Clearcote","invisible_playwright"];
 
 /* v = displayed text, t = evidence tier, n = qualifying note */
@@ -372,7 +372,7 @@ const ROWS = [
     c("stock Chromium","A"), c("stock Chromium","A"), c("Chromium 152 fork","B","Pro; 146 keyless free"),
     c("delegates","A","uses Patchright"), c("own Rust engine","A"), c("Chromium 150 fork","A","ungoogled; open build"), c("Firefox 151 fork","A")]},
   {k:"Modification method", cells:[
-    c("C++ source patches","A","44 in patches/, 2 playwright/"),
+    c("C++ source patches","A","42 in browser/patches/, 2 playwright/"),
     c("AST rewrite of driver","A","ts-morph, 275 lines"),
     c("ChromeDriver rewrite + CDP driver","A"),
     c("raw CDP over WebSocket","A","58 generated bindings"),
@@ -413,7 +413,7 @@ const ROWS = [
   {k:"Real layout & rendering", cells:[
     c("Gecko","A"), c("Blink","A"), c("Blink","A"), c("Blink","A"), c("Blink","A"),
     c("Blink","A"), c("Blink","A","browser tier"),
-    c("own engine","A","69,866 lines; render builds only"), c("Blink","A"), c("Gecko","A")]},
+    c("own engine","A","72,401 lines; render builds only"), c("Blink","A"), c("Gecko","A")]},
   {k:"HTML parser included", cells:[
     c("no","A"), c("no","A"), c("no","A"), c("no","A"), c("no","A"), c("no","A"),
     c("yes","A"), c("yes","A","html5ever"), c("no","A"), c("no","A")]},
@@ -469,19 +469,19 @@ const FINDINGS = [
   {sev:"crit", title:"CloakBrowser disables the Chromium sandbox by default, and the Playwright sandbox switch cannot restore it",
    body:"<code>--no-sandbox</code> is part of the default launch arguments in all three wrappers and in <code>cloakserve</code>. Playwright itself adds the flag unless <code>chromiumSandbox</code> is true, but the wrapper adds it as well, so that switch has no effect under the defaults. The argument merge can add and override flags but cannot remove them; the only opt-out is <code>stealth_args=False</code>, which also drops the wrapper's fingerprint seed and platform flags (the README shows re-adding them by hand). The README does not mention the flag; the CHANGELOG does.",
    why:"The sandbox is what contains a compromised renderer. CloakBrowser is also the only tool of the ten with a closed engine binary — so by default it is unauditable native code, with no OS sandbox, processing hostile input.",
-   src:"cloakbrowser/config.py:54-76 · browser.py:1408-1429 · README.md:818-821 · Tier A"},
+   src:"cloakbrowser/config.py:155-177 · browser.py:1439-1460 · README.md:822-825 · Tier A"},
   {sev:"warn", title:"XDriver ships a frozen bundle with no drift detection",
    body:"295 lines of first-party Python and zero tests. The stealth is a prebuilt <code>playwright-core</code> 1.49.0 fork not built from any published source. Nothing detects that upstream has moved on — current Playwright is 1.63.x.",
    why:"A silently stale stealth patch is worse than a loudly broken one, because you deploy it believing it works. Its README also claims the broadest anti-bot coverage of any tool here, dated September 2025.",
    src:"x_driver/ · last commit 2025-09-10 · Tier A"},
   {sev:"warn", title:"SeleniumBase is large and effectively untyped",
-   body:"102,228 production lines. <code>base_case.py</code> is 17,702 lines and 579 methods in one class. 3.4% of 3,942 functions carry any type annotation; 515 broad <code>except</code> handlers; 550 sleep calls.",
+   body:"102,429 production lines. <code>base_case.py</code> is 17,703 lines and 579 methods in one class. 3.4% of 3,946 functions carry any type annotation; 514 broad <code>except</code> handlers; 551 sleep calls.",
    why:"Forking or patching it is expensive and a type checker cannot help you. Of its 42 <code>shell=True</code> calls, 12 are in <code>core/</code> launch helpers (driver <code>--version</code> probes and driver installs); the rest are in CLI, grid and example code. They interpolate local paths and version strings, not page content.",
    src:"seleniumbase/fixtures/base_case.py · core/browser_launcher.py · Tier A"},
   {sev:"warn", title:"Obscura's panic containment is partial",
-   body:"91 matching lines of non-test <code>.unwrap()</code> and 1 <code>panic!</code> across 168,827 production lines (inline test modules stripped; the earlier 2,326 figure included test code). Release builds use <code>panic = \"unwind\"</code> and each CDP connection runs on its own OS thread, with <code>catch_unwind</code> at the JS-op, URL-op, module-evaluation and resource-load boundaries.",
-   why:"In a one-shot CLI a panic is an exit code. In <code>obscura serve</code>, containment is per connection thread; stack overflows, allocation failures and V8 fatal errors abort the whole process. Load-test it before running it as a long-lived service; <code>--workers N</code> adds process isolation.",
-   src:"Cargo.toml:72-73 · crates/obscura-cdp/src/server.rs:761 · crates/obscura-js/src/ops.rs:1527 · Tier A"},
+   body:"95 matching lines of non-test <code>.unwrap()</code> and 1 <code>panic!</code> across 179,727 production lines (inline test modules stripped; the earlier 2,326 figure included test code). Release builds use <code>panic = \"unwind\"</code> and each CDP connection runs on its own OS thread, with <code>catch_unwind</code> at the JS-op, URL-op, module-evaluation and resource-load boundaries.",
+   why:"In a one-shot CLI a panic is an exit code. In <code>obscura serve</code>, containment is per connection thread; stack overflows, allocation failures and V8 fatal errors abort the whole process. Load-test it before running it as a long-lived service; <code>--workers N</code> adds process isolation, and since v0.2.4 the balancer restarts a worker that exits (sessions on it are lost).",
+   src:"Cargo.toml:72-73 · crates/obscura-cdp/src/server.rs:797 · crates/obscura-js/src/ops.rs:1879 · Tier A"},
   {sev:"warn", title:"Botasaurus swallows errors; its driver has no tests",
    body:"38 bare <code>except:</code> clauses across the two repos — the only tools here with double-digit counts. <code>botasaurus-driver</code>, which implements the actual stealth, has zero test files across 50,169 lines.",
    why:"A bare except catches KeyboardInterrupt and SystemExit too, so it hides causes and can make a process hard to interrupt. PyPI (4.0.101) is also ahead of the published source (4.0.92) — reviewing the repo does not tell you what pip installs.",
@@ -489,9 +489,9 @@ const FINDINGS = [
   {sev:"crit", title:"invisible_playwright's browser contacts GitHub on every launch",
    body:"The patched Firefox fires a fire-and-forget <code>fetch()</code> to a GitHub release asset at startup, gated on a pref that defaults to <code>true</code>. The request carries no identifier, no payload and no cookies (<code>credentials:\"omit\"</code>). The URL is read from a pref that <code>invisible_core</code> sets; neither package sets the <code>enabled</code> pref. Whether the request goes through the session proxy was not run (Tier D): the proxy command is sent after startup begins.",
    why:"It is described in the engine README and in the wrapper's CHANGELOG (plus a launches badge in the README), but searching the wrapper's README and docs for <code>usage_ping</code>, <code>launch counter</code> or <code>launch.txt</code> returns zero matches. Disable with <code>InvisiblePlaywright(extra_prefs={\"invisible_firefox.usage_ping.enabled\": False})</code>.",
-   src:"BrowserGlue.sys.mjs:387-423 · firefox.js:3683,3689 · CHANGELOG.md:739-751 · Tier A"},
+   src:"BrowserGlue.sys.mjs:387-423 · firefox.js:3683,3689 · CHANGELOG.md:1346-1361 · Tier A"},
   {sev:"good", title:"Patchright engineers a fragile approach correctly",
-   body:"Rewriting another project's source with an AST tool is inherently brittle. Patchright uses ts-morph's throwing accessors throughout — 222 <code>…OrThrow(</code> calls across <code>driver_patches/</code>, 33 in <code>crPagePatch.ts</code> — so if Playwright moves a symbol the build breaks at patch time rather than emitting a silently unpatched driver.",
+   body:"Rewriting another project's source with an AST tool is inherently brittle. Patchright uses ts-morph's throwing accessors throughout — 225 <code>…OrThrow(</code> calls across <code>driver_patches/</code>, 33 in <code>crPagePatch.ts</code> — so if Playwright moves a symbol the build breaks at patch time rather than emitting a silently unpatched driver.",
    why:"A CI job diffs two Playwright versions and writes an impact report, and the release workflow runs Playwright's own chromium test suites against the patched driver; a failed run opens an issue and a draft PR. This is the pattern XDriver lacks entirely.",
    src:"driver_patches/ · .github/workflows/check_patch_impact.yml · patchright_release.yml · Tier A"},
   {sev:"good", title:"Scrapling pairs high typing coverage with a low smell count",
@@ -502,15 +502,15 @@ const FINDINGS = [
 
 const METRICS = [
   {title:"Type annotation coverage", cap:"Share of non-test Python functions with any parameter or return annotation. Higher means a type checker can help you.",
-   unit:"%", data:[["invisible_core",95.8],["invisible_pw",90.6],["Scrapling",85.5],["bota-driver",81.2],["CloakBrowser",81.0],["Camoufox",67.4],["Clearcote",28.7],["Obscura (py)",25.6],["Botasaurus",14.0],["XDriver",8.3],["SeleniumBase",3.4]],
+   unit:"%", data:[["CloakBrowser",95.7],["invisible_core",93.6],["invisible_pw",91.1],["Scrapling",85.5],["bota-driver",81.2],["Camoufox",79.4],["Obscura (py)",25.0],["Clearcote",21.7],["Botasaurus",14.0],["XDriver",8.3],["SeleniumBase",3.4]],
    flagBelow:10},
   {title:"Broad exception handlers per 1k lines", cap:"except Exception / except BaseException in production code. Higher means failures surface as behaviour changes rather than tracebacks.",
-   unit:"", data:[["Clearcote",5.1],["SeleniumBase",5.0],["invisible_pw",3.0],["invisible_core",2.8],["CloakBrowser",2.7],["patchright-py",1.8],["Camoufox",0.5],["Scrapling",0.4],["Botasaurus",0.2],["bota-driver",0.1],["Obscura",0.0]],
+   unit:"", data:[["SeleniumBase",5.0],["invisible_pw",4.9],["Clearcote",3.1],["invisible_core",2.3],["patchright-py",1.8],["CloakBrowser",0.9],["Scrapling",0.4],["Camoufox",0.3],["Botasaurus",0.2],["bota-driver",0.1],["Obscura",0.0]],
    flagAbove:5},
   {title:"Production lines of code", cap:"First-party source, excluding tests, vendored trees and generated bundles. Size is not quality — it is the cost of reading and forking.",
-   unit:"", data:[["Obscura",168827],["SeleniumBase",102228],["Camoufox",53517],["bota-driver",50169],["CloakBrowser",35098],["Clearcote",33085],["Botasaurus",31005],["invisible_pw",21406],["Scrapling",16219],["invisible_core",14214],["Patchright",7691],["XDriver",295]]},
+   unit:"", data:[["Obscura",179727],["SeleniumBase",102429],["Clearcote",63262],["bota-driver",50169],["Camoufox",42918],["CloakBrowser",32953],["Botasaurus",31005],["invisible_core",26504],["Scrapling",16219],["invisible_pw",13612],["Patchright",7736],["XDriver",295]]},
   {title:"Test files", cap:"Count of test files in the repository. Presence is not coverage, but zero is unambiguous.",
-   unit:"", data:[["Camoufox",129],["SeleniumBase",117],["Clearcote",108],["invisible_pw",98],["CloakBrowser",83],["Obscura",69],["Scrapling",63],["invisible_core",55],["Botasaurus",13],["Patchright",2],["bota-driver",0],["XDriver",0]],
+   unit:"", data:[["Clearcote",219],["Camoufox",179],["invisible_pw",129],["SeleniumBase",117],["CloakBrowser",92],["invisible_core",92],["Obscura",83],["Scrapling",63],["Botasaurus",13],["Patchright",2],["bota-driver",0],["XDriver",0]],
    flagZero:true},
 ];
 

@@ -1,5 +1,95 @@
 # Changelog
 
+## 2026-10-13 — Re-verification against upstream (all ten tools)
+
+Every tool page, the README tables, the code review and the interactive matrix were
+re-read against the upstream trees in the sandbox; the previous pass was 2026-09-30.
+STATUS.md was regenerated the same day. Nothing was installed, built or executed. The
+invisible_playwright engine fork was read from its git objects without a checkout.
+
+### Versions and commits read
+
+| Tool | Documented on 2026-09-30 | Now | Commit read |
+|------|--------------------------|-----|-------------|
+| Camoufox | browser `v156.0.1-beta.33`, PyPI `0.5.6` | browser `v156.0.1-beta.38` (pre-release, still Firefox 156.0.1), PyPI `0.5.8` (fpgen-based), library pre-releases `0.5.9b1`–`b3` | `4559d01` |
+| Patchright | `1.63.0` | unchanged; `main` has one unreleased driver fix (`86be858`) | `ba8bd9b` |
+| SeleniumBase | `4.54.13` | `4.56.1` (2026-10-12) | `be6514f` |
+| Botasaurus | core `4.0.97`, driver `4.0.101` | unchanged, no commits | `6c9260d`, `db1d291` |
+| XDriver | `v1.0.1` | unchanged, no commits | `b610852` |
+| CloakBrowser | wrapper `0.5.11`, Pro Chromium 152 (macOS 151) | wrapper `0.6.2`, Pro Chromium 154 on every platform | `485f678` |
+| Scrapling | `0.4.15` | unchanged; `main` has 24 docs/sponsor-only commits after the tag | `7a68493` |
+| Obscura | `v0.2.3` | `v0.2.4` (2026-10-04); `main` is 59 commits past the tag | `8edfe48` |
+| invisible_playwright | wrapper `0.25.7`, core `34.31.0`, engine `firefox-34` | wrapper `0.35.3`, core `41.39.0`, engine `firefox-41` (Firefox 151.0) | `91ea73b`, core `415bbd8`, engine `a3819a7` |
+| Clearcote | browser `pre.23`, SDK `0.33.0` | browser unchanged, SDK `0.49.0` (2026-10-12) | `fb3e7bb` |
+
+### What changed upstream
+
+- **Camoufox**: repository split into `browser/`, `python/` and `typescript/` (every path
+  citation changed); 44 to 42 top-level patches (removed `browser-init`,
+  `global-style-sheets`, `pin-addons`, `windows-theming-bug-modified`; added
+  `camoufox-window-module`, `user-agent-app-name`); vendored LibreWolf/Ghostery patches
+  14 to 2. Juggler loads from `resource://gre/modules/juggler/` instead of a `chrome://`
+  package, and the build sets `MOZILLA_OFFICIAL`. When the identity claims an OS or GPU
+  other than the host's, canvas and WebGL readback return `privacy.resistFingerprinting`'s
+  random placeholder by default (new `canvas_noise` option); the default `os` is a random
+  pick, so most default launches claim a non-host OS. WebGPU follows the claimed device.
+  Per-context identities on a launch without the placeholder keep the host's OS and GPU.
+  78 live config keys (was 82). Browser releases declare an `interface` number; `geoip`
+  defaults to the GeoIP AIO database. The npm package is renamed `camoufox`. The canvas,
+  Juggler and restructure changes are in the `0.5.9b*` pre-releases and browser
+  `beta.37`/`beta.38` only.
+- **invisible_playwright**: the Juggler client moved from the wrapper into
+  `invisible_core.juggler` (core 38.34.0 / wrapper 0.30.0); the core is now
+  `MIT AND Apache-2.0`. Since core 41.35.0 the core sends `Browser.setBrowserProxy`, still
+  after the readiness line, so the launch ping still precedes it. Engine `firefox-35` to
+  `firefox-41`: window geometry from a device-pixel frame, `Browser.setServiceWorkersBlocked`,
+  zoom-corrected pointer input, per-context worker locale, a Linux WebRTC-behind-SOCKS
+  wildcard fix; `zoom.stealth.*` prefs 44 to 46. Firefox's shutdown telemetry pings now
+  leave through the session proxy (`firefox-40`). The launch ping is unchanged.
+- **CloakBrowser** 0.5.11 to 0.6.2: Pro Chromium 154 on every platform (87 claimed patches,
+  unchanged). Humanize rewritten (0.6.0) around Playwright's InjectedScript in an isolated
+  world: full selector syntax, strict mode, real Playwright errors; Playwright >= 1.53
+  required. Persistent profiles keep one fingerprint seed. First-run downloads extract into
+  a private staging directory. A one-time warning that Playwright's request client
+  bypasses SOCKS5 or credentialed HTTP proxies. Sandbox default unchanged.
+- **Clearcote**: no engine change (Chromium 150, 37 patches). SDKs 0.33.0 to 0.49.0: hosted
+  browsers (`launch(cloud=True)`), a Docker route on macOS, humanized form filling,
+  Widevine on by default for licensed launches, `--allow-third-party-cookies` by default,
+  ip-api.com GeoIP fallback off by default. The Docker image runs Chrome with its sandbox
+  only when given the bundled seccomp profile, which the SDKs pass only on x86_64. MCP
+  server gained an egress guard. The project README no longer states zero telemetry.
+- **Obscura** v0.2.3 to v0.2.4: intercepted XHR reported as `Xhr` (was `Fetch`); the
+  multi-worker balancer restarts exited workers; `Page.close` with `beforeunload`,
+  `Page.stopLoading`, `Runtime.getHeapUsage`, `HeapProfiler.collectGarbage` and others
+  (111 to 117 CDP methods); MCP tools 37 to 38 on `main`; render engine 72,401 lines. No
+  change to the fingerprint surface.
+- **SeleniumBase** 4.54.13 to 4.56.1: opt-in Fast Mode that skips built-in waits (the
+  project notes it "may impact stealth"); shorter default waits; `selenium` 4.51.0;
+  README rewrite dropping the "Stealthy Chromium Automation" subtitle. UC and CDP driver
+  code unchanged.
+- **Patchright**: one unreleased fix on `main` (request-listener leak and crash-retry loop);
+  no claim affected.
+
+### Corrections
+
+| Tool | Previous statement | Verified state |
+|------|--------------------|----------------|
+| SeleniumBase | Imperva/Incapsula example labelled "WAF + hCaptcha" | The project heading says "invisible reCAPTCHA" (at both commits); the `sb_cdp` handler is an hCaptcha click |
+| CloakBrowser | Shift-symbol typing falls back to `page.evaluate` | Since 0.6.0 always CDP `Input.dispatchKeyEvent`; the fallback survives only in the exported `human_type` helper |
+| CloakBrowser | Version pinning works for keyless and paid keys (README) | README now says paid key only; the keyless code path still honours a pin |
+| Scrapling | Post-tag commits touch only README, docs, images and `zensical.toml` | They also touch `CONTRIBUTING.md` and `.gitignore`; no code |
+| Clearcote | README states zero telemetry/phone-home | No longer in the README; the page lists the SDK's own outbound calls |
+| Camoufox | `1-leak-fixes.patch` also reverts Playwright's policies provider | It changes only `Navigator.cpp`; the provider hunk was removed from `0-playwright.patch` |
+
+### Other
+
+- `scripts/codemetrics.py` now excludes the vendored `invisible_core/juggler/injected.js`
+  (8,121 lines) as well as the wrapper's old `_juggler/injected.js`. All CODE-REVIEW and
+  matrix metrics were regenerated with it.
+- On 2026-10-13 GitHub no longer flagged Clearcote's `v0.1.0-pre.23` release as a
+  pre-release, so STATUS.md shows it without the marker; the tag name, `llms.txt` and the
+  build configuration still describe it as a pre-release.
+
 ## 2026-09-30 — Re-verification against upstream (all ten tools)
 
 Every tool page, the README tables, the code review and the interactive matrix were

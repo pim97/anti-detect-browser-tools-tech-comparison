@@ -8,7 +8,7 @@
 > **What is verified:** **zero** Selenium imports in `botasaurus_driver`; 58 generated CDP binding files under `botasaurus_driver/cdp/`; Bézier cursor paths in `botasaurus_humancursor/.../human_curve_generator.py` (**Tier A**). Any "Selenium wrapper" description of Botasaurus is historical.
 > **Anti-bot service claims:** the README claims **Cloudflare WAF, Cloudflare Turnstile, DataDome** with ✅ against linked demo targets, and markets "undefeatable" scrapers (**Tier B** — vendor-selected demo targets, not a benchmark)
 > **Maintenance:** Core `botasaurus` **4.0.97** (2026-01-06, unchanged); `botasaurus-driver` **4.0.101** on PyPI (2026-08-10) — note the GitHub `setup.py` still reads 4.0.92, so **PyPI is ahead of the repo**. 5.7k stars, 9 contributors, last push 2026-07-26. MIT.
-> **Verified:** 2026-09-30 against `omkarcloud/botasaurus` @ `6c9260d` and `botasaurus-driver` @ `db1d291` (both unchanged since 2026-08-14).
+> **Verified:** 2026-10-13 against `omkarcloud/botasaurus` @ `6c9260d` and `botasaurus-driver` @ `db1d291` (both unchanged since 2026-08-14).
 
 ---
 
@@ -37,7 +37,7 @@ constraint.
 
 ---
 
-## Version & Maintenance Status (verified 2026-09-30)
+## Version & Maintenance Status (verified 2026-10-13)
 
 Botasaurus does **not** publish GitHub Releases — there are no tags/releases on the repo. Versioning happens by an auto-increment script (`increment_version.py`) that bumps the patch number in `setup.py` and auto-publishes to PyPI/npm (commit messages like `chore: autopublish 2026-06-29...`). So "current version" means "latest published package," not a release note.
 

@@ -4,11 +4,11 @@
 > **Category:** Playwright Driver Patcher (rebrowser-patches derivative)
 > **Language:** Python (CLI) + bundled JavaScript (patched `playwright-core`)
 > **Type:** File-replacement patching of the local Playwright driver
-> **Version:** v1.0.1 (released 2025-09-10) — **unchanged as of 2026-09-30**
+> **Version:** v1.0.1 (released 2025-09-10) — **unchanged as of 2026-10-13**
 > **What is verified:** the bundled "patched" driver identifies itself as `turnstilebrowser-playwright-core` **1.49.0**; XDriver's own Python is ~295 lines doing file backup/replace and version validation, with no browser-patching logic of its own (**Tier A**)
 > **Anti-bot service claims:** the README claims **Cloudflare WAF, Turnstile, DataDome, Kasada** and "undetectable even against vendors like Kasada" (**Tier B**). The claims are dated September 2025 and describe a bundle pinned to `playwright-core` 1.49.0; no re-test has been published since.
-> **Maintenance:** No commits since 2025-09-10 (~12.5 months before the verification date). 8 stars, 5 forks, 2 contributors, no PyPI package. Apache-2.0.
-> **Verified:** 2026-09-30 against `arjun-sha/XDriver` @ `b610852` (unchanged since 2026-08-14).
+> **Maintenance:** No commits since 2025-09-10 (~13 months before the verification date). 8 stars, 5 forks, 2 contributors, no PyPI package. Apache-2.0.
+> **Verified:** 2026-10-13 against `arjun-sha/XDriver` @ `b610852` (unchanged since 2026-08-14).
 
 > ### Status
 >
@@ -37,14 +37,14 @@ XDriver is a stealth patching tool that swaps out the JavaScript files inside a 
 | **Fingerprint spoofing** | None in source. **Tier A** |
 | **Input simulation** | None. The only matches for Bézier/humanize strings are in bundled Playwright vendor assets (`codeMirrorModule`, `zipBundleImpl`). **Tier A** |
 | **Pinned Playwright version** | 1.49.0. Current Playwright at the verification date is 1.63.x (`playwright` 1.63.0 on PyPI, 2026-09-15) |
-| **Commit activity** | Last commit 2025-09-10, approximately 12.5 months before the verification date |
+| **Commit activity** | Last commit 2025-09-10, approximately 13 months before the verification date |
 | **Distribution** | No PyPI package |
 | **Project state** | 8 stars, 5 forks, 2 contributors, 0 open issues |
 | **Documented claims vs. source** | The README claims Kasada, DataDome, PerimeterX, Imperva, and Fingerprint.com coverage. No code addressing any of them exists in the repository |
 
 Functional overlap: [Patchright](./patchright.md) implements the same `Runtime.enable`
 countermeasure, tracks Playwright releases automatically, and was last pushed
-2026-09-13.
+2026-10-11.
 
 ---
 
@@ -178,7 +178,7 @@ XDriver Patching Flow (verified):
 
 > **Every row below is a vendor claim from September 2025** (README "Performance"
 > table), never independently benchmarked, about a bundle pinned to `playwright-core`
-> 1.49.0 that has received no updates in ~12.5 months. **Tier B, and decaying.**
+> 1.49.0 that has received no updates in ~13 months. **Tier B, and decaying.**
 >
 > Two structural reasons to discount them heavily:
 >
@@ -357,7 +357,7 @@ XDriver is a **thin, single-author CLI** that copies a third-party rebrowser-pat
 
 **Good for:** a quick, reversible, no-import-changes toggle to test the Runtime.enable fix.
 
-**Functional overlap with Patchright:** both implement the same `Runtime.enable` countermeasure of rebrowser-patches lineage. Patchright is published to PyPI and npm, tracks Playwright releases automatically, supports Python/Node/.NET, and was last pushed 2026-09-13. XDriver has no registry package, pins `playwright-core` 1.49.0, is Python-only, and was last pushed 2025-09-10.
+**Functional overlap with Patchright:** both implement the same `Runtime.enable` countermeasure of rebrowser-patches lineage. Patchright is published to PyPI and npm, tracks Playwright releases automatically, supports Python/Node/.NET, and was last pushed 2026-10-11. XDriver has no registry package, pins `playwright-core` 1.49.0, is Python-only, and was last pushed 2025-09-10.
 
 **Layers addressed:** 1 only (`Runtime.enable`, via the bundle). Not Layer 2 (fingerprinting), 3 (behaviour), or 4 (TLS). **Applicability:** reproducing or testing the `Runtime.enable` leak fix against a Playwright 1.52.0 host install.
 
