@@ -4,21 +4,23 @@
 > **Repository:** [github.com/h4ckf0r0day/obscura](https://github.com/h4ckf0r0day/obscura)
 > **Approach:** V8 runtime + html5ever DOM tree + JavaScript shim + native Rust layout/paint engine (v0.2.0) + optional TLS impersonation
 > **Language:** Rust (CLI / engine / embeddable library), Puppeteer / Playwright clients (any language) via CDP, plus a built-in MCP server
-> **Anti-bot service claims:** **none published** by the project (evidence **Tier D**). It makes no claims about Cloudflare, DataDome, Kasada, or any commercial WAF, and none were tested here. Its stealth documentation states the scope the other way round: it addresses checks on TLS fingerprint and User-Agent, and lists Cloudflare interactive challenges, DataDome and Akamai active challenges, and CAPTCHAs as **not** handled (**Tier B**, `docs/Configure-stealth-and-proxies.md`).
-> **Maintenance:** latest release **v0.2.4** (2026-10-04), after v0.2.3 (2026-09-20), v0.2.2 (2026-09-05) and v0.2.1 (2026-08-23); `main` is 59 commits (26 non-merge) past the v0.2.4 tag. Last push 2026-10-12; 28.8k stars, 2.1k forks, 81 contributors, 193 open issues. Apache-2.0 across the board.
-> **Verified:** 2026-10-13 against `h4ckf0r0day/obscura` @ `8edfe48`; `h4ckf0r0day/obscura-benchmark` @ `2d7bc30` (Tier B figures only).
+> **Anti-bot service claims:** **none published** by the project (evidence **Tier D**). It makes no claims about Cloudflare, DataDome, Kasada, or any commercial WAF, and none were tested here. Its stealth documentation states the scope the other way round: it addresses checks on TLS fingerprint and User-Agent, and lists Cloudflare interactive challenges, DataDome and Akamai active challenges, CAPTCHAs and (added since `8edfe48`) passive TCP/IP stack fingerprinting as **not** handled (**Tier B**, `docs/Configure-stealth-and-proxies.md`).
+> **Maintenance:** latest release **v0.2.7** (2026-11-13), after v0.2.6 (2026-10-31), v0.2.5 (2026-10-17) and v0.2.4 (2026-10-04); `main` is 100 commits (58 non-merge) past the v0.2.7 tag (GitHub compare; the sandbox clone is shallow, so local `rev-list` counts are not used). Last push 2026-11-20; 36.7k stars, 2.9k forks, 100+ contributors, 269 open issues. Apache-2.0 across the board.
+> **Verified:** 2026-11-20 against `h4ckf0r0day/obscura` @ `58a04dd`; `h4ckf0r0day/obscura-benchmark` @ `2d7bc30` (unchanged since 2026-10-04; Tier B figures only).
 
 > ### ⚠️ This page was substantially wrong before 2026-08-14
 >
 > Previous revisions stated that Obscura "contains no layout engine, no CSS cascade,
 > no compositor" and that `getBoundingClientRect` returned synthesized rects. **That
 > was accurate for v0.1.x and is obsolete as of v0.2.0** (2026-08-08), which added a
-> native Rust rendering engine (`crates/obscura-render`, ~66.8k LOC at v0.2.0, 72.4k at `8edfe48`) covering block and
+> native Rust rendering engine (`crates/obscura-render`, ~66.8k LOC at v0.2.0, 74.7k at `58a04dd`) covering block and
 > inline layout, flexbox, grid, tables, floats, positioning, transforms, text shaping,
 > images, canvas, gradients and shadows — plus screenshots and PDF export over CDP.
 > The sections below have been corrected; see [CHANGELOG.md](CHANGELOG.md).
 >
 > **Second correction, 2026-09-30.** Re-reading the tree at `a005d16` showed that several statements that survived the first rewrite still described v0.1.x-era code: the WebGL shim (removed before v0.2.0), the canvas description, the `bootstrap.js` / op / MCP-tool counts and line numbers, the CDP domain count, and a release-CI `continue-on-error` note. Each is corrected inline below.
+>
+> **2026-11-20.** The non-render screenshot/PDF error text, the embeddable crate's re-export line numbers, and the `op_computed_style` signature were already wrong at `8edfe48`; they are corrected inline.
 
 ---
 
@@ -41,7 +43,7 @@
 
 ## What is Obscura?
 
-Obscura is an **open-source headless browser engine written in Rust**, built specifically for web scraping and AI agent automation. It runs JavaScript via V8 (through the `deno_core` crate: `0.412` with V8 `150.4.0` in `Cargo.lock` at `8edfe48` (unchanged since `a005d16`); `0.350` with V8 `137.3.0` at v0.2.0) and exposes a Chrome DevTools Protocol server so it can be driven by Puppeteer or Playwright clients. As of v0.1.7 it also ships as an **embeddable Rust library** (the `obscura` crate) and as a **built-in MCP server** (the `obscura mcp` subcommand) for AI-agent tool use.
+Obscura is an **open-source headless browser engine written in Rust**, built specifically for web scraping and AI agent automation. It runs JavaScript via V8 (through the `deno_core` crate: `0.412` with V8 `150.4.0` in `Cargo.lock` at `58a04dd` (unchanged since `a005d16`); `0.350` with V8 `137.3.0` at v0.2.0) and exposes a Chrome DevTools Protocol server so it can be driven by Puppeteer or Playwright clients. As of v0.1.7 it also ships as an **embeddable Rust library** (the `obscura` crate) and as a **built-in MCP server** (the `obscura mcp` subcommand) for AI-agent tool use.
 
 **Key differentiator:** Unlike every other tool analyzed in this repository, Obscura is not a patched, forked, or wrapped version of Chrome or Firefox. It is a **from-scratch engine** that reimplements a subset of the browser surface in Rust: DOM, CSSOM and Web APIs, and, in render builds, layout and paint.
 
@@ -49,15 +51,15 @@ Obscura is an **open-source headless browser engine written in Rust**, built spe
 
 | Module | Lines | Role |
 |--------|------:|------|
-| `crates/obscura-render/src/dom.rs` | 22,182 | box tree, layout |
-| `crates/obscura-render/src/paint.rs` | 19,547 | rasterization |
-| `crates/obscura-render/src/style.rs` | 11,159 | computed style, cascade |
-| `crates/obscura-render/src/css.rs` | 10,368 | CSS parsing, rule matching |
-| `crates/obscura-render/src/inline.rs` | 5,673 | inline/text layout |
-| other (`lib.rs` 3,000, `border.rs` 452, `bin/paint_file.rs` 20) | 3,472 | |
-| **Total** (`wc -l`, `src/`, `8edfe48`) | **72,401** | 69,866 at `a005d16`, 66,826 at `f458a7f`; the earlier total included the "other" files without listing them |
+| `crates/obscura-render/src/dom.rs` | 22,832 | box tree, layout |
+| `crates/obscura-render/src/paint.rs` | 20,618 | rasterization |
+| `crates/obscura-render/src/style.rs` | 11,291 | computed style, cascade |
+| `crates/obscura-render/src/css.rs` | 10,643 | CSS parsing, rule matching |
+| `crates/obscura-render/src/inline.rs` | 5,844 | inline/text layout |
+| other (`lib.rs` 3,022, `border.rs` 452, `bin/paint_file.rs` 20) | 3,494 | |
+| **Total** (`wc -l`, `src/`, `58a04dd`) | **74,722** | 72,401 at `8edfe48`, 69,866 at `a005d16`, 66,826 at `f458a7f`; the earlier total included the "other" files without listing them |
 
-In render builds `getComputedStyle` is served by the native op `op_computed_style` (`crates/obscura-js/src/ops.rs:8277`), whose doc comment describes a CSSOM snapshot plus a completeness flag: non-geometric reads can resolve only the ancestor cascade while layout work stays pending (`ops.rs:8273-8274`). It takes a pseudo-element and an optional single property as arguments. It is not the old synthesized defaults table. Element geometry comes from `op_layout_geometry` (`ops.rs:8005`), which calls `viewport_client_rects_with_scroll` (`crates/obscura-render/src/paint.rs:2116`). `Page.captureScreenshot`, `Page.printToPDF` and `Page.startScreencast`, previously hard-coded errors, are implemented.
+In render builds `getComputedStyle` is served by the native op `op_computed_style` (`crates/obscura-js/src/ops.rs:10214`). The doc comment written for it describes a CSSOM snapshot plus a completeness flag: non-geometric reads can resolve only the ancestor cascade while layout work stays pending (`ops.rs:10199-10200`; a `StyleQueryCache` struct now sits between that comment and the op). It takes the node id, a pseudo-element, an optional single property and the calling frame's id as arguments. It is not the old synthesized defaults table. Element geometry comes from `op_layout_geometry` (`ops.rs:9932`), which calls `viewport_client_rects_with_scroll` (`crates/obscura-render/src/paint.rs:2598`). `Page.captureScreenshot`, `Page.printToPDF` and `Page.startScreencast`, previously hard-coded errors, are implemented.
 
 **Important caveat — rendering is a build-time feature, not an unconditional one.**
 In `crates/obscura-js/Cargo.toml` the feature set is `default = []`, with the comment
@@ -111,8 +113,8 @@ What it still is not: a Chromium-equivalent. There is no GPU rasterization path;
 │  │          │    │ V8 +         │  │ reqwest      │                │
 │  │ html5    │    │ deno_core    │  │ (default)    │                │
 │  │ ever     │    │ 0.412        │  │ + wreq       │                │
-│  │ DOM      │    │ + 73 ops     │  │ (--features  │                │
-│  │ tree     │    │ + 18,007-line│  │   stealth,   │                │
+│  │ DOM      │    │ + 91 ops     │  │ (--features  │                │
+│  │ tree     │    │ + 20,622-line│  │   stealth,   │                │
 │  │ + CSS    │    │  bootstrap.js│  │   Chrome 145 │                │
 │  │ selectors│    │  (DOM shim)  │  │   TLS)       │                │
 │  └──────────┘    └──────────────┘  └──────────────┘                │
@@ -125,62 +127,65 @@ What it still is not: a Chromium-equivalent. There is no GPU rasterization path;
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-The repository is a Cargo workspace of **ten member crates** at `8edfe48` (nine at v0.2.0; `obscura-ssrf` was added later), plus a non-member `crates/test-support/` helper. The earlier "eight crates" count left out `obscura-render`.
+The repository is a Cargo workspace of **ten member crates** at `58a04dd` (nine at v0.2.0; `obscura-ssrf` was added later), plus a non-member `crates/test-support/` helper. The earlier "eight crates" count left out `obscura-render`. Patched copies of `taffy`, `cosmic-text` and (new since `8edfe48`) `wreq-util` `3.0.0-rc.12` are vendored under `vendor/` and excluded from the workspace (`Cargo.toml:15`).
 
 | Crate | Rust LOC (`src/`) | Responsibility |
 |---|---:|---|
-| `obscura-cli` | 3,199 | clap-based CLI (`fetch`, `scrape`, `serve`, `mcp`) + multi-worker TCP load balancer; also builds the `obscura-worker` binary |
-| `obscura-cdp` | 16,529 | WebSocket server speaking the Chrome DevTools Protocol (14 domains), one OS thread per connection |
-| `obscura-browser` | 12,285 | `Page` abstraction: navigation, subresource fetching, script execution, interception, persona profiles (`profiles.rs`) |
-| `obscura-net` | 6,846 | HTTP client (reqwest baseline + optional `wreq` for TLS impersonation) + blocklist + cookies + robots.txt + interceptor |
-| `obscura-js` | 36,122 Rust + 18,007 JS | V8 runtime via `deno_core` (73 registered ops: 51 always-on + 22 render-only) + `bootstrap.js` DOM/Web API shim |
-| `obscura-dom` | 5,716 | html5ever-backed DOM tree + `selectors` crate for CSS queries |
-| `obscura-render` | 72,401 | optional layout (`taffy`) and paint (`tiny-skia`, `cosmic-text`, `resvg`) layer, compiled in with the `render` feature |
-| `obscura-mcp` | 3,464 | Model Context Protocol server (38 tools, 36 without `render`; stdio + HTTP transports) |
+| `obscura-cli` | 3,889 | clap-based CLI (`fetch`, `scrape`, `serve`, `mcp`) + multi-worker TCP load balancer with worker recycling; also builds the `obscura-worker` binary |
+| `obscura-cdp` | 18,185 | WebSocket server speaking the Chrome DevTools Protocol (14 domains), one OS thread per connection plus a WebSocket I/O thread |
+| `obscura-browser` | 15,576 | `Page` abstraction: navigation, subresource fetching, script execution, interception, accessibility tree (shared by CDP and MCP since v0.2.5), persona profiles (`profiles.rs`) |
+| `obscura-net` | 8,234 | HTTP client (reqwest baseline + optional `wreq` for TLS impersonation) + blocklist + cookies + robots.txt + interceptor |
+| `obscura-js` | 44,803 Rust + 20,622 JS (+ 790-line `indexed_db.js`) | V8 runtime via `deno_core` (91 registered ops: 68 always-on + 23 render-only) + `bootstrap.js` DOM/Web API shim |
+| `obscura-dom` | 6,938 | html5ever-backed DOM tree + `selectors` crate for CSS queries |
+| `obscura-render` | 74,722 | optional layout (`taffy`) and paint (`tiny-skia`, `cosmic-text`, `resvg`) layer, compiled in with the `render` feature |
+| `obscura-mcp` | 4,386 | Model Context Protocol server (38 tools, 36 without `render`, +1 opt-in `web_search`; stdio + HTTP transports) |
 | `obscura-ssrf` | 139 | shared SSRF deny-set (`is_forbidden_ip`) used by `obscura-net` and the renderer's loader |
 | `obscura` | 525 | Embeddable Rust library (`Browser::builder()...`) |
 
-LOC is `wc -l` over `crates/<crate>/src/**/*.rs` at `8edfe48`, including inline unit-test modules. The v0.1.x-era figures previously shown here (for example ~2,130 for `obscura-cli`, ~4,833 Rust + 7,878 JS for `obscura-js`) were already out of date at v0.2.0.
+LOC is `wc -l` over `crates/<crate>/src/**/*.rs` at `58a04dd`, including inline unit-test modules (the same method reproduces the `8edfe48` figures of the previous revision). Ops are the entries pushed in `build_extension` (`crates/obscura-js/src/ops.rs:8856-8960`); the render-only ones sit in its `#[cfg(feature = "render")]` block. The v0.1.x-era figures previously shown here (for example ~2,130 for `obscura-cli`, ~4,833 Rust + 7,878 JS for `obscura-js`) were already out of date at v0.2.0.
 
 ### Page Lifecycle
 
 When `obscura fetch <url>` runs, the navigation path in `obscura-browser` executes roughly:
 
 ```
-1. (optional) robots.txt           fetch and check if --obey-robots (crates/obscura-browser/src/page.rs:3382)
-2. fetch                           validate_url() SSRF guard (obscura-net/src/client.rs:643): http/https/file only,
-                                   private/loopback IPs refused; file:// also gated by allow_file_access (page.rs:3298);
-                                   reqwest, or wreq in a stealth build run with --stealth
+1. (optional) robots.txt           fetch and check if --obey-robots (crates/obscura-browser/src/page.rs:3672)
+2. fetch                           validate_url() SSRF guard (obscura-net/src/client.rs:659): http/https/file only,
+                                   private/loopback IPs refused; file:// also gated by allow_file_access (page.rs:3578,
+                                   and since v0.2.6 in the network loader itself);
+                                   reqwest, or wreq in a stealth build run with --stealth (GET and POST, page.rs:1892-1901)
 3. decode + parse_html()           charset from header, then <meta> sniff, then UTF-8; html5ever produces a DomTree
 4. init V8 runtime                 load bootstrap.js (V8 snapshot); re-seed fingerprint
-5. fetch <link rel=stylesheet>     bounded @import graph (page.rs:1894); installed into the DOM with
-                                   append_external_stylesheet (page.rs:3537)
+5. fetch <link rel=stylesheet>     bounded @import graph (fetch_stylesheets, page.rs:2064; depth 4 and 128 sheets,
+                                   page.rs:370-371); installed into the DOM with append_external_stylesheet (page.rs:3857)
 6. (render builds) resource warm-up  bounded image/font prefetch, OBSCURA_RENDER_RESOURCE_WARMUP_MS (default 1,000 ms)
 7. classify + execute <script>     regular / defer / async / module; phase budget OBSCURA_SCRIPT_DEADLINE_MS (default 30 s)
 8. DOMContentLoaded                iframe realms are built before the wait condition can return
-9. (optional) network idle wait    networkidle0 / networkidle2 (500 ms idle window, 5 s cap)
+9. (optional) network idle wait    networkidle0 / networkidle2: 500 ms idle window inside the navigation deadline
+                                   (OBSCURA_NAV_TIMEOUT_MS, default 30 s, page.rs:372); not reaching idle is an
+                                   error since v0.2.6 (was a 5 s cap reported as success)
 10. dump HTML / text / markdown / links / assets / eval result
 ```
 
 Two consequences of this pipeline are worth flagging:
 
-- **External CSS is resolved (render builds, v0.2.0+).** `obscura-render` parses and cascades stylesheets — `css.rs` sorts matching rules by specificity and source order (`css.rs:8`, `:1570-1576`) and `style.rs` applies the cascade; linked stylesheets, `@import` graphs, web fonts and images are fetched through the page transport before layout. In a **`-no-render` build the old limitation still applies**: CSS is fetched but never resolved into computed style, so JS depending on external stylesheets sees nothing.
-- **Layout is computed, not synthesized (render builds).** `getBoundingClientRect` is backed by real box geometry via `op_layout_geometry`, replacing the v0.1.x deterministic 12-column grid derived from node id. In non-render builds the synthesized grid remains — it exists so Playwright actionability polling and virtualization libraries don't stall (`bootstrap.js:5293-5346`; the comment at `:5323` cites issue #45).
+- **External CSS is resolved (render builds, v0.2.0+).** `obscura-render` parses and cascades stylesheets — `css.rs` sorts matching rules by specificity and source order (`css.rs:8`, `:1631-1640`) and `style.rs` applies the cascade; linked stylesheets, `@import` graphs, web fonts and images are fetched through the page transport before layout. In a **`-no-render` build the old limitation still applies**: CSS is fetched but never resolved into computed style, so JS depending on external stylesheets sees nothing.
+- **Layout is computed, not synthesized (render builds).** `getBoundingClientRect` is backed by real box geometry via `op_layout_geometry`, replacing the v0.1.x deterministic 12-column grid derived from node id. In non-render builds the synthesized grid remains — it exists so Playwright actionability polling and virtualization libraries don't stall (`bootstrap.js:6031-6084`; the comment at `:6061` cites issue #45).
 
 ### V8 Snapshotting
 
-`obscura-js` builds a V8 startup snapshot at compile time (`crates/obscura-js/build.rs`, which embeds `js/bootstrap.js` with `include_str!("js/bootstrap.js")` at `build.rs:16`; cross-compiles use the target's `mksnapshot`), so the bootstrap script is not re-evaluated for every page. `__obscura_init()` (`bootstrap.js:17296`) runs on each new runtime instance. The release workflow smoke-tests every archive variant with `obscura fetch data:... --eval "1+1"` and checks that screenshots work only in the render variants, so a mismatched snapshot is not published (issue #290). Containment of runaway pages: `arm_watchdog` (`runtime.rs:3492`), a per-command CDP watchdog (`cdp_watchdog.rs:94`, budget `OBSCURA_CDP_COMMAND_TIMEOUT_MS`) and a V8 near-heap-limit guard (`runtime.rs:157`). DOM ops are wrapped in `catch_unwind` (`ops.rs:1879`, commented as an anti-panic boundary) so an op panic degrades to a null result instead of unwinding into V8's FFI frame, and `Cargo.toml:72-73` sets `panic = "unwind"` for the release profile so that boundary can work.
+`obscura-js` builds a V8 startup snapshot at compile time (`crates/obscura-js/build.rs`, which embeds `js/bootstrap.js` with `include_str!("js/bootstrap.js")` and splices `js/indexed_db.js` into it at `build.rs:18-19`; cross-compiles use the target's `mksnapshot`), so the bootstrap script is not re-evaluated for every page. `__obscura_init()` (`bootstrap.js:19837`) runs on each new runtime instance. The release workflow smoke-tests every archive variant with `obscura fetch data:... --eval "1+1"` and checks that screenshots work only in the render variants (`.github/workflows/release.yml:149-170`), so a mismatched snapshot is not published (issue #290). Containment of runaway pages: `arm_watchdog` (`runtime.rs:3862`), a per-command CDP watchdog (`cdp_watchdog.rs:151`, budget `OBSCURA_CDP_COMMAND_TIMEOUT_MS`, default 60 s, `dispatch.rs:838-844`), a V8 near-heap-limit guard (`runtime.rs:155`) and, on `main` after v0.2.7 (merge `d93b539`), `Runtime.terminateExecution`, answered on the socket thread so it can interrupt a busy isolate (`crates/obscura-cdp/src/server.rs:2407-2421`). DOM ops are wrapped in `catch_unwind` (`ops.rs:2590`, commented as an anti-panic boundary at `:2584`) so an op panic degrades to a null result instead of unwinding into V8's FFI frame, and `Cargo.toml:66-67` sets `panic = "unwind"` for the release profile (inherited by the `release-dist` profile the release workflow builds with, `:69-70`) so that boundary can work.
 
 ---
 
 ## Anti-Detection Mechanisms
 
-The fingerprint surface is implemented mostly in `crates/obscura-js/js/bootstrap.js` (18,007 lines at `8edfe48`). There are no C++ or binary-level patches: the overrides are JavaScript executed before any page script runs. Persona selection lives in `crates/obscura-browser/src/profiles.rs`, HTTP client hints and TLS in `obscura-net`, and the timezone in the process `TZ` set by the CLI (`crates/obscura-cli/src/main.rs:373-386`). Since v0.1.0 the fields a profile carries (UA, platform, UA-CH) are **internally coherent per platform profile** rather than a fixed Linux persona with mismatched sub-fields.
+The fingerprint surface is implemented mostly in `crates/obscura-js/js/bootstrap.js` (20,622 lines at `58a04dd`, 18,007 at `8edfe48`; the growth since is DOM, frame, form, history and IndexedDB work, not fingerprint code). There are no C++ or binary-level patches: the overrides are JavaScript executed before any page script runs. Persona selection lives in `crates/obscura-browser/src/profiles.rs` (unchanged since `8edfe48`), HTTP client hints and TLS in `obscura-net`, and the timezone in the process `TZ` set by the CLI (`crates/obscura-cli/src/main.rs:404-423`). Since v0.1.0 the fields a profile carries (UA, platform, UA-CH) are **internally coherent per platform profile** rather than a fixed Linux persona with mismatched sub-fields.
 
 ### `navigator` overrides
 
 ```javascript
-// bootstrap.js:7468 (object literal) and :7565-7619 (thin-prototype getters)
+// bootstrap.js:8496 (object literal) and :8593-8647 (thin-prototype getters)
 globalThis.navigator = {
   onLine: true, cookieEnabled: true, maxTouchPoints: 0,
   vendor: "Google Inc.", product: "Gecko", productSub: "20030107",
@@ -204,46 +209,49 @@ globalThis.navigator = {
 ```
 
 What it covers:
-- `navigator.webdriver` is a getter on a **thin prototype** (`bootstrap.js:7574`), so `Object.getOwnPropertyDescriptor(navigator, 'webdriver')` returns `undefined` (as in real Chrome) rather than exposing an own property. The getter returns `false`; the README's "`navigator.webdriver = undefined`" describes the descriptor, not the value (**Tier B** vs **Tier A**).
+- `navigator.webdriver` is a getter on a **thin prototype** (`bootstrap.js:8602`), so `Object.getOwnPropertyDescriptor(navigator, 'webdriver')` returns `undefined` (as in real Chrome) rather than exposing an own property. The getter returns `false`; the README now says `navigator.webdriver = false` too (it said `undefined` at `8edfe48`).
 - Full `navigator.userAgentData` with a `getHighEntropyValues` payload whose `platform` / `platformVersion` come from the same page globals that set the UA string and `navigator.platform`.
-- `userAgentData.brands` and its order are derived deterministically from the Chrome major version in the UA by a port of Chromium's GREASE algorithm (`_uaBrands`, `bootstrap.js:7451`, helper `_chromeMajor` `:7439`); they are not permuted per session seed.
+- `userAgentData.brands` and its order are derived deterministically from the Chrome major version in the UA by a port of Chromium's GREASE algorithm (`_uaBrands`, `bootstrap.js:8479`, helper `_chromeMajor` `:8467`); they are not permuted per session seed.
 - Plugin and mimeType lists (5 plugins, 2 mimeTypes), `connection` (NetworkInformation), faked `getBattery` with per-session values.
 
 What is now **coherent** (previously flagged as tells, now fixed):
-- **The default persona is Windows, not Linux**: `navigator.platform` `Win32`, UA-CH `platform` `Windows`. The Chrome version depends on the build. An ordinary build uses `PROFILES[0]`: Chrome 143, `platformVersion` `10.0.0` (`profiles.rs:8-14`, `select_profile` `:76-91`). A build with the `stealth` feature run with `--stealth` fixes Chrome 145, `Win32`, `Windows`, `15.0.0` (`page.rs:1793-1800`, constants at `wreq_client.rs:61-73`); a test asserts both user agents (`crates/obscura/tests/stealth_transport.rs:9-12,71-74`). The `bootstrap.js` fallbacks (Chrome 145, `15.0.0`) apply only when the host sets no UA. The Rust list has 8 profiles, Chrome 143–146 on Windows and on macOS; none is Linux.
-- `hardwareConcurrency` and `deviceMemory` are **re-randomized per runtime** in `__obscura_init` (`bootstrap.js:17345-17348`): `[4,6,8,12,16]` and `[4,8]` when the stealth feature is active, `[2,4,6,8,12,16]` and `[0.25,0.5,1,2,4,8]` otherwise; not static `8`.
+- **The default persona is Windows, not Linux**: `navigator.platform` `Win32`, UA-CH `platform` `Windows`. The Chrome version depends on the build. An ordinary build uses `PROFILES[0]`: Chrome 143, `platformVersion` `10.0.0` (`profiles.rs:8-14`, `select_profile` `:76-91`). A build with the `stealth` feature run with `--stealth` fixes Chrome 145, `Win32`, `Windows`, `15.0.0` (`page.rs:1958-1966`, constants at `wreq_client.rs:61-73`); a test asserts both user agents (`crates/obscura/tests/stealth_transport.rs:9-12,71-74`). The `bootstrap.js` fallbacks (Chrome 145, `15.0.0`) apply only when the host sets no UA. The Rust list has 8 profiles, Chrome 143–146 on Windows and on macOS; none is Linux.
+- `hardwareConcurrency` and `deviceMemory` are **re-randomized per runtime** in `__obscura_init` (`bootstrap.js:19894-19897`): `[4,6,8,12,16]` and `[4,8]` when the stealth feature is active, `[2,4,6,8,12,16]` and `[0.25,0.5,1,2,4,8]` otherwise; not static `8`.
 - Platform, UA and UA-CH track a single chosen profile (Windows / macOS). The timezone is not part of the profile: it comes from the process `TZ` (default `Europe/Berlin`; `OBSCURA_TIMEZONE` changes it). See "Per-session fingerprint" below.
 
 What may still be detectable:
-- The plugin list includes a `"WebKit built-in PDF"` entry (5 plugins total, `bootstrap.js:7596-7601`), which does not appear in real Chrome's plugin set.
+- The plugin list includes a `"WebKit built-in PDF"` entry (5 plugins total, `bootstrap.js:8624-8630`), which does not appear in real Chrome's plugin set.
+- `--user-agent`, a global flag since v0.2.6, replaces only the UA string. `navigator.platform` and the UA-CH platform still come from the selected profile (`crates/obscura-browser/src/context.rs:188-193`); in a stealth build the override now reaches both the wire and `navigator.userAgent` while the platform stays `Win32` / `Windows` / `15.0.0` and the TLS profile stays Chrome 145 (`page.rs:1958-1966`, `wreq_client.rs:312-326`). A non-Windows or non-145 UA therefore disagrees with the other layers; the project's docs say the flag "does not change the host operating system or TLS profile" (**Tier B**).
 - `Function.prototype.toString` itself is marked native (the masking function reporting as native) — a detector comparing the masking chain can still observe the override in principle.
 - Fingerprint pools are finite (8 screens, 2 audio sample rates, 5–6 hardware-concurrency values), so a detector aggregating values across many requests from one source can still recognize the distribution.
 
 ### `Function.prototype.toString` masking
 
 ```javascript
-// bootstrap.js:203-224
-const _nativeFns = new Set();
-const _nativeStr = new Map();   // exact strings for accessors, via _markNativeAs
+// bootstrap.js:207-234 (abridged)
+const _nativeFns = new WeakSet();
+const _nativeFnHas = _nativeFns.has.bind(_nativeFns);   // bound once, at bootstrap
+const _nativeFnAdd = _nativeFns.add.bind(_nativeFns);
+const _nativeStr = new WeakMap();   // exact strings for accessors, via _markNativeAs (also bound)
 const _origToString = Function.prototype.toString;
 const _functionToString = {     // method syntax: no own `prototype`, like a native function
   toString() {
-    if (_nativeStr.has(this)) { return _nativeStr.get(this); }
-    if (_nativeFns.has(this)) { return `function ${this.name || ''}() { [native code] }`; }
+    if (_nativeStrHas(this)) { return _nativeStrGet(this); }
+    if (_nativeFnHas(this)) { return `function ${this.name || ''}() { [native code] }`; }
     return _origToString.call(this);
   },
 }.toString;
 Function.prototype.toString = _functionToString;
-function _markNative(fn) { if (typeof fn === 'function') _nativeFns.add(fn); return fn; }
-_nativeFns.add(_functionToString);
+function _markNative(fn) { if (typeof fn === 'function') _nativeFnAdd(fn); return fn; }
+_nativeFnAdd(_functionToString);
 ```
 
-More than 110 call sites mark functions native via `_markNative(...)` (114 at `f458a7f`, 117 at `a005d16`, 121 at `8edfe48`, counted by occurrence; the earlier "~96" used a different count). Accessors that need an exact native string use `_markNativeAs`. This handles the common `Function.prototype.toString().includes('[native code]')` check, including on `toDataURL`, media element methods and `getComputedStyle`. Engine-internal globals are additionally filtered out of `Object.getOwnPropertyNames` / `Reflect.ownKeys` results on the global object (`_hideInternalsFromReflection`, `bootstrap.js:235`).
+Since `8edfe48` the registries are a `WeakSet` / `WeakMap` whose methods are bound at bootstrap, so a page that later replaces `Set.prototype.has` or `WeakSet.prototype.has` does not change what `toString` reports (at `8edfe48` they were a `Set` / `Map` called through the live prototype). More than 110 call sites mark functions native via `_markNative(...)` (114 at `f458a7f`, 117 at `a005d16`, 121 at `8edfe48`, 135 at `58a04dd`, counted by occurrence excluding the definition; the earlier "~96" used a different count). Accessors that need an exact native string use `_markNativeAs`. This handles the common `Function.prototype.toString().includes('[native code]')` check, including on `toDataURL`, media element methods and `getComputedStyle`. Engine-internal globals are additionally filtered out of `Object.getOwnPropertyNames` / `Reflect.ownKeys` results on the global object (`_hideInternalsFromReflection`, `bootstrap.js:244`).
 
 ### Per-session fingerprint
 
 ```javascript
-// bootstrap.js:715-783  (_getFp)
+// bootstrap.js:726-794  (_getFp; pools and fields unchanged since 8edfe48)
 const _uaPlat = globalThis.__obscura_ua_platform || 'Windows';
 const isMac = _uaPlat === 'macOS';
 const isLinux = _uaPlat === 'Linux';
@@ -253,29 +261,29 @@ const gpuPool = isMac ? [ /* 6 x ANGLE Metal Renderer (Apple M1..M3, Intel Iris 
 const idx = Math.floor(_fpRand(42) * gpuPool.length);
 const screenPool = [[1920,1080],[2560,1440],[1366,768],[1536,864],[1440,900],[1680,1050],[1280,720],[3840,2160]];
 _fpCache = {
-  gpu: gpuPool[idx], gpuVendor: gpuVendorPool[idx],   // assigned; no reader found at 8edfe48
+  gpu: gpuPool[idx], gpuVendor: gpuVendorPool[idx],   // assigned; no reader found at 58a04dd
   audioBaseLatency, audioSampleRate: [44100, 48000][...], compThreshold, compKnee, compRatio,
   batteryLevel, batteryCharging, screen: screenPool[...],
-  canvasFingerprint: cfp,                             // assigned; no reader found at 8edfe48
+  canvasFingerprint: cfp,                             // assigned; no reader found at 58a04dd
 };
 ```
 
-The platform-matched GPU pools (Windows → ANGLE Direct3D11, macOS → ANGLE Metal, Linux → ANGLE/Mesa OpenGL) still exist, but nothing reads the `gpu`, `gpuVendor` or `canvasFingerprint` fields: the only `_fp(...)` readers in `bootstrap.js` at `8edfe48` are `screen` (`:7700`, `:17323`), `batteryCharging` / `batteryLevel` (`:7519`) and the `audio*` / `comp*` fields (`:15193-15198`). Upstream's own docs dropped the "WebGL/GPU renderer internally consistent" sentence for this reason (commit `d415fe6`, 2026-08-26). The README still lists GPU among the per-session randomized values (**Tier B**). `__obscura_init` (`bootstrap.js:17296`) re-seeds `_fpSeed = Date.now() ^ (Math.random()*0xFFFFFFFF >>> 0)` (`:17305`) for each new runtime, and `Page::init_js` creates a new runtime for every navigation (`page.rs:1754`).
+The platform-matched GPU pools (Windows → ANGLE Direct3D11, macOS → ANGLE Metal, Linux → ANGLE/Mesa OpenGL) still exist, but nothing reads the `gpu`, `gpuVendor` or `canvasFingerprint` fields: the only `_fp(...)` readers in `bootstrap.js` at `58a04dd` are `screen` (`:8728`, `:19872`), `batteryCharging` / `batteryLevel` (`:8547`) and the `audio*` / `comp*` fields (`:17668-17673`). Upstream's own docs dropped the "WebGL/GPU renderer internally consistent" sentence for this reason (commit `d415fe6`, 2026-08-26). The README still lists GPU among the per-session randomized values (`README.md:397`, **Tier B**). `__obscura_init` (`bootstrap.js:19837`) re-seeds `_fpSeed = Date.now() ^ (Math.random()*0xFFFFFFFF >>> 0)` (`:19853`) for each new runtime, and `Page::init_js` (`page.rs:1917`) drops the old runtime and creates a new one for every cross-document navigation (`:1933-1946`). Same-document history traversal keeps the live runtime since v0.2.7.
 
 Profile selection is controllable:
 - `OBSCURA_PROFILE=<n>` pins a specific index of the 8-entry Rust `PROFILES` list (`profiles.rs:76-91`).
 - `OBSCURA_ROTATE_PROFILE=1` picks a random profile per browser context.
 - Default is `PROFILES[0]` (rotation is opt-in because one IP cycling identities is itself a signal; the code comment adds that a rotated profile does not yet carry a matching TLS or timezone fingerprint).
-- A build with the `stealth` feature run with `--stealth` ignores the pool and uses the fixed Chrome 145 / Windows identity (`page.rs:1793-1800`).
+- A build with the `stealth` feature run with `--stealth` ignores the pool and uses the fixed Chrome 145 / Windows identity (`page.rs:1958-1966`); only an explicit `--user-agent` changes its UA string (see above).
 
 ### Canvas and WebGL
 
-**WebGL is unavailable.** `HTMLCanvasElement.prototype.getContext` returns `null` for `'webgl'`, `'experimental-webgl'` and `'webgl2'` (`bootstrap.js:15066-15083`). The code comment says failing is the only truthful behaviour until the renderer has a real WebGL backend, because the former shim reported successful shader and program creation while every draw call was a no-op. A unit test asserts it (`runtime.rs:15997`), and `WebGLRenderingContext` / `WebGL2RenderingContext` exist as empty classes (`bootstrap.js:7656-7657`). A page therefore cannot read `UNMASKED_VENDOR_WEBGL` / `UNMASKED_RENDERER_WEBGL` or read back GL pixels, and a page that treats missing WebGL as a signal sees it. The WebGL shim with `getParameter` and random `readPixels` output that earlier revisions of this page described was already removed at v0.2.0 (it was still present at v0.1.11).
+**WebGL is unavailable.** `HTMLCanvasElement.prototype.getContext` returns `null` for `'webgl'`, `'experimental-webgl'` and `'webgl2'` (`bootstrap.js:17541-17558`). The code comment says failing is the only truthful behaviour until the renderer has a real WebGL backend, because the former shim reported successful shader and program creation while every draw call was a no-op. A unit test asserts it (`runtime.rs:19008`), and `WebGLRenderingContext` / `WebGL2RenderingContext` exist as empty classes (`bootstrap.js:8684-8685`). WebGPU is likewise absent: `navigator.gpu.requestAdapter()` resolves `null` (`bootstrap.js:17808`). A page therefore cannot read `UNMASKED_VENDOR_WEBGL` / `UNMASKED_RENDERER_WEBGL` or read back GL pixels, and a page that treats missing WebGL as a signal sees it. The WebGL shim with `getParameter` and random `readPixels` output that earlier revisions of this page described was already removed at v0.2.0 (it was still present at v0.1.11).
 
 **Canvas 2D is a JavaScript software rasterizer.**
 
 ```javascript
-// bootstrap.js:15084-15091
+// bootstrap.js:17559-17566 (canvas code unchanged since 8edfe48 apart from passing the frame id to the surface ops)
 HTMLCanvasElement.prototype.toDataURL = function(type) {
   const ctx = this._ctx || this.getContext('2d');
   if (ctx && ctx._buf) {
@@ -286,30 +294,34 @@ HTMLCanvasElement.prototype.toDataURL = function(type) {
 };
 ```
 
-`getContext('2d')` returns `_Canvas2D` (`bootstrap.js:14654`), which draws into an RGBA `Uint8ClampedArray`: `fillRect`, `strokeRect`, `clearRect`, `drawImage`, `getImageData` / `putImageData`, linear and radial gradients and, since commit `98d779b` (2026-09-19), `stroke()`. `toDataURL` and `toBlob` encode that buffer as a valid PNG with uncompressed (stored) DEFLATE blocks (`_encodePNG`, `bootstrap.js:14584`); the `type` argument is ignored, so the output is always PNG. `translate`, `rotate`, `scale`, `setTransform`, `clip`, `bezierCurveTo`, `quadraticCurveTo` and `arcTo` are no-ops. **`fillText` does not rasterize fonts** (`bootstrap.js:14776`): each character is drawn as a 5×7 dot pattern derived from `_fpRand(<char code> ...)`, so text drawn to a canvas depends on the per-session seed and matches no real font. In render builds each canvas is registered with the renderer as a surface (`op_canvas_register_surface`, `op_canvas_paint_damage`) so it appears in screenshots. A script that hashes canvas output therefore receives a valid PNG whose pixels are a per-session synthetic result rather than the output of a real text stack; one that decodes it does not get a non-image, as earlier revisions of this page stated.
+`getContext('2d')` returns `_Canvas2D` (`bootstrap.js:17129`), which draws into an RGBA `Uint8ClampedArray`: `fillRect`, `strokeRect`, `clearRect`, `drawImage`, `getImageData` / `putImageData`, linear and radial gradients and, since commit `98d779b` (2026-09-19), `stroke()`. `toDataURL` and `toBlob` encode that buffer as a valid PNG with uncompressed (stored) DEFLATE blocks (`_encodePNG`, `bootstrap.js:17059`); the `type` argument is ignored, so the output is always PNG. `translate`, `rotate`, `scale`, `setTransform`, `clip`, `bezierCurveTo`, `quadraticCurveTo` and `arcTo` are no-ops (`bootstrap.js:17341-17445`). **`fillText` does not rasterize fonts** (`bootstrap.js:17251`): each character is drawn as a 5×7 dot pattern derived from `_fpRand(<char code> ...)`, so text drawn to a canvas depends on the per-session seed and matches no real font. In render builds each canvas is registered with the renderer as a surface (`op_canvas_register_surface`, `op_canvas_paint_damage`) so it appears in screenshots. A script that hashes canvas output therefore receives a valid PNG whose pixels are a per-session synthetic result rather than the output of a real text stack; one that decodes it does not get a non-image, as earlier revisions of this page stated.
 
 ### Audio
 
-Audio context, compressor parameters and analyser data are synthetic values derived from `_fpSeed` (`AudioContext` at `bootstrap.js:15192`; the sample rate is drawn from `[44100, 48000]`). Oscillator, gain, filter and buffer-source nodes are inert objects, so no DSP graph runs. `OfflineAudioContext.startRendering` (`bootstrap.js:15227`) does not process a graph either: it synthesizes a 10 kHz triangle wave and scales it so that the sum of absolute values over samples 4500–4999 equals 124.04347527516074 plus a seed-derived jitter of at most 0.001; the code comment says the target is the value measured on Chrome for Linux. A fingerprinter that hashes a rendered buffer therefore receives a buffer whose checked sum is pinned to that reference rather than the result of a real signal chain.
+Audio context, compressor parameters and analyser data are synthetic values derived from `_fpSeed` (`AudioContext` at `bootstrap.js:17667`, unchanged since `8edfe48`; the sample rate is drawn from `[44100, 48000]`). Oscillator, gain, filter and buffer-source nodes are inert objects, so no DSP graph runs. `OfflineAudioContext.startRendering` (`bootstrap.js:17702`) does not process a graph either: it synthesizes a 10 kHz triangle wave and scales it so that the sum of absolute values over samples 4500–4999 equals 124.04347527516074 plus a seed-derived jitter of at most 0.001; the code comment says the target is the value measured on Chrome for Linux. A fingerprinter that hashes a rendered buffer therefore receives a buffer whose checked sum is pinned to that reference rather than the result of a real signal chain.
 
 ### `event.isTrusted` (now correct)
 
 ```javascript
-// bootstrap.js:10701-10712, 10779-10781 (abridged; the helper also records sticky user activation)
-const _trustedEvents = new WeakSet();
-globalThis.__obscura_markTrusted = function(ev) { try { if (ev) _trustedEvents.add(ev); } catch (_e) {} return ev; };
+// bootstrap.js:12023-12043, 12112 (abridged; the helper also records sticky user activation)
+// Browser-generated events are trusted (issue #303); authored dispatch clears trust.
+__obscuraCore.ops.__obscura_eventTrust = new WeakSet();   // shared with child frame realms
+const _eventSetAdd = Function.prototype.call.bind(WeakSet.prototype.add);
+const _eventSetHas = Function.prototype.call.bind(WeakSet.prototype.has);
+globalThis.__obscura_markTrusted = function(ev) {
+  try { if (ev) _eventSetAdd(__obscuraCore.ops.__obscura_eventTrust, ev); } catch (_e) {} return ev; };
 globalThis.Event = class Event {
   ...
-  get isTrusted() { return _trustedEvents.has(this); }
+  get isTrusted() { return _eventSetHas(__obscuraCore.ops.__obscura_eventTrust, this); }
 };
 ```
 
-This is a **fix** relative to the previous analysis. Page-created events (`new Event(...)`, `new MouseEvent(...)`) now report `isTrusted === false`, per spec, because only events Obscura's CDP input pipeline dispatches are added to the closure-private `_trustedEvents` WeakSet (via the non-enumerable `__obscura_markTrusted`). The old "always `true`" tell is gone.
+This is a **fix** relative to the previous analysis. Page-created events (`new Event(...)`, `new MouseEvent(...)`) now report `isTrusted === false`, per spec, because only events Obscura's CDP input pipeline dispatches are added to the trust registry (via the non-enumerable `__obscura_markTrusted`). Since `8edfe48` that registry is a `WeakSet` held on the private `deno_core` op object rather than a bootstrap-closure variable, so child frame realms share it, and its methods are bound at bootstrap. The old "always `true`" tell is gone.
 
 ### Mouse and keyboard input (now hit-tested)
 
 ```javascript
-// crates/obscura-cdp/src/domains/input.rs:147-354 (mousePressed excerpt from :193)
+// crates/obscura-cdp/src/domains/input.rs:147-405 (mousePressed excerpt from :193)
 "dispatchMouseEvent" => {
   // mousePressed:
   var target = (document.elementFromPoint && document.elementFromPoint(x,y))
@@ -320,15 +332,15 @@ This is a **fix** relative to the previous analysis. Page-created events (`new E
 }
 ```
 
-Also a **fix**: dispatched mouse coordinates are resolved through `document.elementFromPoint(x, y)` first, so `elementFromPoint` recurses into the tree properly. Coordinate-driven clicks (not just selector-driven `page.click('selector')`) hit the intended element. The v0.1.x "coordinates are ignored, target is always `__obscura_click_target`" limitation no longer holds. In a render build, hit-testing now runs against real measured boxes rather than the synthesized grid. `mouseMoved` hit-tests the same way and dispatches `mouseover` / `mouseenter` / `mouseout` transitions, presses dispatch pointer and mouse events, and wheel events are dispatched too (`input.rs:147-359`); `dispatchTouchEvent` and `setIgnoreInputEvents` return an empty result without dispatching anything (`input.rs:514-515`).
+Also a **fix**: dispatched mouse coordinates are resolved through `document.elementFromPoint(x, y)` first, so `elementFromPoint` recurses into the tree properly. Coordinate-driven clicks (not just selector-driven `page.click('selector')`) hit the intended element. The v0.1.x "coordinates are ignored, target is always `__obscura_click_target`" limitation no longer holds. In a render build, hit-testing now runs against real measured boxes rather than the synthesized grid. `mouseMoved` hit-tests the same way and dispatches `mouseover` / `mouseenter` / `mouseout` transitions, presses dispatch pointer and mouse events, and wheel events are dispatched too (`input.rs:147-405`, wheel from `:352`); `dispatchTouchEvent` and `setIgnoreInputEvents` return an empty result without dispatching anything (`input.rs:515-516`).
 
 ### `getComputedStyle` — renderer-backed in v0.2.0
 
 In a **render build**, `getComputedStyle` is served by a native op:
 
 ```rust
-// crates/obscura-js/src/ops.rs:8273-8282 (doc comment paraphrased: CSSOM snapshot plus a
-// completeness flag; non-geometric reads may resolve only the ancestor cascade)
+// crates/obscura-js/src/ops.rs:10211-10220 (the doc comment at :10199-10200 says: CSSOM snapshot
+// plus a completeness flag; non-geometric reads may resolve only the ancestor cascade)
 #[cfg(feature = "render")]
 #[op2]
 #[string]
@@ -337,6 +349,7 @@ fn op_computed_style(
     #[string] nid_str: String,
     #[string] pseudo: String,
     #[string] property: String,
+    frame_id: u32,
 ) -> String {
 ```
 
@@ -344,9 +357,9 @@ Values come from the actual cascade and layout, so the v0.1.x tells are gone: no
 defaults table, no rect-derived dimensions, no `font-family: 'Times'` giveaway.
 
 In a **non-render build** the old JS-synthesized implementation is still what runs —
-inline style, then dimensions from the bounding rect, then a defaults table (`bootstrap.js:9173-9292`) — with all
+inline style, then dimensions from the bounding rect, then a defaults table (`bootstrap.js:10284-10404`) — with all
 the detectability that implies. This is the single biggest behavioural difference
-between the two builds and the main reason to check which one you are shipping. In render builds `innerText` also returns the rendered text (`bootstrap.js:3755-3760`, commit `55e76f0`).
+between the two builds and the main reason to check which one you are shipping. In render builds `innerText` also returns the rendered text (`bootstrap.js:4347-4352`, commit `55e76f0`).
 
 ---
 
@@ -354,7 +367,7 @@ between the two builds and the main reason to check which one you are shipping. 
 
 Obscura has **two independent stealth levers** that are easy to conflate:
 
-1. The **runtime `--stealth` flag** (global; applies to `fetch`, `serve`, `scrape`, `mcp`). Tracker blocking is switched on in any build (`crates/obscura-browser/src/context.rs:107-109`). The wreq transport and the JS-level stealth identity (fixed Chrome 145 / Windows persona, narrower hardware pools) only take effect in a binary compiled with the `stealth` feature (`page.rs:1792-1800`); the project's docs say the flag requires a build that includes it (`docs/Configure-stealth-and-proxies.md`, **Tier B**).
+1. The **runtime `--stealth` flag** (global; applies to `fetch`, `serve`, `scrape`, `mcp`). Tracker blocking is switched on in any build (`crates/obscura-browser/src/context.rs:185-187`). The wreq transport and the JS-level stealth identity (fixed Chrome 145 / Windows persona, narrower hardware pools) only take effect in a binary compiled with the `stealth` feature (`page.rs:1957-1966`); the project's docs say the flag requires a build that includes it (`docs/Configure-stealth-and-proxies.md`, **Tier B**). Since `8edfe48` those docs also list passive TCP/IP stack fingerprinting (SYN options, window size) as not handled, because the kernel sets those fields (**Tier B**).
 2. The **`stealth` build feature** (`cargo build --features stealth`, or a `-stealth` / `-no-render-stealth` release archive). It compiles in `wreq` so the HTTP client can impersonate Chrome's TLS ClientHello. Without this feature the binary falls back to `reqwest`/rustls.
 
 ### Default HTTP client (`reqwest`)
@@ -362,9 +375,9 @@ Obscura has **two independent stealth levers** that are easy to conflate:
 The baseline client is `reqwest` with rustls, gzip/brotli/deflate, and SOCKS support. Chrome-shaped headers are added manually; `sec-ch-ua` and `sec-ch-ua-platform` are derived from the current UA string, so they follow the selected profile:
 
 ```rust
-// crates/obscura-net/src/client.rs:1449-1470 (remaining headers to :1500)
+// crates/obscura-net/src/client.rs:1605-1627 (remaining headers to :1682)
 let ua = self.user_agent.read().await.clone();
-let (sec_ch_ua, sec_ch_ua_platform) = chrome_client_hints(&ua);   // derived from the UA string (:996)
+let (sec_ch_ua, sec_ch_ua_platform) = chrome_client_hints(&ua);   // derived from the UA string (:1111)
 headers.insert("sec-ch-ua", sec_ch_ua);                           // fallback literal: Chrome 145
 headers.insert("sec-ch-ua-mobile", "?0");
 headers.insert("sec-ch-ua-platform", sec_ch_ua_platform);         // fallback literal: "Windows"
@@ -378,16 +391,16 @@ The headers look like Chrome, but without the stealth feature the TLS handshake 
 ### `--features stealth` build (`wreq`)
 
 ```rust
-// crates/obscura-net/src/wreq_client.rs:215-218
+// crates/obscura-net/src/wreq_client.rs:233-236
 let emulation_opts = wreq_util::Emulation::builder()
     .profile(wreq_util::Profile::Chrome145)
     .platform(wreq_util::Platform::Windows)
     .build();
 ```
 
-`wreq` is a TLS-impersonation library (BoringSSL-backed, similar in spirit to `curl_cffi`). With the feature enabled the client is configured with wreq-util's **Chrome 145 / Windows** emulation profile, which is intended to reproduce Chrome's JA3 / JA4, ALPN and cipher order (the wire output was not captured in this review; **Tier B**). The profile is hardcoded — no rotation, no per-session variation, and no alternative emulation targets. The `wreq` / `wreq-util` deps are pinned to exact pre-release RCs (`wreq =6.0.0-rc.29`, `wreq-util =3.0.0-rc.12`) because their API churns between RCs (issue #234), and `prefix-symbols` is enabled only on Linux/Android to avoid BoringSSL/OpenSSL symbol clashes (issue #39).
+`wreq` is a TLS-impersonation library (BoringSSL-backed, similar in spirit to `curl_cffi`). With the feature enabled the client is configured with wreq-util's **Chrome 145 / Windows** emulation profile, which is intended to reproduce Chrome's JA3 / JA4, ALPN and cipher order (the wire output was not captured in this review; **Tier B**). The profile is hardcoded — no rotation, no per-session variation, and no alternative emulation targets. The `wreq` / `wreq-util` deps are pinned to exact pre-release RCs (`wreq =6.0.0-rc.29`, `wreq-util =3.0.0-rc.12`) because their API churns between RCs (issue #234), and `prefix-symbols` is enabled only on Linux/Android to avoid BoringSSL/OpenSSL symbol clashes (issue #39). Since `8edfe48` `wreq-util` is built from a vendored copy (`vendor/wreq-util`, `crates/obscura-net/Cargo.toml:33`) that CI pins to one tree hash described as a "maintainer-reviewed compression backport" (`scripts/ci/pr_policy.py:36-39`); the v0.2.6 notes say the existing emulation profiles were retained (**Tier B**; the vendored profile files were not diffed against the published crate). Since v0.2.7 form POST navigations in a stealth build also go through the wreq client (`page.rs:1892-1901`, `wreq_client.rs:360-376`).
 
-**Release binaries:** the release workflow builds four variants per target on native runners (`.github/workflows/release.yml:80-122`): `default` (`--features render`), `stealth` (`--features render,stealth`), `no-render` and `no-render-stealth`, packaged as `obscura-<target>.tar.gz`, `-stealth`, `-no-render` and `-no-render-stealth` (`.zip` on Windows). **Only the `-stealth` and `-no-render-stealth` archives contain the wreq transport**; the unsuffixed archive and the Docker image (built with `--features render`) do not. No build step is marked `continue-on-error` at v0.2.0 or later, so a failed stealth compile fails the release job instead of silently shipping the default client; earlier revisions of this page described a `continue-on-error: true` fallback that is not in the tree. The smoke-test step runs `fetch data:... --eval 1+1` on all four variants.
+**Release binaries:** the release workflow builds four variants per target on native runners with the size-optimised `release-dist` profile (`.github/workflows/release.yml:89-142`): `default` (`--features render`), `stealth` (`--features render,stealth`), `no-render` and `no-render-stealth`, packaged as `obscura-<target>.tar.gz`, `-stealth`, `-no-render` and `-no-render-stealth` (`.zip` on Windows; since v0.2.7 the Windows zips bundle the Visual C++ runtime DLLs, `scripts/ci/package_windows.ps1`). **Only the `-stealth` and `-no-render-stealth` archives contain the wreq transport**; the unsuffixed archive and the Docker image (built with `--features render`) do not. No build step is marked `continue-on-error` at v0.2.0 or later, so a failed stealth compile fails the release job instead of silently shipping the default client; earlier revisions of this page described a `continue-on-error: true` fallback that is not in the tree. The smoke-test step runs `fetch data:... --eval 1+1` on all four variants.
 
 ### Tracker blocking
 
@@ -397,42 +410,42 @@ const PGL_LIST: &str = include_str!("pgl_domains.txt");  // 3,520 domains
 // test asserts blocklist().len() > 3500
 ```
 
-Peter Lowe's tracker domain list (**3,520 domains**, unchanged) is embedded at compile time. Lookup is exact plus suffix match. Blocked domains are never fetched — privacy hygiene that also speeds loads and prevents third-party fingerprinting scripts from running, but it does not itself disguise the client. `OBSCURA_BLOCK_TRACKERS=0` turns blocking off in the stealth client (`wreq_client.rs:284`, `:685`; commit `9ced496`).
+Peter Lowe's tracker domain list (**3,520 domains**, unchanged) is embedded at compile time. Lookup is exact plus suffix match. Blocked domains are never fetched — privacy hygiene that also speeds loads and prevents third-party fingerprinting scripts from running, but it does not itself disguise the client. `OBSCURA_BLOCK_TRACKERS=0` turns blocking off in the stealth client (`wreq_client.rs:303`, `:843`; commit `9ced496`).
 
 ### Request/response interception (new in v0.1.9)
 
-The `obscura-net` interceptor and `obscura-browser`'s `InterceptedRequest` / `InterceptResolution` expose callbacks to observe, block, modify headers on, or fulfill requests from Rust (embeddable API) and via CDP `Fetch`. Since commit `359362f` (2026-10-03, included in v0.2.4) the resource type of a JS-initiated request follows its destination: XHR is reported as `Xhr`, script, stylesheet and document loads keep those types, and `fetch()` is reported as `Fetch` (`crates/obscura-js/src/ops.rs:3602-3608`; `ResourceType` enum at `crates/obscura-net/src/client.rs:150-159`). At `a005d16` both `fetch()` and XHR were reported as `Fetch`.
+The `obscura-net` interceptor and `obscura-browser`'s `InterceptedRequest` / `InterceptResolution` expose callbacks to observe, block, modify headers on, or fulfill requests from Rust (embeddable API) and via CDP `Fetch`. Since commit `359362f` (2026-10-03, included in v0.2.4) the resource type of a JS-initiated request follows its destination: XHR is reported as `Xhr`, script, stylesheet and document loads keep those types, and `fetch()` is reported as `Fetch` (`crates/obscura-js/src/ops.rs:4492-4498`; `ResourceType` enum at `crates/obscura-net/src/client.rs:150-159`). At `a005d16` both `fetch()` and XHR were reported as `Fetch`. Since v0.2.6 main-document navigations can also be paused before transport and fulfilled without contacting the server (README and release notes, **Tier B**), and since v0.2.5 `InterceptResolution::Continue.body` is `Option<Vec<u8>>` (binary-safe; a Rust API change).
 
 ---
 
 ## CDP Implementation
 
-`obscura-cdp` implements a subset of the Chrome DevTools Protocol sufficient to support Puppeteer and Playwright clients connecting via `connectOverCDP` / `puppeteer.connect`. It implements **14 domains** (`crates/obscura-cdp/src/dispatch.rs:802-822`; the page previously listed 12 and omitted `IO` and `Emulation`) and accepts 11 further domains as no-ops (`Log`, `Performance`, `Security`, `CSS`, `ServiceWorker`, `Inspector`, `Debugger`, `Profiler`, `HeapProfiler`, `Overlay`, `Audits`; `dispatch.rs:832-833`) so that Puppeteer's connect handshake does not fail. The one exception is `HeapProfiler.collectGarbage`, which since commit `8bb46be` runs a V8 garbage collection (`dispatch.rs:820-828`):
+`obscura-cdp` implements a subset of the Chrome DevTools Protocol sufficient to support Puppeteer and Playwright clients connecting via `connectOverCDP` / `puppeteer.connect`. It implements **14 domains** (`crates/obscura-cdp/src/dispatch.rs:879-909`; the page previously listed 12 and omitted `IO` and `Emulation`) and accepts 11 further domains as no-ops (`Log`, `Performance`, `Security`, `CSS`, `ServiceWorker`, `Inspector`, `Debugger`, `Profiler`, `HeapProfiler`, `Overlay`, `Audits`; `dispatch.rs:922-923`) so that Puppeteer's connect handshake does not fail. The one exception is `HeapProfiler.collectGarbage`, which since commit `8bb46be` runs a V8 garbage collection (`dispatch.rs:910-918`):
 
 | Domain | Implemented (selected) | Notable Gaps |
 |---|---|---|
 | Target | getTargets, createTarget, closeTarget, attachToTarget, attachToBrowserTarget, setAutoAttach, createBrowserContext, disposeBrowserContext, getTargetInfo | no `targetCrashed` event |
 | Browser | getVersion, close, getWindowForTarget, getWindowBounds / setWindowBounds, setDownloadBehavior, grantPermissions, resetPermissions | `getVersion` reports a Linux user agent (Chrome 145) regardless of persona (`domains/browser.rs:7-9`) |
-| Page | navigate, reload, stopLoading, close (fires `beforeunload`), handleJavaScriptDialog (for that `beforeunload` prompt), getFrameTree, createIsolatedWorld, getLayoutMetrics, getNavigationHistory, navigateToHistoryEntry, addScriptToEvaluateOnNewDocument, lifecycle events, captureScreenshot, printToPDF, startScreencast / stopScreencast / screencastFrameAck | screenshot, PDF and screencast need a render build; `fromSurface=false` unsupported; `setBypassCSP` is acknowledged without effect (`domains/page.rs:1651`) |
-| Runtime | enable, disable, evaluate, callFunctionOn, getProperties, addBinding, removeBinding, releaseObject, getExceptionDetails, getHeapUsage | `Debugger` is accepted as a no-op |
-| DOM | getDocument, querySelector, querySelectorAll, getOuterHTML, describeNode, resolveNode, setAttributeValue, removeNode, focus, scrollIntoViewIfNeeded, setFileInputFiles, getBoxModel, getContentQuads | content / padding / border / margin quads in getBoxModel are all one `getBoundingClientRect` quad (`dom.rs:298-347`); real geometry only in render builds |
+| Page | navigate, reload, stopLoading, close (fires `beforeunload`), handleJavaScriptDialog (for that `beforeunload` prompt), getFrameTree, createIsolatedWorld, getLayoutMetrics, getNavigationHistory, navigateToHistoryEntry, addScriptToEvaluateOnNewDocument, lifecycle events, captureScreenshot, printToPDF, startScreencast / stopScreencast / screencastFrameAck | screenshot, PDF and screencast need a render build; `fromSurface=false` unsupported; `setBypassCSP` validates its argument and is acknowledged without effect (`domains/page.rs:1729-1733`); `captureSnapshot` is refused in every build (`:2104-2110`) |
+| Runtime | enable, disable, evaluate, callFunctionOn, getProperties, addBinding, removeBinding, releaseObject, getExceptionDetails, getHeapUsage; terminateExecution (socket-thread fast path, `server.rs:2407`) | `Debugger` is accepted as a no-op |
+| DOM | getDocument, querySelector, querySelectorAll, getOuterHTML, describeNode, resolveNode, setAttributeValue, removeNode, focus, scrollIntoViewIfNeeded, setFileInputFiles, getBoxModel, getContentQuads; added since `8edfe48`: getAttributes, requestNode, requestChildNodes, getNodeForLocation (top-level light DOM, v0.2.6), disable | content / padding / border / margin quads in getBoxModel are all one `getBoundingClientRect` quad (`dom.rs:564-601`); real geometry only in render builds |
 | DOMSnapshot | enable, disable, captureSnapshot | geometry and styles are synthesized in every build (`domsnapshot.rs:1-20`) |
 | Accessibility | enable, getFullAXTree (roles / names) | — |
 | Network | enable, disable, setCookie / setCookies, getCookies, getAllCookies, deleteCookies, clearBrowserCookies, setExtraHTTPHeaders, setUserAgentOverride, setCacheDisabled, setRequestInterception, setBlockedURLs, getResponseBody | no WebSocket frame events |
 | Fetch | enable, disable, continueRequest, fulfillRequest, failRequest, getResponseBody, takeResponseBodyAsStream | — |
 | IO | read, close | — |
 | Storage | getCookies, setCookies, clearCookies, deleteCookies | no IndexedDB or storage events (cookie methods only) |
-| Input | dispatchMouseEvent (hit-tested), dispatchKeyEvent, insertText | dispatchTouchEvent and setIgnoreInputEvents are empty stubs (`input.rs:514-515`) |
-| Emulation | setDeviceMetricsOverride, clearDeviceMetricsOverride, setDefaultBackgroundColorOverride, setUserAgentOverride, setLocaleOverride, setTouchEmulationEnabled, setEmulatedMedia | `setEmulatedMedia` applies only the `prefers-reduced-motion` feature (`domains/emulation.rs:68-80`) |
+| Input | dispatchMouseEvent (hit-tested), dispatchKeyEvent, insertText | dispatchTouchEvent and setIgnoreInputEvents are empty stubs (`input.rs:515-516`) |
+| Emulation | setDeviceMetricsOverride, clearDeviceMetricsOverride, setDefaultBackgroundColorOverride, setUserAgentOverride, setLocaleOverride, setTouchEmulationEnabled, setEmulatedMedia | `setEmulatedMedia` applies only `prefers-reduced-motion` and, since v0.2.5, `prefers-color-scheme`; other features are ignored (`domains/emulation.rs:68-99`) |
 | LP | getMarkdown (DOM-to-Markdown, custom domain) | — |
 
-`Page.printToPDF` and `Page.captureScreenshot` are **implemented as of v0.2.0** in render builds — viewport, clipped, scrolled and full-page capture with PNG/JPEG/WebP output, plus paginated PDF export with paper sizes, margins, scale and page ranges. Screencasting is supported with acknowledgement backpressure. In a non-render build these still return an explanatory error (`domains/page.rs:2015`; `"Page.{method} is not supported by Obscura: no layout or paint engine"`), and `fromSurface=false` is unsupported in every build (`domains/page.rs:1890`) since there is no separate browser-window compositor surface. The main frame's `frameId` equals its `targetId` (`crates/obscura-browser/src/page.rs:1076`, for Playwright compatibility); child iframe frames are reported as `<frameId>-frame-<n>` (`domains/page.rs:18-19`). Each CDP command has a deadline (`OBSCURA_CDP_COMMAND_TIMEOUT_MS`, `dispatch.rs:772-789`) so one wedged page cannot stall other sessions, and each CDP connection runs on its own OS thread with its own Tokio runtime and `LocalSet` (`server.rs:797-836`), up to 128 connections by default (`DEFAULT_MAX_CONNECTIONS`, `server.rs:45`). A non-loopback bind is refused unless `OBSCURA_CDP_TOKEN` (at least 32 bytes) is set (`server.rs:59-63`, `:360`). Counting the string match arms in the 14 domain handlers gives 117 distinct method names at `8edfe48`, 111 at `a005d16` and 105 at `f458a7f`; the earlier "~244 method-handler arms" figure could not be reproduced. New since `f458a7f`: `Browser.grantPermissions` / `resetPermissions`, `Runtime.disable`, `Input.insertText`, `Emulation.setUserAgentOverride` / `setLocaleOverride`. New since `a005d16`: `Page.close`, `Page.stopLoading`, `Page.handleJavaScriptDialog`, `Page.setBypassCSP`, `Runtime.getHeapUsage`, `Emulation.setEmulatedMedia`.
+`Page.printToPDF` and `Page.captureScreenshot` are **implemented as of v0.2.0** in render builds — viewport, clipped, scrolled and full-page capture with PNG/JPEG/WebP output, plus paginated PDF export with paper sizes, margins, scale and page ranges. Screencasting is supported with acknowledgement backpressure. In a non-render build these return `"Page.<method> requires a build with the render feature"` (`domains/page.rs:1946`, `:1957`, `:1975`, `:2102`; `domains/pdf.rs:281`); the "no layout or paint engine" error earlier revisions quoted belongs to `Page.captureSnapshot`, which is refused in every build (`page.rs:2104-2110`). `fromSurface=false` is unsupported in every build (`domains/page.rs:1979-1985`) since there is no separate browser-window compositor surface. The main frame's `frameId` equals its `targetId` (`crates/obscura-browser/src/page.rs:1105-1110`, for Playwright compatibility); child iframe frames are reported as `<frameId>-frame-<n>` (`domains/page.rs:18-20`). Each CDP command has a deadline (`OBSCURA_CDP_COMMAND_TIMEOUT_MS`, default 60 s, `dispatch.rs:838-865`) so one wedged page cannot stall other sessions, and each CDP connection runs its pages on its own OS thread with its own Tokio runtime and `LocalSet`, with a second thread for WebSocket I/O (`server.rs:870-875`, `run_connection` `:876`), up to 128 connections by default (`DEFAULT_MAX_CONNECTIONS`, `server.rs:51`). Since v0.2.7 each connection gets a copy-on-write snapshot of the server's startup `localStorage` and a fresh IndexedDB store (`server.rs:910-912`; release notes). A non-loopback bind is refused unless `OBSCURA_CDP_TOKEN` (at least 32 bytes) is set (`server.rs:68-75`, `:428-433`), and since v0.2.7 a CDP request carrying an `Origin` other than the endpoint's own is refused with 403 unless listed in `OBSCURA_CDP_ALLOWED_ORIGINS` (comma-separated, `*` for all; `server.rs:153-160`, `:233-244`); clients that send no `Origin` are unaffected. Counting the string match arms of each domain handler's top-level `match method` gives 122 distinct method names at `58a04dd`, 117 at `8edfe48`, 111 at `a005d16` and 105 at `f458a7f` (the count does not include `Runtime.terminateExecution`, which is answered before dispatch); the earlier "~244 method-handler arms" figure could not be reproduced. New since `f458a7f`: `Browser.grantPermissions` / `resetPermissions`, `Runtime.disable`, `Input.insertText`, `Emulation.setUserAgentOverride` / `setLocaleOverride`. New since `a005d16`: `Page.close`, `Page.stopLoading`, `Page.handleJavaScriptDialog`, `Page.setBypassCSP`, `Runtime.getHeapUsage`, `Emulation.setEmulatedMedia`. New since `8edfe48`: `DOM.getAttributes`, `DOM.requestNode`, `DOM.requestChildNodes`, `DOM.getNodeForLocation`, `DOM.disable`.
 
 ---
 
 ## MCP Server
 
-New since v0.1.4 and expanded through v0.1.9: `obscura mcp` runs a Model Context Protocol server so an AI agent (Claude, Cursor, etc.) can drive the browser as a tool. It defines **38 tools** in `handle_tools_list` (`crates/obscura-mcp/src/lib.rs:335`); `browser_screenshot` and `browser_pdf` are listed only in render builds (`lib.rs:727-743`), so a no-render build exposes 36. Examples: `browser_navigate`, `browser_snapshot`, `browser_click`, `browser_fill_form`, `browser_extract`, `browser_tab_new`, `browser_tab_switch`, `browser_storage_state`. `browser_wait_for_function` and promise-awaiting `browser_evaluate` were added after v0.2.4 (commit `7500e6d`), as was a `--font-dir` option for `obscura mcp`. It supports **multiple tabs / isolated pages** and offers both **stdio and HTTP transports** (`obscura mcp` / `obscura mcp --http --host <addr> --port <n>`; defaults 127.0.0.1:3000, `main.rs:195-214`). A non-loopback HTTP bind is refused unless `OBSCURA_MCP_TOKEN` (at least 32 bytes) is set (`crates/obscura-mcp/src/http.rs:61-65`, `:281`), and browser requests are refused unless their `Origin` is listed in `OBSCURA_MCP_ALLOWED_ORIGINS` (`http.rs:234-241`, `:367`). The `--stealth` global flag applies here too.
+New since v0.1.4 and expanded through v0.1.9: `obscura mcp` runs a Model Context Protocol server so an AI agent (Claude, Cursor, etc.) can drive the browser as a tool. It defines **38 tools** in `handle_tools_list` (`crates/obscura-mcp/src/lib.rs:353`); `browser_screenshot` and `browser_pdf` are listed only in render builds (`lib.rs:745-780`), so a no-render build exposes 36. A 39th tool, `web_search`, is listed and callable only when `OBSCURA_WEB_SEARCH=keenable` is set (`lib.rs:782`, gate `:2221-2224`); it sends the agent's queries to the third-party Keenable API (`api.keenable.ai`, `lib.rs:2213-2214`; added in v0.2.7). Examples: `browser_navigate`, `browser_snapshot`, `browser_click`, `browser_fill_form`, `browser_extract`, `browser_tab_new`, `browser_tab_switch`, `browser_storage_state`. `browser_wait_for_function`, promise-awaiting `browser_evaluate` and a `--font-dir` option for `obscura mcp` shipped in v0.2.5, which also made snapshots return actionable element references and kept tab runtimes alive across tab switches (release notes, **Tier B**). It supports **multiple tabs / isolated pages** and offers both **stdio and HTTP transports** (`obscura mcp` / `obscura mcp --http --host <addr> --port <n>`; defaults 127.0.0.1:3000, `main.rs:223-236`). A non-loopback HTTP bind is refused unless `OBSCURA_MCP_TOKEN` (at least 32 bytes) is set (`crates/obscura-mcp/src/http.rs:61-65`, `:279-281`), and browser requests are refused unless their `Origin` is listed in `OBSCURA_MCP_ALLOWED_ORIGINS` (`http.rs:234-241`, `:383`). The `--stealth` global flag applies here too.
 
 ---
 
@@ -455,7 +468,7 @@ async fn main() -> anyhow::Result<()> {
 }
 ```
 
-It re-exports the interception types (`InterceptedRequest`, `InterceptResolution`, `RequestCallback`, `RequestInfo`, `Response`, `ResponseCallback`, `ResourceType`; `crates/obscura/src/lib.rs:19-27`) so a Rust program can observe and modify traffic without going through CDP.
+It re-exports the interception types (`InterceptedRequest`, `InterceptResolution`, `RequestCallback`, `RequestInfo`, `Response`, `ResponseCallback`, `ResourceType`; `crates/obscura/src/lib.rs:30-32`) so a Rust program can observe and modify traffic without going through CDP.
 
 ---
 
@@ -474,7 +487,7 @@ The project publishes these figures in its README and in the separate `obscura-b
 
 The benchmark repo's latest published pass (2026-09-11, against Obscura `01e1caa`) builds its WPT binary with `--no-default-features` (a no-render build), and its README labels the concurrency and memory results as the no-render scraping profile; its WPT run covers only the classic DOM/JavaScript profile (reftests are not run, and rendering regressions are tracked by the main repo's `render-repros/` suite). Its published results are WPT Core tier 327,094 / 392,547 subtests (83.3%; Relevant 86.8%, Full 67.6%), 33 / 33 obstacle-course stages, 94 / 98 pages rendered in the real-world corpus (headless Chrome 85 / 98) and 1,432 / 1,500 pages rendered in the reliability sweep with 0 crashes and 0 panics. Its `stealth-bench/run.py` is an internal fingerprint-consistency check served from a local HTTP server (the docstring says no outbound requests are made), not a run against third-party detectors. All of these are the maintainer's figures (**Tier B**). No memory, startup or load-time figures are published for the render-enabled default archive (**Tier D**). In a no-render build the savings come from skipping work a real browser performs: layout, style cascade, font shaping, image decode and raster; a render build performs layout and CPU rasterization as well (there is still no GPU compositor). The full suite lives at `github.com/h4ckf0r0day/obscura-benchmark`; the numbers above have not been independently verified for this analysis.
 
-For multi-URL workloads, `obscura scrape` runs `obscura-worker` child processes with a configurable concurrency limit (default 10), and `obscura serve --workers N` runs N CDP server child processes behind a TCP load balancer. Since v0.2.4 exited workers are reaped and restarted and the balancer answers HTTP 503 when no worker is ready (commit `f2b9e99`; a crash still closes that worker's sessions, per the README); after v0.2.4, SIGTERM / SIGINT stop the workers and `--max-connections` is passed through to them (commit `4b14a76`). `--v8-flags` can raise the V8 heap cap for JS-heavy pages.
+For multi-URL workloads, `obscura scrape` runs `obscura-worker` child processes with a configurable concurrency limit (default 10), and `obscura serve --workers N` runs N CDP server child processes behind a TCP load balancer. Since v0.2.4 exited workers are reaped and restarted and the balancer answers HTTP 503 when no worker is ready (commit `f2b9e99`; a crash still closes that worker's sessions, per `README.md:473-475`). Since v0.2.5 SIGTERM / SIGINT stop the workers, `--max-connections` applies per worker, and workers can be recycled gracefully by connection count, age or (Linux only) resident memory: `--worker-max-connections`, `--worker-max-age`, `--worker-max-rss` (off by default, require `--workers` > 1) and `--worker-drain-timeout` (default 120 s) (`crates/obscura-cli/src/main.rs:98-117`, `:482-484`); a replacement starts before the old worker drains (`respawn_worker` `:718`, supervisor `:783`). `--v8-flags` can raise the V8 heap cap for JS-heavy pages.
 
 ---
 
@@ -486,15 +499,15 @@ For multi-URL workloads, `obscura scrape` runs `obscura-worker` child processes 
 |---|---|
 | Lightweight footprint | ~30 MB resident, ~70 MB binary (project figures, **Tier B**; the benchmark repo labels its throughput results as the no-render profile), no Chrome / Node.js dependency |
 | V8 startup snapshot | bootstrap script compiled into a snapshot at build time (`build.rs`); the README lists startup as instant (**Tier B**) |
-| Prebuilt releases | Linux x86_64 + aarch64, macOS Intel + ARM, Windows x86_64 (built on native CI runners); Docker image for linux/amd64 + arm64 |
-| CDP API surface | 14 domains plus 11 accepted no-ops; documented for use with `puppeteer-core` and `playwright-core` |
-| Built-in MCP server | 38 tools (36 without `render`), multi-tab, stdio + HTTP; token required for non-loopback HTTP |
+| Prebuilt releases | Linux x86_64 + aarch64, macOS Intel + ARM, Windows x86_64 (built on native CI runners; Scoop manifest in `scoop/obscura.json`); Docker image for linux/amd64 + arm64 |
+| CDP API surface | 14 domains (122 methods) plus 11 accepted no-ops; documented for use with `puppeteer-core` and `playwright-core` |
+| Built-in MCP server | 38 tools (36 without `render`; opt-in `web_search` makes 39), multi-tab, stdio + HTTP; token required for non-loopback HTTP |
 | Embeddable Rust library | `Browser::builder()` API + request/response interception |
 | Profile-derived persona | 8 Windows / macOS profiles with matching UA, platform, UA-CH; fixed Chrome 145 / Windows identity in stealth builds; timezone from the process `TZ` |
 | Tracker blocking | 3,520-domain PGL list embedded at compile time |
-| Multi-worker mode | Built-in process supervisor + TCP load balancer for parallel scraping |
+| Multi-worker mode | Built-in process supervisor + TCP load balancer for parallel scraping, with restart of exited workers and opt-in graceful recycling (v0.2.5) |
 | Optional TLS impersonation | `--features stealth` (or a `-stealth` archive) enables Chrome 145 (Windows) JA3 / JA4 via `wreq` |
-| Containment mechanisms | V8 termination watchdogs and near-heap-limit guard, per-command deadlines, `catch_unwind` around DOM and URL ops, SSRF / DNS-rebind guards, token-gated non-loopback CDP / MCP binds |
+| Containment mechanisms | V8 termination watchdogs and near-heap-limit guard, per-command deadlines, `catch_unwind` around DOM and URL ops, SSRF / DNS-rebind guards, token-gated non-loopback CDP / MCP binds, `Origin` allowlists on CDP (v0.2.7) and MCP HTTP |
 | Rust workspace | Ten member crates, `deno_core` foundation, Apache-2.0 throughout |
 
 ### Limitations
@@ -502,14 +515,14 @@ For multi-URL workloads, `obscura scrape` runs `obscura-worker` child processes 
 | Limitation | Description |
 |---|---|
 | **Rendering is build-gated** | `default = []` in Cargo — a source build without `--features render` has none of the v0.2.0 layout work. Release archives (no suffix / `-stealth`) and the Docker image do include it; `-no-render*` archives do not. Know which binary you have. |
-| Non-render builds keep every v0.1.x layout limitation | No cascade, synthesized `getBoundingClientRect` grid, defaults-table `getComputedStyle`, `captureScreenshot`/`printToPDF` return errors |
+| Non-render builds keep every v0.1.x layout limitation | No cascade, synthesized `getBoundingClientRect` grid, defaults-table `getComputedStyle`, `captureScreenshot`/`printToPDF`/screencast return "requires a build with the render feature" errors |
 | No GPU rasterization | Painting is CPU-side; there is no compositor surface (`fromSurface=false` is unsupported in all builds) |
 | WebGL unavailable; canvas 2D is a JS software rasterizer | `getContext('webgl')` returns `null`; `fillText` draws seed-derived dot glyphs rather than fonts; transforms, `clip` and curves are no-ops; `toDataURL` is a valid PNG of the buffer |
-| Young rendering engine | `obscura-render` is 72.4k lines at `8edfe48` and was introduced in v0.2.0 (2026-08-08). The README states that long-tail CSS, some Web APIs, media playback, compositor effects and platform font rasterization may differ from Chromium (**Tier B**) |
-| No Service Workers or audio DSP | `navigator.serviceWorker.register()` resolves without registering a worker; `AudioContext` graph nodes are inert (`bootstrap.js:15192`) |
+| Young rendering engine | `obscura-render` is 74.7k lines at `58a04dd` and was introduced in v0.2.0 (2026-08-08). The README states that long-tail CSS, some Web APIs, media playback, compositor effects and platform font rasterization may differ from Chromium (**Tier B**) |
+| No Service Workers or audio DSP | `navigator.serviceWorker.register()` resolves without registering a worker; `AudioContext` graph nodes are inert (`bootstrap.js:17667`) |
 | Finite fingerprint pools | 8 screens, 2 audio sample rates, 5–6 hardware-concurrency values (GPU pools of 6–12 entries exist but are not exposed) — aggregatable across many requests |
-| Plugin list tell | Includes `"WebKit built-in PDF"` (`bootstrap.js:7601`), not present in real Chrome |
-| Single TLS profile in stealth mode | Chrome 145 Windows only; no rotation or alternative targets |
+| Plugin list tell | Includes `"WebKit built-in PDF"` (`bootstrap.js:8629`), not present in real Chrome |
+| Single TLS profile in stealth mode | Chrome 145 Windows only; no rotation or alternative targets; a `--user-agent` override changes the UA string but not the TLS profile or platform fields |
 | Default build has no TLS impersonation | Needs the `stealth` feature: a `-stealth` / `-no-render-stealth` archive or `--features stealth`; the unsuffixed archive and the Docker image do not include it |
 | wreq on pinned pre-release RCs | TLS impersonation depends on exact `wreq` RC pins that churn |
 
@@ -531,7 +544,7 @@ tar xzf obscura-x86_64-linux.tar.gz
 # Linux aarch64, macOS (Intel + Apple Silicon), Windows x86_64 (.zip) also published.
 ```
 
-The project docs also list Arch Linux AUR (`docs/Installation.md:39`) and NixOS (`nix-env -iA nixpkgs.obscura`, README). The Docker image is built on `gcr.io/distroless/cc-debian12:nonroot` (uid 65532, ~57 MB compressed per the README) for linux/amd64 and linux/arm64, with `--features render` and without the stealth feature (`Dockerfile`, `.github/workflows/docker.yml:45`).
+The project docs also list Arch Linux AUR (`docs/Installation.md:39`), NixOS (`nix-env -iA nixpkgs.obscura`, README) and, since `8edfe48`, a Scoop manifest for Windows that installs the default (render, no stealth) variant (`scoop/obscura.json`, README). The Docker image is built on `gcr.io/distroless/cc-debian12:nonroot` (uid 65532, ~57 MB compressed per the README) for linux/amd64 and linux/arm64, with `--features render` and without the stealth feature (`Dockerfile:40`, `.github/workflows/docker.yml:45`). It serves on `0.0.0.0` inside the container (`Dockerfile:70`), so it refuses to start without `OBSCURA_CDP_TOKEN` (`crates/obscura-cdp/src/server.rs:428-433`); the install docs now pass one (`docs/Installation.md:47-58`).
 
 ### Build from source
 
@@ -626,12 +639,16 @@ obscura scrape url1 url2 url3 \
 OBSCURA_PROFILE=2            # pin a fingerprint profile by index
 OBSCURA_ROTATE_PROFILE=1     # random profile per browser context
 OBSCURA_TIMEZONE=America/New_York   # Date + Intl report the same zone (default Europe/Berlin)
-OBSCURA_CDP_COMMAND_TIMEOUT_MS, OBSCURA_FETCH_TIMEOUT_MS   # deadlines
+OBSCURA_CDP_COMMAND_TIMEOUT_MS, OBSCURA_FETCH_TIMEOUT_MS, OBSCURA_NAV_TIMEOUT_MS   # deadlines
 OBSCURA_SCRIPT_DEADLINE_MS   # page script-execution budget (default 30 s)
 OBSCURA_ALLOW_PRIVATE_NETWORK=1   # lift the SSRF deny-set for localhost / LAN targets
 OBSCURA_BLOCK_TRACKERS=0     # disable tracker blocking in the stealth client
 OBSCURA_CDP_TOKEN, OBSCURA_MCP_TOKEN   # bearer tokens (non-loopback binds need one)
+OBSCURA_CDP_ALLOWED_ORIGINS, OBSCURA_MCP_ALLOWED_ORIGINS   # browser Origin allowlists
+OBSCURA_WEB_SEARCH=keenable  # list the MCP web_search tool (queries go to a third-party API)
 ```
+
+`--user-agent` is a global flag since v0.2.6 (`crates/obscura-cli/src/main.rs:43-48`); see the coherence caveat under [Anti-Detection Mechanisms](#anti-detection-mechanisms).
 
 ---
 
@@ -665,7 +682,7 @@ Obscura runs JavaScript and, in render builds, its own layout and paint engine w
 
 | Check type | Expectation | Reasoning from the architecture |
 |---|:---:|---|
-| Static HTML behind UA filter | likely fine | UA, headers, and UA-CH look like Chrome and agree with each other |
+| Static HTML behind UA filter | likely fine | UA, headers, and UA-CH look like Chrome and agree with each other (unless `--user-agent` replaces the UA alone) |
 | Layout-probing checks (`getBoundingClientRect`, `getComputedStyle`) | **materially improved in v0.2.0 render builds** | Real measured geometry and renderer-computed style replace the v0.1.x synthesized grid and defaults table. Non-render builds are unchanged and keep the synthesized grid and defaults table. |
 | Canvas-pixel checks | synthetic output | Canvas 2D is a JS software rasterizer: `toDataURL` is a valid PNG, but `fillText` draws seed-derived dot glyphs rather than a font, so text-based canvas hashes are per-session synthetic values |
 | WebGL / audio-DSP checks | not implemented | WebGL is unavailable (`getContext` returns `null`); audio graph nodes are inert and `OfflineAudioContext` returns a scaled synthetic wave |
@@ -704,7 +721,7 @@ DataDome- or Kasada-class systems.
 ## Resources
 
 - [GitHub Repository](https://github.com/h4ckf0r0day/obscura)
-- [Documentation](https://docs.obscura.sh)
+- [Documentation](https://github.com/h4ckf0r0day/obscura/tree/main/docs) — the README's docs badge points here since `8edfe48`; `docs.obscura.sh` now redirects to the GitHub wiki
 - [obscura-benchmark](https://github.com/h4ckf0r0day/obscura-benchmark) — the separate benchmark/conformance suite
 - [deno_core](https://github.com/denoland/deno_core) — V8 runtime crate used by Obscura
 - [wreq](https://crates.io/crates/wreq) — TLS impersonation library used in stealth mode
@@ -722,4 +739,4 @@ Across v0.1.x and v0.2.x the fingerprint surface changed: the persona fields (UA
 
 **Applicability:** high-concurrency fetching where per-instance memory matters and the targets do not probe canvas, WebGL, or audio, plus AI-agent browsing over the MCP server. Layout-probing targets require a render-enabled build (release archive with no suffix or `-stealth`, or `--features render` from source). Memory and page-load figures are the project's own (Tier B).
 
-*Verified against the source at `github.com/h4ckf0r0day/obscura` @ `8edfe48` (`main`, 59 commits past the v0.2.4 tag) and `h4ckf0r0day/obscura-benchmark` @ `2d7bc30`, 2026-10-13. Read in an isolated container — see [METHODOLOGY.md](METHODOLOGY.md#source-handling).*
+*Verified against the source at `github.com/h4ckf0r0day/obscura` @ `58a04dd` (`main`, 100 commits past the v0.2.7 tag) and `h4ckf0r0day/obscura-benchmark` @ `2d7bc30`, 2026-11-20. Read in an isolated container — see [METHODOLOGY.md](METHODOLOGY.md#source-handling).*

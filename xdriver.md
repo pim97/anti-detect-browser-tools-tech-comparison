@@ -4,20 +4,23 @@
 > **Category:** Playwright Driver Patcher (rebrowser-patches derivative)
 > **Language:** Python (CLI) + bundled JavaScript (patched `playwright-core`)
 > **Type:** File-replacement patching of the local Playwright driver
-> **Version:** v1.0.1 (released 2025-09-10) — **unchanged as of 2026-10-13**
+> **Version:** v1.0.1 (released 2025-09-10) — **unchanged as of 2026-11-20**
 > **What is verified:** the bundled "patched" driver identifies itself as `turnstilebrowser-playwright-core` **1.49.0**; XDriver's own Python is ~295 lines doing file backup/replace and version validation, with no browser-patching logic of its own (**Tier A**)
 > **Anti-bot service claims:** the README claims **Cloudflare WAF, Turnstile, DataDome, Kasada** and "undetectable even against vendors like Kasada" (**Tier B**). The claims are dated September 2025 and describe a bundle pinned to `playwright-core` 1.49.0; no re-test has been published since.
-> **Maintenance:** No commits since 2025-09-10 (~13 months before the verification date). 8 stars, 5 forks, 2 contributors, no PyPI package. Apache-2.0.
-> **Verified:** 2026-10-13 against `arjun-sha/XDriver` @ `b610852` (unchanged since 2026-08-14).
+> **Maintenance:** No commits since 2025-09-10 (~14 months before the verification date). 8 stars, 5 forks, 2 contributors, 0 open issues, no PyPI package. Apache-2.0.
+> **Verified:** 2026-11-20 against `arjun-sha/XDriver` @ `b610852` (unchanged since 2026-08-14); rebrowser-patches statements checked against `rebrowser/rebrowser-patches` @ `31b5135` (v1.1.3, 2026-11-02).
 
 > ### Status
 >
 > XDriver repackages a [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches)-lineage
 > `playwright-core` fork. Its last commit is 2025-09-10 and its bundle targets
-> `playwright-core` 1.49.0, against a current Playwright of 1.63.x.
-> [Patchright](./patchright.md) implements the same `Runtime.enable` countermeasure and
-> tracks Playwright releases automatically. This page documents XDriver because it
-> still appears in tool recommendations.
+> `playwright-core` 1.49.0, against a current Playwright of 1.65.x (`playwright` 1.65.2 on
+> PyPI, 2026-11-14). [Patchright](./patchright.md) implements the same `Runtime.enable`
+> countermeasure and tracks Playwright releases automatically, and rebrowser-patches itself
+> resumed releases in October 2026 (v1.1.0–v1.1.3, with patch sets for `playwright-core`
+> 1.64.1 and drop-in `rebrowser-playwright` packages; **Tier A** for the patch directories,
+> **Tier B** for the release notes). This page documents XDriver because it still appears in
+> tool recommendations.
 
 ---
 
@@ -25,7 +28,7 @@
 
 XDriver is a stealth patching tool that swaps out the JavaScript files inside a locally installed Playwright's `driver/package` directory with a pre-patched copy, then prints an "XDriver Session Active" banner from Playwright's `__init__.py`. Unlike script-injection approaches, it replaces Playwright's bundled Node driver payload with a hardened build.
 
-**What it actually ships (verified from source):** the bundled "patched" driver is **not original work**. `x_driver/bundles/package/package.json` identifies it as `turnstilebrowser-playwright-core` v1.49.0 — a `playwright-core` fork carrying the `turnstilebrowser-patches` set (a [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches) lineage). Every stealth modification in the bundle is gated behind `TURNSTILEBROWSER_PATCHES_*` environment variables. XDriver's own Python code (295 lines across `x_driver/*.py`, excluding the bundle) only does file backup/replace and version validation; it contains no browser-patching logic of its own.
+**What it actually ships (verified from source):** the bundled "patched" driver is **not original work**. `x_driver/bundles/package/package.json` identifies it as `turnstilebrowser-playwright-core` v1.49.0 — a `playwright-core` fork carrying the `turnstilebrowser-patches` set (a [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches) lineage). Every stealth modification in the bundle is gated behind `TURNSTILEBROWSER_PATCHES_*` environment variables. XDriver's own Python code (295 lines: 262 across `x_driver/*.py` plus the 33-line `setup.py`, excluding the bundle; the two `examples/*.py` files are empty) only does file backup/replace and version validation; it contains no browser-patching logic of its own.
 
 ## Technical summary
 
@@ -35,16 +38,16 @@ XDriver is a stealth patching tool that swaps out the JavaScript files inside a 
 | **Shipped bundle** | `turnstilebrowser-playwright-core` 1.49.0 — a prebuilt `playwright-core` fork of [rebrowser-patches](https://github.com/rebrowser/rebrowser-patches) lineage. Not built from sources published in this repository. **Tier A** |
 | **`Runtime.enable` tell** | Addressed by the bundle, gated behind `TURNSTILEBROWSER_PATCHES_*` environment variables. Implementation is upstream, not this project's. **Tier A** |
 | **Fingerprint spoofing** | None in source. **Tier A** |
-| **Input simulation** | None. The only matches for Bézier/humanize strings are in bundled Playwright vendor assets (`codeMirrorModule`, `zipBundleImpl`). **Tier A** |
-| **Pinned Playwright version** | 1.49.0. Current Playwright at the verification date is 1.63.x (`playwright` 1.63.0 on PyPI, 2026-09-15) |
-| **Commit activity** | Last commit 2025-09-10, approximately 13 months before the verification date |
-| **Distribution** | No PyPI package |
+| **Input simulation** | None. The only matches for Bézier/humanize strings are in bundled Playwright vendor assets (`codeMirrorModule`, `zipBundleImpl`, `utilsBundleImpl`). **Tier A** |
+| **Pinned Playwright version** | 1.49.0. Current Playwright at the verification date is 1.65.x (`playwright` 1.65.2 on PyPI, 2026-11-14) |
+| **Commit activity** | Last commit 2025-09-10, approximately 14 months before the verification date |
+| **Distribution** | No PyPI package (`x-driver` and `x_driver` return 404; the `xdriver` name belongs to an unrelated Selenium extension) |
 | **Project state** | 8 stars, 5 forks, 2 contributors, 0 open issues |
 | **Documented claims vs. source** | The README claims Kasada, DataDome, PerimeterX, Imperva, and Fingerprint.com coverage. No code addressing any of them exists in the repository |
 
 Functional overlap: [Patchright](./patchright.md) implements the same `Runtime.enable`
 countermeasure, tracks Playwright releases automatically, and was last pushed
-2026-10-11.
+2026-11-13.
 
 ---
 
@@ -94,6 +97,8 @@ Grepping the bundle, exactly **6 JavaScript files** (out of 282 in `lib/`) carry
 
 The central technique is the **Runtime.enable leak fix**, the same well-known evasion popularized by rebrowser-patches: instead of calling `Runtime.enable` (which lets detectors observe a CDP-controlled execution context), the driver creates an isolated world via `Page.createIsolatedWorld` and adds bindings there.
 
+The bundle's mode names match rebrowser-patches' own (`addBinding` default, `alwaysIsolated`, `0`; rebrowser `README.md:85-88` at `31b5135`), with the `REBROWSER_` environment prefix renamed to `TURNSTILEBROWSER_`. rebrowser-patches has moved on since the bundle was built: its October 2026 releases add fixes described as finding main-world context ids "without leaving anything in the page", randomising the helper name in Playwright stack traces, and dropping launch switches pages can notice (commits `7c1f298`, `e66f8f4`, `955267a`; **Tier B** as to effect). XDriver's 2025 bundle predates them.
+
 #### A. Runtime.enable Leak Fix (`crConnection.js`)
 
 The real, verified code (paraphrased from the bundle) is env-var driven, not the hand-written `_shouldHideMessage`/`PatchedTransport` class the previous version of this page showed (that code does not exist):
@@ -112,7 +117,7 @@ if (fixMode === 'addBinding') {
 // getIsolatedWorld(): Page.createIsolatedWorld({ worldName }) → returns executionContextId
 ```
 
-Default behavior (no env vars set): `RUNTIME_FIX_MODE = 'addBinding'` and the utility world is renamed to `util`. Setting `RUNTIME_FIX_MODE='0'` reverts to stock (leaky) Playwright behavior — you can see the `=== '0'` guards throughout the six files.
+Default behavior (no env vars set): `RUNTIME_FIX_MODE = 'addBinding'` and the utility world is renamed to `util`. `crConnection.js` also accepts `alwaysIsolated` (`crConnection.js:191, 228`). Setting `RUNTIME_FIX_MODE='0'` reverts to stock (leaky) Playwright behavior — you can see the `=== '0'` guards throughout the six files.
 
 #### B. Service Worker Runtime Isolation (`crServiceWorker.js`)
 
@@ -178,7 +183,7 @@ XDriver Patching Flow (verified):
 
 > **Every row below is a vendor claim from September 2025** (README "Performance"
 > table), never independently benchmarked, about a bundle pinned to `playwright-core`
-> 1.49.0 that has received no updates in ~13 months. **Tier B, and decaying.**
+> 1.49.0 that has received no updates in ~14 months. **Tier B, and decaying.**
 >
 > Two structural reasons to discount them heavily:
 >
@@ -281,7 +286,7 @@ x_driver deactivate  # restores original Playwright from package_1 backup
 | Limitation | Details |
 |------------|---------|
 | **Not original stealth** | Bundles `turnstilebrowser-playwright-core` 1.49.0; XDriver adds only a copy/backup CLI |
-| **No PyPI package** | `x-driver`/`x_driver` 404 on PyPI; the README's PyPI badge is fake (v0.0.1, links nowhere). Git install only |
+| **No PyPI package** | `x-driver`/`x_driver` 404 on PyPI; the README's PyPI badge is static (it shows v0.0.1 and links to the pypi.org home page, `README.md:4-5`). Git install only |
 | **Overstated README** | "C-level," WebRTC protection, marker scrubbing, binding obfuscation — none exist in the source |
 | **Version mismatch** | Requires host `playwright==1.52.0` but ships a 1.49.0 driver |
 | **Version-locked** | Hard-pinned to `["1.52.0"]`; `--force` needed for anything else |
@@ -357,7 +362,7 @@ XDriver is a **thin, single-author CLI** that copies a third-party rebrowser-pat
 
 **Good for:** a quick, reversible, no-import-changes toggle to test the Runtime.enable fix.
 
-**Functional overlap with Patchright:** both implement the same `Runtime.enable` countermeasure of rebrowser-patches lineage. Patchright is published to PyPI and npm, tracks Playwright releases automatically, supports Python/Node/.NET, and was last pushed 2026-10-11. XDriver has no registry package, pins `playwright-core` 1.49.0, is Python-only, and was last pushed 2025-09-10.
+**Functional overlap with Patchright:** both implement the same `Runtime.enable` countermeasure of rebrowser-patches lineage. Patchright is published to PyPI and npm, tracks Playwright releases automatically, supports Python/Node/.NET, and was last pushed 2026-11-13. XDriver has no registry package, pins `playwright-core` 1.49.0, is Python-only, and was last pushed 2025-09-10.
 
 **Layers addressed:** 1 only (`Runtime.enable`, via the bundle). Not Layer 2 (fingerprinting), 3 (behaviour), or 4 (TLS). **Applicability:** reproducing or testing the `Runtime.enable` leak fix against a Playwright 1.52.0 host install.
 

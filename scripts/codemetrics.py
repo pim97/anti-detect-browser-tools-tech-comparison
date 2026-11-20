@@ -60,7 +60,9 @@ EXCLUDE = ["!.git", "!node_modules", "!bundles", "!dist", "!build", "!target",
            # Since core 38.34.0 the Juggler client (and its injected.js bundle) lives in
            # invisible_core/juggler/.
            "!**/juggler/injected.js"]
-TESTGLOBS = ["tests", "test", "*_test.*", "test_*.*", "*.test.*", "spec"]
+# `*_tests.rs`: Rust sibling test modules, declared `#[cfg(test)] mod x_tests;` (Obscura has five;
+# until 2026-11-20 they counted as production code).
+TESTGLOBS = ["tests", "test", "*_test.*", "test_*.*", "*.test.*", "spec", "*_tests.rs"]
 EXTS = ["py", "js", "ts", "rs", "cc", "cpp", "h", "hpp", "cs"]
 
 
@@ -86,6 +88,14 @@ def per_file_counts(out):
 
 def rg(pattern, root, extra=None, only_tests=False, exclude_tests=False):
     cmd = ["rg", "--no-messages", "-c", "-e", pattern, str(root)]
+    # Pattern counts cover source files only (plus shell scripts and Dockerfiles, where
+    # launch flags live). Until 2026-11-20 they also scanned Markdown and other text, so
+    # translated docs and CHANGELOG lines counted as production `print(` and
+    # `--no-sandbox` hits. Includes go first: ripgrep gives the last matching glob
+    # precedence.
+    for e in EXTS + ["sh"]:
+        cmd += ["--glob", f"*.{e}"]
+    cmd += ["--glob", "Dockerfile*"]
     for g in EXCLUDE:
         cmd += ["--glob", g]
     if exclude_tests:
@@ -123,6 +133,7 @@ def is_test_path(f):
     base = os.path.basename(f)
     return ("/tests/" in f or "/test/" in f or base.startswith("test_")
             or base.rsplit(".", 1)[0].endswith("_test") or ".test." in base
+            or base.endswith("_tests.rs")
             or "/spec/" in f)
 
 

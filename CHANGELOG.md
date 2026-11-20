@@ -1,5 +1,181 @@
 # Changelog
 
+## 2026-11-20 — Re-verification against upstream (all ten tools)
+
+Every tool page, the README tables, the code review and the interactive matrix were
+re-read against the upstream trees in the sandbox; the previous pass was 2026-10-13.
+STATUS.md was regenerated the same day. Nine of the ten tools changed; XDriver did not.
+Nothing from the upstream trees was installed, built or executed. The sandbox clones are
+shallow (depth 50), so where more than 50 commits had landed the comparison is a tree diff
+between the two pins, and no commit older than the clone's boundary was read on its own.
+
+### Versions and commits read
+
+| Tool | Documented on 2026-10-13 | Now | Commit read |
+|------|--------------------------|-----|-------------|
+| Camoufox | browser `v156.0.1-beta.38` (pre-release, Firefox 156.0.1), PyPI `0.5.8` | browser `v159.0-beta.42` (2026-11-15, pre-release, Firefox 159.0; latest non-pre-release `v158.0.1-beta.41`, 2026-10-29), PyPI `0.5.9` (2026-11-01, no matching tag), library pre-release `v0.5.10b1` | `4c909d6` |
+| Patchright | `1.63.0` (GitHub/npm/PyPI); `main` had one unreleased fix (`86be858`) | GitHub release `v1.64.1` (2026-10-15; `v1.64.0` and `v1.64.1` tag the same commit `2d2b887`), npm `1.64.3` and PyPI `1.64.4` (2026-11-02, no matching tags); `86be858` shipped in `v1.64.0`; three code commits on `main` after the last tag | `521ad98` (python `8727f3b`, nodejs `a2e746c`, dotnet `6d20770`) |
+| SeleniumBase | `4.56.1` | `4.58.2` (2026-11-19) | `11f3610` |
+| Botasaurus | core `4.0.97`, driver `4.0.101` | unchanged on PyPI; 13 monorepo commits, all in the Node packages | `3873a56`, `db1d291` |
+| XDriver | `v1.0.1` | unchanged, no commits since 2025-09-10 | `b610852` (rebrowser-patches statements checked at `31b5135`) |
+| CloakBrowser | wrapper `0.6.2`, Pro Chromium 154 on every platform | wrapper `0.7.3` (2026-11-20), Chromium `156.0.8078.47.1` on every platform for free and paid keys; keyless download removed in 0.7.0 | `fa3716e` |
+| Scrapling | `0.4.15` | `0.5.1` (2026-11-04), after `0.5` (2026-10-17); `main` has 7 docs/sponsor/CI-only commits after the tag | `2998c9e` |
+| Obscura | `v0.2.4`; `main` 59 commits past the tag | `v0.2.7` (2026-11-13), after `v0.2.5` (2026-10-17) and `v0.2.6` (2026-10-31); `main` 100 commits past the tag (373 since `8edfe48`, GitHub compare) | `58a04dd` |
+| invisible_playwright | wrapper `0.35.3`, core `41.39.0`, engine `firefox-41` (Firefox 151.0) | wrapper `0.57.1`, core `67.79.0` (both 2026-11-20), engine `firefox-67` (Firefox 159.0); the engine repository was re-rooted as a patch series | `d1bfea3`, core `191f0fa`, engine `9110d5d` |
+| Clearcote | browser `pre.23` (Chromium 150), SDK `0.49.0` | browser `v0.1.0-pre.25` (2026-10-28; open Windows/Linux build on Chromium 151) plus `v0.1.0-pre.24` (2026-10-21, pre-release; open macOS arm64 build on Chromium 150); SDK `0.70.1` (2026-11-19) | `389653c` (291 commits after `fb3e7bb`, GitHub compare) |
+
+### What changed upstream
+
+- **Camoufox**: Firefox 156.0.1 to **159.0**. Top-level patches 42 to **65** (64 in
+  release `v159.0-beta.42`): removed `audio-fingerprint-manager` and `no-search-engines`;
+  added 25, among them `cpu-vendor-estimates` (canvas and Opus computed as a claimed Intel
+  or AMD CPU, ARM64/x86-64 emulated; new `cpu` option), `webrtc-socks5-udp` (WebRTC UDP
+  through a SOCKS5 relay; no invented srflx candidate), `zz-stock-cost-parity` (spoofed
+  getters do stock's work first so they are not faster than stock),
+  `per-context-http-user-agent`, `windows-crt-math` and `windows-keyboard` (a Windows
+  identity on another host), `headless-software-webgl`, and background-traffic patches
+  (Remote Settings from pinned dumps, Push on demand). **Audio noise removed**: no
+  `audio:seed`; the render is stock's per CPU architecture. Window `innerWidth`/`screenX`
+  getters no longer read the config; the real window is sized and placed instead. No
+  `policies.json`; stock search engines return. Config keys 78 to 79 live, 54 to 65 marked
+  `removed`. Releases ride a twice-monthly train (1st and 15th). After the latest release,
+  humanized input left the browser: `humanize=True` runs the pinned `myuri` 4.0.0 package
+  in the launcher, the vendored LGPL cursory-js and the `humanize*` config keys are gone,
+  and Python `^3.11` is required.
+- **Patchright** 1.63.0 to 1.64.1 (GitHub), npm 1.64.3 / PyPI 1.64.4: the Playwright 1.64.0
+  port (`79fc6fc`) adapts the patches to Playwright's selector-target API, registers init
+  scripts with `runImmediately` after the binding wrappers are installed, and has the page
+  call upstream's `updateRequestInterception()` instead of always enabling interception.
+  After the `v1.64.1` tag, `main` keeps Chromium's `MediaRouter` feature enabled
+  (`929d804`), drops two `framesPatch.ts` overrides (`bd714e6`), and fixes restarted
+  requests hanging behind authenticated proxies (`f14e043`); whether npm 1.64.3 / PyPI
+  1.64.4 contain them is not recorded. The route-injection list is still never populated.
+- **SeleniumBase** 4.56.1 to 4.58.2: UC and CDP Mode stop passing `--test-type` unless a
+  proxy is set (new `no_tt` option drops it with a proxy too) and keep IPC flooding
+  protection on unless Fast Mode is set; Chrome for Testing gets `--disable-infobars`;
+  `--disable-popup-blocking` and the `MediaRouter` disabled feature were dropped. CDP
+  typing on Windows and macOS wraps uppercase letters and shifted symbols in Shift key
+  events (Linux still sends `char` events). The DataDome slider is found in nested iframes.
+  `selenium` 4.53.0; PyOTP replaced by an in-house TOTP routine; README rewritten again.
+- **Botasaurus**: no PyPI release and no Python change. The JS driver's Chrome launcher
+  tracks and force-kills launched Chrome processes; the Node server gained task abort,
+  retried data-file writes and NDJSON streaming.
+- **XDriver**: no change. rebrowser-patches, the lineage it repackages, resumed releases
+  (v1.1.0 to v1.1.3) with patch sets for `playwright-core` 1.64.1 and fixes XDriver's 2025
+  bundle predates.
+- **CloakBrowser** 0.6.2 to 0.7.3: **every launch now needs a licence key** (0.7.0). A
+  launch with no key offers a free key by email (one concurrent session) in a terminal or,
+  without one, raises with a sign-up link and polls cloakbrowser.dev for the key in the
+  background (every 15 s, up to 10 min). The keyless Chromium 146 download, the GitHub
+  Releases fallback, GitHub sign-in, `CLOAKBROWSER_DOWNLOAD_URL` and
+  `CLOAKBROWSER_SKIP_CHECKSUM` are gone, and the Docker image no longer contains a binary.
+  Pro moved 154 to 155 to **156** on every platform (87 claimed patches); the README says
+  free and paid keys get the same build. Humanize retuned (0.6.3). Playwright capped below
+  1.66 (.NET below 1.65). The release-archive attestation workflow was deleted (`91effe4`)
+  while the README still documents `gh attestation verify`. Sandbox default unchanged.
+- **Scrapling** 0.4.15 to 0.5.1 (breaking): the plain-Playwright
+  `DynamicFetcher`/`DynamicSession` tier is removed, so every browser path is Patchright;
+  `cdp_url` moved to new `RemoteSession` classes that attach over CDP with no launch flags;
+  `capture_xhr` replaced by session network recording; `save_state()`/`load_state()`;
+  `pierce_shadow`; `STEALTH_ARGS` 53 to 54. The Cloudflare solver waits up to ~5 s for late
+  widgets and clicks embedded widgets through a checkbox locator (still max 3 re-solves).
+  The MCP server moved to `scrapling/core/ai/` and grew from 13 to 17 tools (page actions,
+  network history, `browser_observe` frame sampling); the README now says agents can
+  "bypass any CAPTCHA" through it (Tier B). `curl_cffi>=0.16.3`.
+- **Obscura** v0.2.4 to v0.2.7: still 14 CDP domains, 117 to 122 methods; MCP still 38
+  tools plus an opt-in `web_search` that sends queries to the third-party Keenable API.
+  Render engine 72,401 to 74,722 lines. `--user-agent` became a global flag that reaches
+  stealth builds' UA while their platform fields and Chrome 145 TLS profile stay fixed.
+  Worker recycling, per-connection storage isolation and a CDP `Origin` allowlist. Stealth
+  form POST navigations use the wreq client. Fingerprint pools, canvas, audio and WebGL
+  unchanged.
+- **invisible_playwright** 0.35.3 to 0.57.1 (core 41.39.0 to 67.79.0; engine `firefox-41`
+  to `firefox-67`): the engine repository was re-rooted on 2026-10-27 (`eefcdbb`, no
+  parents): the full-tree `stealth/150`/`stealth/151` branches are gone, and `main` and the
+  release tags hold a patch series against Mozilla's `FIREFOX_159_0_RELEASE`, 79 feature
+  folders (75 with a `hooks.patch`, 665 added files). Firefox 151.0 to 159.0 at
+  `firefox-54`. **The launch counter has had no pref since `firefox-64`**: the URL is a
+  constant (`StealthLaunchCounter.sys.mjs`), so it cannot be turned off or redirected and
+  the `extra_prefs` opt-out this report documented no longer works; both READMEs now
+  describe it. By the source it is held until the core names the session proxy and then
+  uses it (read, not run). Behind a proxy, names resolve by DoH through the proxy and
+  WebRTC/HTTP3 UDP goes through the SOCKS5 relay when the core measures the UDP exit as
+  matching the TCP exit; the synthetic server-reflexive candidate is gone. 2D canvas reads
+  back as drawn since `firefox-52` (noise on WebGL/WebGPU only). On a cold cache the core
+  downloads Mozilla's intermediate-certificate list from the host's own address.
+  `launch_server()` serves the browser to stock Playwright clients (0.48.0). Linux arm64
+  dropped. The projects moved to the `oss-invisible` GitHub organisation. The core wheel
+  ships Firefox branding archives (MPL-2.0) not named in its licence field. The update
+  check to aus5.mozilla.org goes out again (download and install refused). 50 static
+  `zoom.stealth.*` prefs (46).
+- **Clearcote**: the open Windows/Linux build moved from Chromium 150 to 151
+  (`v0.1.0-pre.25`) and is now an official ThinLTO + PGO build with DCHECKs compiled out.
+  Patches 37 to 62: `951` removed; `960`–`985` added (SOCKS5 authentication and UDP
+  ASSOCIATE relay, engine-side HTTP proxy authentication, portable cookie key, a
+  `--clearcote-validate-persona` self-check, opt-in persona schema 2, and WebGL/WebGPU/DPR
+  coherence for cross-OS personas); stray backup hunks dropped. A separate open **macOS
+  arm64** build on Chromium 150 (`v0.1.0-pre.24`, unsigned, not notarized). SDKs 0.49.0 to
+  0.70.1: the `geoip` lookup now runs by default (IP echo plus GeoIP database download;
+  `geoip: false` turns it off); native launch of the macOS build on Apple Silicon (Docker
+  only on Intel Macs); per-identity humanize pacing and a post-load reading pause; on
+  licensed r51+ engines a signed persona is fetched from `persona.clearcotelabs.com` on
+  every launch, and an imported profile's JSON is sent there.
+
+### Corrections
+
+| Tool | Previous statement | Verified state |
+|------|--------------------|----------------|
+| Camoufox | The default `os` is a random pick of Windows, macOS and Linux, so a default launch claims another OS than the host's in most draws | With no `os`, `generate_fingerprint()` passes no OS condition and fpgen draws the OS from its own model; its weighting was not read (fpgen is not in the sandbox), so "most draws" is unestablished (Tier D) |
+| Patchright | `chromiumSwitchesPatch.ts` removes "the big `--disable-features=...` blob" | The switch was always kept: Playwright builds it as `'--disable-features=' + disabledFeatures.join(',')`, so the literal string in the removal list never matched. Since `929d804` only `MediaRouter` is dropped from the list |
+| Patchright | `patchright.patch` 50,211 lines, +20,568 / −10,826, `driver_patches/` 5,091 lines | Those were `26ab9ae` figures; at `ba8bd9b` 50,277 lines, +20,622 / −10,828, 5,136 lines |
+| Botasaurus | `Runtime.enable` "not addressed; the only source reference is a commented-out line at `connection.py:219`" | `connection.py:219` is `self.websocket.close()`. The driver contains no `Runtime.enable` send: domains are enabled only for registered event handlers (`core/connection.py:318-349`), and the Runtime handlers are commented out "to avoid runtime detection" (`core/tab.py:165-173`). Botasaurus is now listed under "`Runtime.enable` addressed" with "not tested at runtime" |
+| Botasaurus | "58 generated binding files" in `botasaurus_driver/cdp/` | 54 domain modules plus `__init__.py`, `util.py`, `README.md` and `py.typed` |
+| Botasaurus | Driver repo "last public commit 2025-06" | 2026-07-30 (`db1d291`) |
+| SeleniumBase | A fingerprint-term search hits only a `--use-angle=swiftshader-webgl` option and recorder JS | It also hits the `--enable-3d-apis` option and `base_case.py` canvas-drawing test helpers; still no fingerprint-rewriting code |
+| XDriver | 295 lines "across `x_driver/*.py`" | `x_driver/*.py` is 262 lines; the 295 includes the 33-line `setup.py` |
+| XDriver | The README's PyPI badge "links nowhere" | A static v0.0.1 badge linking to the pypi.org home page |
+| CloakBrowser | README stealth table and matrix: "Chromium 152 fork (Pro; 151 on macOS)" | Already Chromium 154 on every platform at `485f678` (the page and changelog said so; these two cells were missed). Now 156 |
+| CloakBrowser | CODE-REVIEW finding 1: `cloakserve` builds its arguments at `bin/cloakserve:353-354` | `:354-355` at `485f678`; `:367-373` now |
+| Obscura | In a non-render build, screenshot/PDF/screencast return "…not supported by Obscura: no layout or paint engine" | They return "Page.<method> requires a build with the render feature"; the quoted string belongs to `Page.captureSnapshot`, refused in every build |
+| Obscura | Interception types re-exported at `crates/obscura/src/lib.rs:19-27` | Lines 30-32 |
+| Obscura | `op_computed_style` signature without `frame_id` | It also takes the calling frame's id |
+| Clearcote | Per-site audio (`AudioBuffer`) farbling from the seed | The noise helpers in `020-audio` are never called: their only call site is commented out (`020-audio.patch:71,94,115`, the same at `pre.23`). `patches/README.md` still says otherwise |
+| Clearcote | One seed derives locale and fonts | The font list is one canonical list per claimed OS (or an imported profile's); languages and timezone come from options or `geoip` |
+| Clearcote | The SDK's default `disable_non_proxied_udp` keeps WebRTC UDP behind the proxy | On the open build `100-webrtc-leak` re-enables non-proxied UDP whenever `--webrtc-ip` is set (`100-webrtc-leak.patch:34-41`, unchanged since `pre.23`) |
+| Clearcote | No named commercial anti-bot service appears in the public tree | SDK comments already named reCAPTCHA as a bot detector at `fb3e7bb`; they now also cite a fingerprint.com verdict. Neither is a pass-rate claim |
+| Clearcote | Usage example passed a seed together with `fingerprint_profile` | The SDK warns against that; the example now uses the profile alone |
+| invisible_playwright | The page's comparison table gave Camoufox "Firefox 152 fork, 44 `.patch` files" and CloakBrowser "Chromium 152 (Pro)" | Already stale on 2026-10-13 (Camoufox 156.0.1 with 42 patches, CloakBrowser 154); the page now defers those cells to the tools' own pages |
+| invisible_playwright | "The one content hash on the reuse path is `omni.ja` on Windows" | The `omni.ja` comparison runs only when adopting an unstamped tree; a stamped cache hit runs `verify_engine` only (`download.py:546-559`, `:671-672` at `191f0fa`; the same at `415bbd8`) |
+
+### Code metrics
+
+`scripts/codemetrics.py` was changed in two ways before the tables were regenerated, so
+some figures do not compare directly with 2026-10-13:
+
+- **Pattern counts now cover source files only** (the same extensions as the line counts,
+  plus `*.sh` and `Dockerfile*`). They used to scan every non-excluded file, Markdown
+  included. Scrapling's translated documentation took its `print(` count from 192 to 891
+  without a code change; the source-only figure is 34. CloakBrowser's `--no-sandbox`
+  count drops from 4 to 3 (the fourth was its CHANGELOG), and Clearcote's is 67 (84 at
+  2026-10-13 with documentation included).
+- **`*_tests.rs` files count as tests.** Obscura declares five sibling test modules as
+  `#[cfg(test)] mod x_tests;`; counted as production they added 50 `.unwrap()` lines and
+  4 `panic!` (103 and 1 without them).
+
+Both new largest files are generated tables: Camoufox's
+`browser/additions/gfx/skia/skia/src/opts/SkCpuEstimateTables.h` and `invisible_core`'s
+`juggler/keylayouts_windows.py`; they are labelled as such.
+
+### Pass notes
+
+- Two slices of this pass first mistook the sandbox's shallow-clone boundary for a history
+  rewrite (Camoufox, Clearcote). GitHub's compare API shows both old pins as plain
+  ancestors of the new ones; the claims were removed before publication.
+- The invisible_playwright engine fork really was re-rooted: its history now starts at
+  `eefcdbb` (2026-10-27, no parents per the GitHub API), a patch series rebuilt from the
+  old full-tree branch. Its tag `firefox-67` was cloned in full into the sandbox so the
+  series could be read rather than inferred from commit messages.
+
 ## 2026-10-13 — Re-verification against upstream (all ten tools)
 
 Every tool page, the README tables, the code review and the interactive matrix were
