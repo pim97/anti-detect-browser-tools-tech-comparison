@@ -11,6 +11,7 @@ community, or not established.
 ## Table of contents
 
 - [Scope](#scope)
+- [Inclusion criteria](#inclusion-criteria)
 - [Evidence tiers](#evidence-tiers)
 - [What we did not do](#what-we-did-not-do)
 - [Source handling](#source-handling)
@@ -31,6 +32,36 @@ Explicitly **out of scope**: hosted scraping APIs and commercial proxy networks.
 solve an overlapping problem with a completely different cost and operational model,
 and putting a paid API in the same table as an MIT library invites apples-to-oranges
 conclusions. Where a hosted service is relevant it is named as context, never scored.
+
+---
+
+## Inclusion criteria
+
+A tool proposed for the comparison is added when, at the start of a verification pass,
+it meets all three of the following:
+
+1. **Readable engine, or wide adoption.** The project publishes its engine changes (a
+   patch series or source tree plus build configuration, so the shipped build is
+   rebuildable), **or**, if the engine is a closed binary, the project shows adoption
+   comparable to the closed-engine tool already covered (CloakBrowser; see
+   [STATUS.md](STATUS.md)). A closed engine is reviewable only through its wrapper, so
+   every engine-side claim about it is Tier B; that cost is accepted only for tools many
+   readers already use.
+2. **Recent release.** At least one release in the 90 days before the pass.
+3. **Out of alpha on one platform.** At least one supported platform is not labelled
+   alpha or experimental by the project itself.
+
+A request that does not yet meet them stays open and is re-checked at the next pass; a
+comment on the issue is enough to ask for that.
+
+Tools already covered are not removed for missing criterion 2. They stay, with their
+inactivity stated in the report, because the comparison is also a record: XDriver has had
+no commit since 2025-09-10 and is kept on that basis (see "Inactive project" in the
+README's project-health table).
+
+These criteria do not apply to the evidence itself. Whatever gets in is read the same way
+— source at a pinned commit, in the sandbox, nothing installed or run — and anti-bot
+outcomes stay at Tier B unless a reproducible test is published.
 
 ---
 

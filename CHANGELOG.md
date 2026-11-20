@@ -168,6 +168,10 @@ Both new largest files are generated tables: Camoufox's
 
 ### Pass notes
 
+- METHODOLOGY.md gained [inclusion criteria](METHODOLOGY.md#inclusion-criteria) for
+  proposed tools (readable engine or wide adoption, a release in the last 90 days, one
+  non-alpha platform), written up after the Hexium Browser request in issue #2, which does
+  not meet them as of this pass.
 - Two slices of this pass first mistook the sandbox's shallow-clone boundary for a history
   rewrite (Camoufox, Clearcote). GitHub's compare API shows both old pins as plain
   ancestors of the new ones; the claims were removed before publication.
